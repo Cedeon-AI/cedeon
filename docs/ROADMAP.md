@@ -26,8 +26,8 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ✅ **Complete** (2026-08-30) — **no AI** |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ✅ **Complete** (2026-08-30) — **no AI** |
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ✅ **Complete** (2026-08-30) — live-verified |
-| 8 | Recovery Packet + human review / approval flow | ⏭️ **Next** |
-| 9 | Notice draft (draft only, human approval, never auto-sent) | ⬜ |
+| 8 | Recovery Packet + human review / approval flow | ✅ **Complete** (2026-08-30) — **no AI** |
+| 9 | Notice draft (draft only, human approval, never auto-sent) | ⏭️ **Next** |
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ⬜ |
 
 **First meaningful success criterion:** a reinsurance professional uploads a
@@ -313,9 +313,29 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   text, the agent used its tools, and it did not change the `8,700,000.00` figure.
   Web: an "AI investigation" panel on the candidate detail — applicability badge,
   cited findings badged *AI interpretation*, injection flag, poll-while-running.
-- **P8:** `recovery_packet_versions` with statement classification
-  (FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION); `reviews` flow
-  (confirm/edit/reject/request-info) with before/after + reason. HTML packet.
+- **P8:** ✅ **Complete (2026-08-30). No AI — deterministic assembly.** Migration
+  `0008`: `recovery_packets` (one per candidate; mutable only for
+  `current_version_id` + `human_overrides`) and immutable `recovery_packet_versions`
+  (`version_no`, `status` draft/approved/rejected/superseded, `content` JSONB,
+  `rendered_html`, `calculation_id` `RESTRICT`, `investigation_id` `SET NULL`,
+  approver + timestamps; candidate↔version circular FK hand-split for
+  `alembic check`). `app/domain/recoveries/packet.py` is pure: `assemble_packet`
+  arranges validated terms (FACT), the engine's calculation + trace + allocations
+  (CALCULATION), the investigator's findings with their citations
+  (AI_INTERPRETATION), and the review decisions + human edits (HUMAN_DECISION) into
+  classified `PacketStatement`s; `render_packet_html` emits a single self-contained
+  HTML file with the four classes visually distinct. `POST /recovery-candidates/{id}/packet`
+  generates a new immutable version each time and supersedes the rest;
+  `POST /recovery-packets/{pid}/versions/{vid}/review` is `confirm` | `reject` |
+  `request_info` | `edit` — an `edit` records a `reviews` row with before/after,
+  stores the override on the packet, and regenerates a new version with the
+  statement replaced and flagged `edited_by_human`. `GET .../html` streams the
+  rendered artifact. **17 new tests** (196 + 2 live): pure assembly/HTML units and an
+  API slice (4 classes present, the `8,700,000.00` figure + `4.35/2.61/1.74M`
+  allocations as CALCULATION, cited findings as AI_INTERPRETATION, approve → Review
+  + audit, regenerate supersedes, edit → before/after + new version). Web:
+  `/recovery-candidates/{id}/packet` — the classified packet, review actions,
+  inline statement editing, version list, "open printable HTML".
 - **P9:** Notice drafter — approved-values whitelist in, draft out, human approval to
   send, never auto-sent.
 - **P10:** OTel dashboards, AI cost/latency views, calculation-trace viewer, audit

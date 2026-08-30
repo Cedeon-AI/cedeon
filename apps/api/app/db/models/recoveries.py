@@ -22,6 +22,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -31,7 +32,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin
 from app.domain.ai import ApplicabilityAssessment, FindingKind, InvestigationStatus
-from app.domain.recoveries import RecoveryCandidateStatus
+from app.domain.recoveries import PacketVersionStatus, RecoveryCandidateStatus
 
 _candidate_status = SAEnum(
     RecoveryCandidateStatus,
@@ -56,6 +57,13 @@ _applicability = SAEnum(
 )
 _finding_kind = SAEnum(
     FindingKind, native_enum=False, length=24, create_constraint=False, name="finding_kind"
+)
+_packet_version_status = SAEnum(
+    PacketVersionStatus,
+    native_enum=False,
+    length=12,
+    create_constraint=False,
+    name="recovery_packet_version_status",
 )
 
 MONEY = Numeric(20, 2)
@@ -228,6 +236,83 @@ class RecoveryInvestigationFinding(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
 
     investigation: Mapped[RecoveryInvestigation] = relationship(back_populates="findings")
     citation: Mapped[Any | None] = relationship("Citation")
+
+
+class RecoveryPacket(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """One audit-friendly artifact per recovery candidate. Mutable only for
+    `current_version_id` and `human_overrides`; the versions themselves are frozen."""
+
+    __tablename__ = "recovery_packets"
+    __table_args__ = (
+        UniqueConstraint("recovery_candidate_id", name="uq_recovery_packets_candidate"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    recovery_candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_candidates.id", ondelete="CASCADE"), nullable=False
+    )
+    current_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recovery_packet_versions.id", ondelete="SET NULL", use_alter=True),
+        nullable=True,
+    )
+    human_overrides: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    versions: Mapped[list[RecoveryPacketVersion]] = relationship(
+        back_populates="packet",
+        cascade="all, delete-orphan",
+        foreign_keys="RecoveryPacketVersion.recovery_packet_id",
+        order_by="RecoveryPacketVersion.version_no",
+    )
+
+
+class RecoveryPacketVersion(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Immutable. Regenerating a packet writes a new version and supersedes the rest."""
+
+    __tablename__ = "recovery_packet_versions"
+    __table_args__ = (
+        UniqueConstraint("recovery_packet_id", "version_no", name="uq_recovery_packet_versions_no"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    recovery_packet_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_packets.id", ondelete="CASCADE"), nullable=False
+    )
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[PacketVersionStatus] = mapped_column(
+        _packet_version_status, nullable=False, default=PacketVersionStatus.DRAFT
+    )
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    rendered_html: Mapped[str | None] = mapped_column(Text, nullable=True)
+    calculation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_calculations.id", ondelete="RESTRICT"), nullable=False
+    )
+    investigation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recovery_investigations.id", ondelete="SET NULL"), nullable=True
+    )
+    generated_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    packet: Mapped[RecoveryPacket] = relationship(
+        back_populates="versions", foreign_keys=[recovery_packet_id]
+    )
 
 
 class RecoveryAllocation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

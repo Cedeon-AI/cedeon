@@ -643,6 +643,25 @@
         "title": "FindingKind",
         "type": "string"
       },
+      "GeneratePacketResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "packet_id": {
+            "format": "uuid",
+            "title": "Packet Id",
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/RecoveryPacketVersionOut"
+          }
+        },
+        "required": [
+          "packet_id",
+          "version"
+        ],
+        "title": "GeneratePacketResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1404,6 +1423,243 @@
         "title": "OrganizationSummary",
         "type": "object"
       },
+      "PacketCitationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "quoted_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoted Text"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          }
+        },
+        "required": [
+          "document_id",
+          "page_number",
+          "section",
+          "quoted_text"
+        ],
+        "title": "PacketCitationOut",
+        "type": "object"
+      },
+      "PacketContentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/PacketSectionOut"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "subtitle",
+          "generated_at",
+          "engine_version",
+          "sections"
+        ],
+        "title": "PacketContentOut",
+        "type": "object"
+      },
+      "PacketReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "statement_key": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Key"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "PacketReviewRequest",
+        "type": "object"
+      },
+      "PacketSectionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/PacketStatementOut"
+            },
+            "title": "Statements",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "statements"
+        ],
+        "title": "PacketSectionOut",
+        "type": "object"
+      },
+      "PacketStatementClass": {
+        "enum": [
+          "fact",
+          "calculation",
+          "ai_interpretation",
+          "human_decision"
+        ],
+        "title": "PacketStatementClass",
+        "type": "string"
+      },
+      "PacketStatementOut": {
+        "additionalProperties": false,
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PacketCitationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Detail",
+            "type": "object"
+          },
+          "edited_by_human": {
+            "title": "Edited By Human",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "statement_class": {
+            "$ref": "#/components/schemas/PacketStatementClass"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "statement_class",
+          "text",
+          "citation",
+          "detail",
+          "edited_by_human"
+        ],
+        "title": "PacketStatementOut",
+        "type": "object"
+      },
+      "PacketVersionStatus": {
+        "enum": [
+          "draft",
+          "approved",
+          "rejected",
+          "superseded"
+        ],
+        "title": "PacketVersionStatus",
+        "type": "string"
+      },
       "PageList": {
         "additionalProperties": false,
         "properties": {
@@ -2072,6 +2328,175 @@
           "findings"
         ],
         "title": "RecoveryInvestigationOut",
+        "type": "object"
+      },
+      "RecoveryPacketDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "current_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecoveryPacketVersionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "human_overrides": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Human Overrides",
+            "type": "object"
+          },
+          "packet_id": {
+            "format": "uuid",
+            "title": "Packet Id",
+            "type": "string"
+          },
+          "recovery_candidate_id": {
+            "format": "uuid",
+            "title": "Recovery Candidate Id",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryPacketVersionSummary"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "packet_id",
+          "recovery_candidate_id",
+          "human_overrides",
+          "current_version",
+          "versions"
+        ],
+        "title": "RecoveryPacketDetail",
+        "type": "object"
+      },
+      "RecoveryPacketVersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "calculation_id": {
+            "format": "uuid",
+            "title": "Calculation Id",
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/PacketContentOut"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Id"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PacketVersionStatus"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "status",
+          "calculation_id",
+          "investigation_id",
+          "review_note",
+          "approved_at",
+          "superseded",
+          "created_at",
+          "content"
+        ],
+        "title": "RecoveryPacketVersionOut",
+        "type": "object"
+      },
+      "RecoveryPacketVersionSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PacketVersionStatus"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "status",
+          "superseded",
+          "created_at"
+        ],
+        "title": "RecoveryPacketVersionSummary",
         "type": "object"
       },
       "RecoveryPreviewRequest": {
@@ -4354,6 +4779,90 @@
         ]
       }
     },
+    "/recovery-candidates/{candidate_id}/packet": {
+      "get": {
+        "operationId": "getRecoveryPacket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryPacketDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recovery Packet",
+        "tags": [
+          "recovery-candidates"
+        ]
+      },
+      "post": {
+        "operationId": "generateRecoveryPacket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratePacketResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assemble a recovery packet (a new immutable version each time)",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
     "/recovery-candidates/{candidate_id}/recalculate": {
       "post": {
         "operationId": "recalculateRecoveryCandidate",
@@ -4447,6 +4956,122 @@
         "summary": "Human decision: confirm | reject | request_info",
         "tags": [
           "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-packets/{packet_id}/versions/{version_id}/html": {
+      "get": {
+        "operationId": "getRecoveryPacketHtml",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "packet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Packet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The rendered packet HTML (for printing / archiving)",
+        "tags": [
+          "recovery-packets"
+        ]
+      }
+    },
+    "/recovery-packets/{packet_id}/versions/{version_id}/review": {
+      "post": {
+        "operationId": "reviewRecoveryPacketVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "packet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Packet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PacketReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryPacketVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Human decision on a packet version: confirm | reject | request_info | edit",
+        "tags": [
+          "recovery-packets"
         ]
       }
     },

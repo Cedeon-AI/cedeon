@@ -190,9 +190,19 @@ missing_information / ambiguity / inconsistency / notice_obligation / next_step,
 `text`, `confidence`, `citation_id` nullable SET NULL). A must-cite finding whose
 quote is not on the cited page loses its citation and is downgraded to an ambiguity
 before it is stored (ADR-0011). ·
-`recovery_packets` (`recovery_candidate_id`, `current_version_id`) ·
-`recovery_packet_versions` (`version_no`, `content` JSONB, `calculation_id`,
-`investigation_id` nullable, `rendered_html` nullable, `status`) ·
+`recovery_packets` *(Phase 8; migration 0008)* — one per `recovery_candidate_id`
+(`UNIQUE`): (`current_version_id` → `recovery_packet_versions` (circular, added
+post-create), `human_overrides` JSONB `statement_key → {text, reason, by}`,
+`created_by`). Mutable only for those two fields. ·
+`recovery_packet_versions` — **immutable**: (`version_no`, `status`
+draft/approved/rejected/superseded, `content` JSONB — the classified
+`PacketSection[]` / `PacketStatement[]` structure, `rendered_html` — the
+self-contained HTML artifact, `calculation_id` `RESTRICT`, `investigation_id`
+nullable `SET NULL`, `generated_by`, `review_note`, `approved_by` / `approved_at`,
+`superseded_at`; `UNIQUE(recovery_packet_id, version_no)`). Regenerating writes a
+new row and supersedes the rest. Each statement is classed **FACT / CALCULATION /
+AI_INTERPRETATION / HUMAN_DECISION**; a human edit is a `reviews` row + an entry in
+`recovery_packets.human_overrides`, folded into the next generated version. ·
 `recovery_notices` (`kind`, `status`, `recipient` JSONB, `body_markdown`,
 `agent_run_id`, `approved_by` nullable, `approved_at`) — **never auto-sent in MVP**.
 

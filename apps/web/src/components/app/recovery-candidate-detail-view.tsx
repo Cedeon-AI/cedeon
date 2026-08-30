@@ -83,6 +83,14 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
           <h1 className="text-xl font-semibold tracking-tight">Recovery candidate</h1>
           <Badge tone={status.tone}>{status.label}</Badge>
           {candidate.currency_mismatch ? <Badge tone="warning">currency mismatch</Badge> : null}
+          {calc ? (
+            <Link
+              href={`/recovery-candidates/${candidateId}/packet`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Recovery packet →
+            </Link>
+          ) : null}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Gross event incurred {formatMoney(candidate.gross_event_incurred, candidate.currency)} ·{" "}

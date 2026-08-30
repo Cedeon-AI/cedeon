@@ -7,6 +7,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import HTMLResponse
 
 from app.api.dependencies.context import (
     AppSettings,
@@ -20,13 +21,22 @@ from app.api.schemas.recoveries import (
     CalcStepOut,
     CalculationAllocationOut,
     CreateRecoveryCandidateRequest,
+    GeneratePacketResponse,
     InvestigationCitationOut,
     InvestigationFindingOut,
+    PacketCitationOut,
+    PacketContentOut,
+    PacketReviewRequest,
+    PacketSectionOut,
+    PacketStatementOut,
     RecoveryCalculationOut,
     RecoveryCandidateDetail,
     RecoveryCandidateList,
     RecoveryCandidateOut,
     RecoveryInvestigationOut,
+    RecoveryPacketDetail,
+    RecoveryPacketVersionOut,
+    RecoveryPacketVersionSummary,
     RecoveryReviewOut,
     ReviewRecoveryCandidateRequest,
     ToolCallOut,
@@ -36,13 +46,17 @@ from app.db.models.recoveries import (
     RecoveryCalculation,
     RecoveryCandidate,
     RecoveryInvestigation,
+    RecoveryPacket,
+    RecoveryPacketVersion,
 )
 from app.domain.recoveries import RecoveryCandidateStatus
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
+from app.services.packet import PacketReview, RecoveryPacketService
 from app.services.recoveries import RecoveryCandidateService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
+packets_router = APIRouter(prefix="/recovery-packets", tags=["recovery-packets"])
 
 
 def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
@@ -266,4 +280,142 @@ async def get_recovery_agent_tool_calls(
     calls = await InvestigationService(session, settings).tool_calls(context, agent_run_id)
     return AgentRunToolCalls(
         agent_run_id=agent_run_id, tool_calls=[_tool_call_out(c) for c in calls]
+    )
+
+
+# --- recovery packet ----------------------------------------------
+
+
+def _packet_content_out(content: dict) -> PacketContentOut:
+    return PacketContentOut(
+        title=content["title"],
+        subtitle=content["subtitle"],
+        generated_at=content["generated_at"],
+        engine_version=content["engine_version"],
+        sections=[
+            PacketSectionOut(
+                key=section["key"],
+                title=section["title"],
+                statements=[
+                    PacketStatementOut(
+                        key=s["key"],
+                        statement_class=s["statement_class"],
+                        text=s["text"],
+                        citation=(PacketCitationOut(**s["citation"]) if s["citation"] else None),
+                        detail=s.get("detail", {}),
+                        edited_by_human=s.get("edited_by_human", False),
+                    )
+                    for s in section["statements"]
+                ],
+            )
+            for section in content["sections"]
+        ],
+    )
+
+
+def _packet_version_out(version: RecoveryPacketVersion) -> RecoveryPacketVersionOut:
+    return RecoveryPacketVersionOut(
+        id=version.id,
+        version_no=version.version_no,
+        status=version.status,
+        calculation_id=version.calculation_id,
+        investigation_id=version.investigation_id,
+        review_note=version.review_note,
+        approved_at=version.approved_at,
+        superseded=version.superseded_at is not None,
+        created_at=version.created_at,
+        content=_packet_content_out(version.content),
+    )
+
+
+def _packet_detail(
+    packet: RecoveryPacket, current: RecoveryPacketVersion | None
+) -> RecoveryPacketDetail:
+    return RecoveryPacketDetail(
+        packet_id=packet.id,
+        recovery_candidate_id=packet.recovery_candidate_id,
+        human_overrides=dict(packet.human_overrides),
+        current_version=_packet_version_out(current) if current else None,
+        versions=[
+            RecoveryPacketVersionSummary(
+                id=v.id,
+                version_no=v.version_no,
+                status=v.status,
+                superseded=v.superseded_at is not None,
+                created_at=v.created_at,
+            )
+            for v in sorted(packet.versions, key=lambda x: x.version_no, reverse=True)
+        ],
+    )
+
+
+@router.post(
+    "/{candidate_id}/packet",
+    response_model=GeneratePacketResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Assemble a recovery packet (a new immutable version each time)",
+    operation_id="generateRecoveryPacket",
+)
+async def generate_recovery_packet(
+    candidate_id: UUID, context: AuthedContext, session: DbSession
+) -> GeneratePacketResponse:
+    version = await RecoveryPacketService(session).generate(context, candidate_id)
+    return GeneratePacketResponse(
+        packet_id=version.recovery_packet_id, version=_packet_version_out(version)
+    )
+
+
+@router.get(
+    "/{candidate_id}/packet",
+    response_model=RecoveryPacketDetail,
+    operation_id="getRecoveryPacket",
+)
+async def get_recovery_packet(
+    candidate_id: UUID, context: AuthedContext, session: DbSession
+) -> RecoveryPacketDetail:
+    service = RecoveryPacketService(session)
+    packet = await service.get_for_candidate(context, candidate_id)
+    return _packet_detail(packet, service.current_version(packet))
+
+
+@packets_router.post(
+    "/{packet_id}/versions/{version_id}/review",
+    response_model=RecoveryPacketVersionOut,
+    summary="Human decision on a packet version: confirm | reject | request_info | edit",
+    operation_id="reviewRecoveryPacketVersion",
+)
+async def review_recovery_packet_version(
+    packet_id: UUID,
+    version_id: UUID,
+    payload: PacketReviewRequest,
+    context: AuthedContext,
+    session: DbSession,
+) -> RecoveryPacketVersionOut:
+    version = await RecoveryPacketService(session).review_version(
+        context,
+        packet_id,
+        version_id,
+        PacketReview(
+            decision=payload.decision,
+            reason=payload.reason,
+            statement_key=payload.statement_key,
+            value=payload.value,
+        ),
+    )
+    return _packet_version_out(version)
+
+
+@packets_router.get(
+    "/{packet_id}/versions/{version_id}/html",
+    response_class=HTMLResponse,
+    summary="The rendered packet HTML (for printing / archiving)",
+    operation_id="getRecoveryPacketHtml",
+)
+async def get_recovery_packet_html(
+    packet_id: UUID, version_id: UUID, context: AuthedContext, session: DbSession
+) -> HTMLResponse:
+    version = await RecoveryPacketService(session).version_html(context, version_id)
+    return HTMLResponse(
+        content=version.rendered_html or "<!doctype html><title>Empty packet</title>",
+        headers={"Cache-Control": "private, no-store"},
     )

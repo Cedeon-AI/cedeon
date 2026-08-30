@@ -24,6 +24,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0017 | Loss import is a deterministic mapping pipeline; no AI | Accepted |
 | 0018 | Recovery candidate ↔ calculation split; content hash gates recompute | Accepted |
 | 0019 | Investigator retrieval is lexical (Postgres FTS); vector arm deferred | Accepted |
+| 0020 | Recovery Packet: classified statements, immutable versions, edit = regenerate | Accepted |
 
 ---
 
@@ -376,3 +377,33 @@ search misses pure paraphrase ("catastrophe" vs "cat event") — acceptable on
 clause-headed chunks at this scale, and the grounding gate (ADR-0011) catches a
 finding that cites the wrong passage regardless. Revisit when a real treaty is large
 enough that FTS recall visibly costs the investigator a citation.
+
+## ADR-0020 — Recovery Packet: classified statements, immutable versions, edit = regenerate
+
+**Context.** The packet is the artifact a reinsurance professional acts on and an
+auditor later reads. It must (a) never blur a computed number, an AI reading, a
+contract fact, and a human decision; (b) be reproducible — "what did the packet say
+when it was approved on the 3rd?"; (c) let a human correct wording without
+destroying that history or silently overriding the deterministic figure.
+
+**Decision.** `assemble_packet` is a pure function that arranges already-produced
+material into `PacketStatement`s, each carrying one of four classes — **FACT**
+(validated term / record), **CALCULATION** (engine output + trace, ADR-0010),
+**AI_INTERPRETATION** (an investigator finding, with its citation), **HUMAN_DECISION**
+(a review or edit). It never computes or interprets. `recovery_packet_versions` are
+**immutable**; `POST .../packet` always writes a new version and supersedes the
+prior one. A human edit does not mutate a version: it records a `reviews` row with
+before/after, stores `{text, reason, by}` on `recovery_packets.human_overrides`
+keyed by the statement, and regenerates — the new version shows the edited text
+flagged `edited_by_human` with the original preserved in `detail.original_text`, and
+a HUMAN_DECISION statement noting the edit. `rendered_html` is a deterministic
+single-file render stored alongside `content` for printing / archiving.
+
+**Consequences.** Every packet the reviewer ever saw is retrievable; an approval is
+tied to an exact immutable version. Editing the layer-recovery *text* is possible
+(and audited) but it is cosmetic — the CALCULATION class and the underlying
+`recovery_calculations` row are unchanged, so a reader can always see it was a human
+wording change, not a recomputation. Overrides accumulate on the packet, so a
+regenerate after a new investigation keeps prior human wording. Statement keys are
+stable strings; renaming one in `assemble_packet` orphans its overrides (acceptable
+— overrides are advisory text, not data).

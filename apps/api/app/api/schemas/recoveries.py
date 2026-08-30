@@ -8,7 +8,11 @@ from pydantic import Field
 
 from app.api.schemas import ApiModel
 from app.domain.ai import ApplicabilityAssessment, FindingKind, InvestigationStatus
-from app.domain.recoveries import RecoveryCandidateStatus
+from app.domain.recoveries import (
+    PacketStatementClass,
+    PacketVersionStatus,
+    RecoveryCandidateStatus,
+)
 from app.domain.reviews import ReviewDecision
 
 
@@ -153,3 +157,77 @@ class ToolCallOut(ApiModel):
 class AgentRunToolCalls(ApiModel):
     agent_run_id: UUID
     tool_calls: list[ToolCallOut]
+
+
+# --- recovery packet ------------------------------------------------
+
+
+class PacketCitationOut(ApiModel):
+    document_id: str | None
+    page_number: int | None
+    section: str | None
+    quoted_text: str | None
+
+
+class PacketStatementOut(ApiModel):
+    key: str
+    statement_class: PacketStatementClass
+    text: str
+    citation: PacketCitationOut | None
+    detail: dict[str, str]
+    edited_by_human: bool
+
+
+class PacketSectionOut(ApiModel):
+    key: str
+    title: str
+    statements: list[PacketStatementOut]
+
+
+class PacketContentOut(ApiModel):
+    title: str
+    subtitle: str
+    generated_at: str
+    engine_version: str
+    sections: list[PacketSectionOut]
+
+
+class RecoveryPacketVersionOut(ApiModel):
+    id: UUID
+    version_no: int
+    status: PacketVersionStatus
+    calculation_id: UUID
+    investigation_id: UUID | None
+    review_note: str | None
+    approved_at: dt.datetime | None
+    superseded: bool
+    created_at: dt.datetime
+    content: PacketContentOut
+
+
+class RecoveryPacketVersionSummary(ApiModel):
+    id: UUID
+    version_no: int
+    status: PacketVersionStatus
+    superseded: bool
+    created_at: dt.datetime
+
+
+class RecoveryPacketDetail(ApiModel):
+    packet_id: UUID
+    recovery_candidate_id: UUID
+    human_overrides: dict[str, dict[str, str]]
+    current_version: RecoveryPacketVersionOut | None
+    versions: list[RecoveryPacketVersionSummary]
+
+
+class GeneratePacketResponse(ApiModel):
+    packet_id: UUID
+    version: RecoveryPacketVersionOut
+
+
+class PacketReviewRequest(ApiModel):
+    decision: ReviewDecision
+    reason: str | None = Field(default=None, max_length=2000)
+    statement_key: str | None = Field(default=None, max_length=120)
+    value: str | None = Field(default=None, max_length=2000)

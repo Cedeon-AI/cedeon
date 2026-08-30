@@ -14,6 +14,8 @@ from app.db.models.recoveries import (
     RecoveryCandidate,
     RecoveryInvestigation,
     RecoveryInvestigationFinding,
+    RecoveryPacket,
+    RecoveryPacketVersion,
 )
 from app.domain.recoveries import RecoveryCandidateStatus
 
@@ -118,3 +120,48 @@ class RecoveryInvestigationRepository:
             )
         )
         return list(result.scalars().all())
+
+
+class RecoveryPacketRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, obj: object) -> None:
+        self._session.add(obj)
+
+    async def for_candidate(
+        self, organization_id: UUID, candidate_id: UUID
+    ) -> RecoveryPacket | None:
+        result = await self._session.execute(
+            select(RecoveryPacket)
+            .where(
+                RecoveryPacket.organization_id == organization_id,
+                RecoveryPacket.recovery_candidate_id == candidate_id,
+            )
+            .execution_options(populate_existing=True)
+            .options(selectinload(RecoveryPacket.versions))
+        )
+        return result.scalar_one_or_none()
+
+    async def get(self, organization_id: UUID, packet_id: UUID) -> RecoveryPacket | None:
+        result = await self._session.execute(
+            select(RecoveryPacket)
+            .where(
+                RecoveryPacket.id == packet_id,
+                RecoveryPacket.organization_id == organization_id,
+            )
+            .execution_options(populate_existing=True)
+            .options(selectinload(RecoveryPacket.versions))
+        )
+        return result.scalar_one_or_none()
+
+    async def get_version(
+        self, organization_id: UUID, version_id: UUID
+    ) -> RecoveryPacketVersion | None:
+        result = await self._session.execute(
+            select(RecoveryPacketVersion).where(
+                RecoveryPacketVersion.id == version_id,
+                RecoveryPacketVersion.organization_id == organization_id,
+            )
+        )
+        return result.scalar_one_or_none()

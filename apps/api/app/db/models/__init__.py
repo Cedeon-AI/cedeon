@@ -24,6 +24,8 @@ from app.db.models.recoveries import (
     RecoveryCandidate,
     RecoveryInvestigation,
     RecoveryInvestigationFinding,
+    RecoveryPacket,
+    RecoveryPacketVersion,
 )
 from app.db.models.reinsurance import (
     Cedent,
@@ -57,6 +59,8 @@ __all__ = [
     "RecoveryCandidate",
     "RecoveryInvestigation",
     "RecoveryInvestigationFinding",
+    "RecoveryPacket",
+    "RecoveryPacketVersion",
     "ReinsuranceProgram",
     "Reinsurer",
     "Review",
