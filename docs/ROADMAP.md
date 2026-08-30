@@ -42,6 +42,13 @@ real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and C
 correctly identifies and explains a potential recovery using exact treaty citations
 and deterministic calculations.
 
+**Post-MVP UX direction.** [docs/UX_STUDY.md](UX_STUDY.md) studies the in-app workflow
+from the ceded-reinsurance analyst's chair and proposes a re-framed IA (Home worklist ·
+Reinsurance programme · Recoveries · Audit log), two guided wizards, and a single-page
+recovery workspace — **no domain-model change**. Proposed order: **A** reframe (UI only,
+recommended first) · **B** recovery workspace · **C** collection tracking (new phase) ·
+**D** multi-layer programmes. Not yet scheduled — pending a real-user check of **A**.
+
 ---
 
 ## The first vertical slice

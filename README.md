@@ -28,6 +28,8 @@ product is **Cedeon Recovery Intelligence**:
 | [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased plan, current status, the first vertical slice, golden E2E test |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records |
+| [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, proposed IA, phasing |
+| [packages/fixtures/](packages/fixtures/) | Synthetic treaty PDFs + claim CSVs for an end-to-end walkthrough |
 
 ## Status
 
@@ -72,7 +74,8 @@ apps/
   api/        FastAPI backend — domain, services, AI, workers
   web/        Next.js frontend — app + marketing
 packages/
-  fixtures/   Synthetic treaty + loss + golden-recovery fixtures (shared by tests)
+  fixtures/   Synthetic treaty PDFs + claim CSVs + generator — the end-to-end demo data
+  openapi/    The generated OpenAPI document (the frontend contract)
 infra/        docker-compose, Dockerfiles, deployment config
 docs/         Architecture & product documentation
 scripts/      Dev + CI helper scripts
