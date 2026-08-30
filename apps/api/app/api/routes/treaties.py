@@ -7,6 +7,12 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from app.api.dependencies.context import AuthedContext, DbSession, TreatyServiceDep
+from app.api.schemas.recoveries import (
+    AllocationOut,
+    CalcStepOut,
+    RecoveryPreviewRequest,
+    RecoveryPreviewResponse,
+)
 from app.api.schemas.reinsurance import (
     LayerOut,
     ParticipationOut,
@@ -27,6 +33,7 @@ from app.api.schemas.validation import (
 )
 from app.db.models.extraction import TreatyTermCandidate
 from app.db.models.reinsurance import Treaty, TreatyVersion
+from app.services.recoveries import RecoveryPreviewService
 from app.services.validation import CandidateReview, ValidationService
 
 router = APIRouter(prefix="/treaties", tags=["treaties"])
@@ -226,3 +233,43 @@ async def validate_treaty_version(
 ) -> TreatyVersionOut:
     version = await ValidationService(session).validate_version(context, version_id)
     return _version_out(version)
+
+
+@router.post(
+    "/{treaty_id}/recovery-preview",
+    response_model=RecoveryPreviewResponse,
+    summary="Deterministic 'what would this treaty recover' — read-only, not persisted",
+    operation_id="previewRecovery",
+)
+async def preview_recovery(
+    treaty_id: UUID,
+    payload: RecoveryPreviewRequest,
+    context: AuthedContext,
+    session: DbSession,
+) -> RecoveryPreviewResponse:
+    calc = await RecoveryPreviewService(session).preview(
+        context, treaty_id, gross_loss_amount=payload.gross_loss
+    )
+    return RecoveryPreviewResponse(
+        engine_version=calc.engine_version,
+        currency=calc.xol.currency,
+        gross_loss=calc.xol.gross_loss.amount,
+        attachment=calc.xol.attachment.amount,
+        limit=calc.xol.limit.amount,
+        amount_above_attachment=calc.xol.amount_above_attachment.amount,
+        layer_recovery=calc.layer_recovery.amount,
+        cedent_retention=calc.cedent_retention.amount,
+        allocations=[
+            AllocationOut(
+                reinsurer_id=a.key,
+                reinsurer_name=a.label,
+                share=a.share,
+                amount=a.amount.amount,
+            )
+            for a in calc.allocations
+        ],
+        trace=[
+            CalcStepOut(label=s.label, expression=s.expression, result=s.result)
+            for s in calc.xol.trace
+        ],
+    )

@@ -155,3 +155,22 @@ layers = [
     "app.repositories",
     "app.domain",
 ]
+
+[[tool.importlinter.contracts]]
+name = "Calculation engine imports only Money (ADR-0010)"
+type = "forbidden"
+source_modules = ["app.domain.recoveries.calculations"]
+forbidden_modules = [
+    "app.ai",
+    "app.db",
+    "app.api",
+    "app.services",
+    "app.repositories",
+    "app.jobs",
+    "app.domain.treaties",
+    "app.domain.documents",
+    "app.domain.ai",
+    "pydantic",
+    "pydantic_ai",
+    "anthropic",
+]

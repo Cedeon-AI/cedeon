@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { RecoveryPreview } from "@/components/app/recovery-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,10 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {version?.status === "validated" || version?.status === "active" ? (
+        <RecoveryPreview treatyId={treatyId} />
+      ) : null}
 
       <Card>
         <CardHeader>

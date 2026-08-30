@@ -34,6 +34,37 @@
         "title": "AddMemberRequest",
         "type": "object"
       },
+      "AllocationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "reinsurer_id": {
+            "title": "Reinsurer Id",
+            "type": "string"
+          },
+          "reinsurer_name": {
+            "title": "Reinsurer Name",
+            "type": "string"
+          },
+          "share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reinsurer_id",
+          "reinsurer_name",
+          "share",
+          "amount"
+        ],
+        "title": "AllocationOut",
+        "type": "object"
+      },
       "Body_uploadDocument": {
         "properties": {
           "file": {
@@ -50,6 +81,30 @@
           "file"
         ],
         "title": "Body_uploadDocument",
+        "type": "object"
+      },
+      "CalcStepOut": {
+        "additionalProperties": false,
+        "properties": {
+          "expression": {
+            "title": "Expression",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "expression",
+          "result"
+        ],
+        "title": "CalcStepOut",
         "type": "object"
       },
       "CedentCreate": {
@@ -848,6 +903,94 @@
           "treaty_count"
         ],
         "title": "ProgramOut",
+        "type": "object"
+      },
+      "RecoveryPreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "gross_loss": {
+            "description": "gross event incurred",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Gross Loss",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gross_loss"
+        ],
+        "title": "RecoveryPreviewRequest",
+        "type": "object"
+      },
+      "RecoveryPreviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationOut"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "amount_above_attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Above Attachment",
+            "type": "string"
+          },
+          "attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Attachment",
+            "type": "string"
+          },
+          "cedent_retention": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cedent Retention",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "gross_loss": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Loss",
+            "type": "string"
+          },
+          "layer_recovery": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Layer Recovery",
+            "type": "string"
+          },
+          "limit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Limit",
+            "type": "string"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/CalcStepOut"
+            },
+            "title": "Trace",
+            "type": "array"
+          }
+        },
+        "required": [
+          "engine_version",
+          "currency",
+          "gross_loss",
+          "attachment",
+          "limit",
+          "amount_above_attachment",
+          "layer_recovery",
+          "cedent_retention",
+          "allocations",
+          "trace"
+        ],
+        "title": "RecoveryPreviewResponse",
         "type": "object"
       },
       "RegisterRequest": {
@@ -2389,6 +2532,59 @@
           }
         },
         "summary": "Rerun Extraction",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/recovery-preview": {
+      "post": {
+        "operationId": "previewRecovery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deterministic 'what would this treaty recover' \u2014 read-only, not persisted",
         "tags": [
           "treaties"
         ]

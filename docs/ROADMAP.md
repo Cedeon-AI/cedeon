@@ -13,8 +13,8 @@ deterministic recovery working," choose the latter.
 | 1 | Foundation (monorepo, API, web, DB, auth, CI) — **no AI** | ✅ **Complete** (2026-08-30) |
 | 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ✅ **Complete** (2026-08-30) |
 | 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live model call code-complete, pending workspace-scoped key to verify |
-| 4 | Executable XOL model + deterministic calculation engine | ⏭️ **Next** |
-| 5 | Loss import (CSV → mapping → validation → underlying losses) | ⬜ |
+| 4 | Executable XOL model + deterministic calculation engine | ✅ **Complete** (2026-08-30) |
+| 5 | Loss import (CSV → mapping → validation → underlying losses) | ⏭️ **Next** |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⬜ |
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ⬜ |
 | 8 | Recovery Packet + human review / approval flow | ⬜ |
@@ -215,9 +215,19 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   **deferred to Phase 7** — treaties are small enough to pass all chunks to
   extraction, and targeted retrieval is what the Recovery Investigator needs. See
   ADR-0016.
-- **P4:** `domain/recoveries/calculations/` — pure `calculate_xol_recovery` +
-  `allocate_recovery`, `ENGINE_VERSION`, golden table + Hypothesis properties.
-  `treaty_layers` / `treaty_participations` from validated terms.
+- **P4:** ✅ **Complete (2026-08-30).** `app/domain/recoveries/calculations/xol.py`
+  — pure `calculate_xol_recovery` (`max(gross − attachment, 0)` then `min(·, limit)`,
+  currency-checked, negatives/zero-limit rejected, step `trace`) + `allocate_recovery`
+  (each participant `layer_recovery × share`, penny-exact via the `Money.allocate`
+  largest-remainder split, cedent retention on partial placement) + `calculate_recovery`.
+  `ENGINE_VERSION = "1.0.0"`. **28 tests**: the golden `$20M xs $50M` table
+  (30/50/50.01/55/58.7/70/70.01/100 M), boundary + invalid-input cases, the
+  `8.7M → 4.35/2.61/1.74` allocation, and Hypothesis properties (recovery ∈
+  `[0, limit]`, monotonic in gross loss, allocations sum exactly). A 4th import-linter
+  contract forbids the engine from importing anything but `Money` (ADR-0010).
+  Read-only `POST /treaties/{id}/recovery-preview` runs the engine against a
+  *validated* treaty (no persistence — Phase 6 owns `RecoveryCandidate`); shown as a
+  "what-if" card on Treaty Detail with the calculation trace visible.
 - **P5:** `loss_imports` → `loss_import_rows` (raw JSONB) → column mapping →
   validation report → `underlying_losses`. Keep raw file + mapping + rows forever.
 - **P6:** `RecoveryCandidate` from `(treaty_version, layer, loss_event)`;

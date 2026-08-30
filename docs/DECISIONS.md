@@ -195,6 +195,13 @@ creates a new immutable row. Mandatory golden-table + Hypothesis property tests.
 **Consequences.** Any recovery figure is reproducible and explainable. "Why did the
 number change?" is always answerable from stored rows.
 
+**Status (2026-08-30).** Built in Phase 4: `app/domain/recoveries/calculations/xol.py`
+(`ENGINE_VERSION = "1.0.0"`), 28 tests (golden table + boundaries + Hypothesis
+properties), and a 4th import-linter contract — the engine may import **only**
+`app.domain.money`. Persistence of `recovery_calculations` rows (engine version,
+inputs, `trace`, `input_hash`) lands with `RecoveryCandidate` in Phase 6; the Phase 4
+`/recovery-preview` endpoint runs the engine read-only against a validated treaty.
+
 ## ADR-0011 — Provenance-first extraction; human validation gate
 
 **Context.** An LLM must never be the source of truth for a material term.
