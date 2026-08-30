@@ -18,6 +18,8 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "python-multipart>=0.0.12",
     "email-validator>=2.2",
+    "pymupdf>=1.24",
+    "aioboto3>=13.0",
     "opentelemetry-api>=1.29",
     "opentelemetry-sdk>=1.29",
 ]
@@ -27,6 +29,10 @@ otel = [
     "opentelemetry-instrumentation-fastapi>=0.50b0",
     "opentelemetry-instrumentation-asyncpg>=0.50b0",
     "opentelemetry-exporter-otlp-proto-http>=1.29",
+]
+# Heavy VLM parser — installed only in the worker image (Phase 2 follow-up), never in CI.
+docling = [
+    "docling>=2.0",
 ]
 
 [dependency-groups]
@@ -88,7 +94,15 @@ disallow_untyped_calls = true
 warn_return_any = true
 
 [[tool.mypy.overrides]]
-module = ["procrastinate.*", "uuid_utils.*"]
+module = [
+    "procrastinate.*",
+    "uuid_utils.*",
+    "aioboto3.*",
+    "botocore.*",
+    "docling.*",
+    "opentelemetry.exporter.*",
+    "opentelemetry.instrumentation.*",
+]
 ignore_missing_imports = true
 
 # --- Pytest ---
@@ -101,6 +115,9 @@ addopts = "-ra --strict-markers"
 markers = [
     "db: test requires a PostgreSQL container",
     "e2e: end-to-end vertical-slice test",
+]
+filterwarnings = [
+    "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",
 ]
 
 # --- import-linter: keep the domain pure ---

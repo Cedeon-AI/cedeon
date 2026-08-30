@@ -78,10 +78,30 @@ async def db(_engine: None) -> AsyncIterator[None]:
 
 
 @pytest.fixture
-def app(db: None):
+def object_store(tmp_path: Path):
+    from app.storage.filesystem import FilesystemObjectStore
+
+    return FilesystemObjectStore(tmp_path / "objectstore")
+
+
+@pytest.fixture
+def parse_calls() -> list[tuple[object, object]]:
+    return []
+
+
+@pytest.fixture
+def app(db: None, object_store, parse_calls):
+    from app.api.dependencies.context import get_object_store, get_parse_enqueuer
     from app.main import create_app
 
-    return create_app()
+    application = create_app()
+    application.dependency_overrides[get_object_store] = lambda: object_store
+
+    async def _record(organization_id: object, document_id: object) -> None:
+        parse_calls.append((organization_id, document_id))
+
+    application.dependency_overrides[get_parse_enqueuer] = lambda: _record
+    return application
 
 
 @pytest_asyncio.fixture

@@ -143,27 +143,28 @@ fixtures, everything else supporting.
 │   │   │   │   ├── money.py            # Money value object + exact allocation
 │   │   │   │   ├── organizations/      # Role enum + authz rank
 │   │   │   │   ├── audit/              # ActorType, AuditRecord
-│   │   │   │   ├── documents/          # (Phase 2)
+│   │   │   │   ├── documents/          # parsed-doc types · heading-aware chunk_document()
 │   │   │   │   ├── treaties/           # (Phase 3)
 │   │   │   │   ├── losses/             # (Phase 5)
 │   │   │   │   ├── recoveries/
 │   │   │   │   │   └── calculations/   # XOL engine — pure functions, ENGINE_VERSION (Phase 4)
 │   │   │   │   └── reviews/            # (Phase 8)
-│   │   │   ├── services/               # orchestration: use-cases wiring domain + repos + jobs
+│   │   │   ├── services/               # orchestration; e.g. document_pipeline (parse→chunk)
 │   │   │   ├── repositories/           # SQLAlchemy queries; every query org-scoped
 │   │   │   ├── ai/                     # (Phase 3+) agents · extraction · tools · prompts · evals
-│   │   │   ├── parsing/                # (Phase 2) DocumentParser: PyMuPDF → Docling → OCR
-│   │   │   ├── storage/                # (Phase 2) ObjectStore: S3 / MinIO
-│   │   │   ├── jobs/                   # Procrastinate app + task definitions (Phase 1: ping)
+│   │   │   ├── parsing/                # DocumentParser: PyMuPDFParser (+ Docling stub, OCR later)
+│   │   │   ├── storage/                # ObjectStore: FilesystemObjectStore (dev) · S3ObjectStore
+│   │   │   ├── jobs/                   # Procrastinate app + tasks (ping · parse_document)
 │   │   │   ├── scripts/                # export_openapi, seed_demo
 │   │   │   ├── integrations/           # (later) future external adapters, ACORD
 │   │   │   └── db/
 │   │   │       ├── models/             # SQLAlchemy ORM models
 │   │   │       ├── base.py · session.py
-│   │   │       └── migrations/         # Alembic (0001_identity_and_audit)
+│   │   │       └── migrations/         # Alembic (0001 identity+audit · 0002 documents)
 │   │   ├── tests/
-│   │   │   ├── domain/                 # money + (Phase 4) calc golden + property tests
-│   │   │   ├── api/                    # auth, tenancy, roles, audit append-only, contract
+│   │   │   ├── domain/                 # money + chunking (+ Phase 4 calc golden/property)
+│   │   │   ├── parsing/ · storage/     # PyMuPDF parser · filesystem object store
+│   │   │   ├── api/                    # auth, tenancy, roles, audit, contract, documents
 │   │   │   └── e2e/                    # (Phase 6) the vertical-slice golden test
 │   │   ├── pyproject.toml · uv.lock
 │   │   └── alembic.ini

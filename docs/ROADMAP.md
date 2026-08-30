@@ -11,8 +11,8 @@ deterministic recovery working," choose the latter.
 | --- | --- | --- |
 | 0 | Architecture review + docs | ✅ **Complete** — verdict *Partially agree* (Temporal deferred) |
 | 1 | Foundation (monorepo, API, web, DB, auth, CI) — **no AI** | ✅ **Complete** (2026-08-30) |
-| 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ⏭️ **Next** |
-| 3 | Treaty extraction + human validation workspace | ⬜ |
+| 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ✅ **Complete** (2026-08-30) |
+| 3 | Treaty extraction + human validation workspace | ⏭️ **Next** |
 | 4 | Executable XOL model + deterministic calculation engine | ⬜ |
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ⬜ |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⬜ |
@@ -183,10 +183,19 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
 
 ## Later phases (adjusted for the Temporal deferral)
 
-- **P2:** `DocumentParser` interface + `PyMuPDFParser` first (prove the loop), then
-  `DoclingParser` in the worker image (pre-baked models). Procrastinate jobs:
-  `parse_document` → `chunk_document`. `documents` immutable; `document_parses`
-  state machine. Document viewer (page images/text). No OCR auto-trigger.
+- **P2:** ✅ **Complete (2026-08-30).** `ObjectStore` interface (`FilesystemObjectStore`
+  dev/test, `S3ObjectStore` MinIO/S3). `DocumentParser` interface + `PyMuPDFParser`
+  (pages, blocks, bbox, font-size heading heuristic); `DoclingParser` is a documented
+  stub behind the `docling` extra + `CEDEON_DOCUMENT_PARSER` switch. Pure
+  `chunk_document` (heading-aware, section paths, exact char offsets). Migration 0002:
+  `documents` (immutable, sha256-deduped) · `document_parses` (state machine,
+  supersede-on-reparse) · `document_pages` · `document_chunks`. Procrastinate
+  `parse_document` job (parse + chunk in one transaction; embedding split comes in
+  P3). `POST /documents` (multipart) + list/detail/pages/chunks/content endpoints.
+  Web: Documents library (upload, status polling) + two-pane viewer (page text |
+  chunks). 26 new tests (chunker, PyMuPDF, filesystem store, document API + tenant
+  isolation + audit). **Follow-up:** implement + verify `DoclingParser` and add its
+  ML deps to a dedicated worker image (it cannot run in CI).
 - **P3:** Extraction as a structured-output call (PydanticAI `output_type`). Hybrid
   retrieval (FTS + `halfvec`/HNSW + RRF). `treaty_term_candidates` + provenance.
   Two-panel validation workspace. `treaty_versions` freeze on `VALIDATED`. First

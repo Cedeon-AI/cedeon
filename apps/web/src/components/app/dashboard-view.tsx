@@ -1,8 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrentUser, listMembers } from "@/lib/api";
+import { getCurrentUser, listDocuments, listMembers } from "@/lib/api";
 
 const PIPELINE_METRICS = [
   { label: "Treaties", phase: "Phase 3" },
@@ -25,6 +26,14 @@ export function DashboardView() {
     queryFn: async () => {
       const { data } = await listMembers({ throwOnError: true });
       return data;
+    },
+  });
+
+  const documents = useQuery({
+    queryKey: ["documents"],
+    queryFn: async () => {
+      const { data } = await listDocuments({ throwOnError: true });
+      return data.documents;
     },
   });
 
@@ -66,16 +75,22 @@ export function DashboardView() {
             <p className="text-lg font-semibold capitalize">{me.data?.role ?? "—"}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">Session expires</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-medium text-muted-foreground">
-              {me.data ? new Date(me.data.session.expires_at).toLocaleString() : "—"}
-            </p>
-          </CardContent>
-        </Card>
+        <Link
+          href="/documents"
+          className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Card className="h-full transition hover:border-primary/40">
+            <CardHeader>
+              <CardTitle className="text-muted-foreground">Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg font-semibold">
+                {documents.data ? documents.data.length : "—"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Upload &amp; parse →</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div>

@@ -37,13 +37,19 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     cookie_domain: str | None = None
 
-    # Object storage (unused until Phase 2, wired for completeness)
+    # Object storage
+    object_store: Literal["filesystem", "s3"] = "filesystem"
+    filesystem_store_root: str = ".data/objectstore"
     s3_endpoint_url: str | None = None
     s3_region: str = "us-east-1"
     s3_bucket: str = "cedeon-local"
     s3_access_key_id: str | None = None
     s3_secret_access_key: str | None = None
     s3_force_path_style: bool = True
+
+    # Document pipeline
+    document_parser: Literal["pymupdf", "docling"] = "pymupdf"
+    document_max_upload_mb: int = 50
 
     # Telemetry
     otel_enabled: bool = False

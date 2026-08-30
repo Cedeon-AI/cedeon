@@ -99,10 +99,19 @@ owner/admin/member/viewer) · `sessions` (server-side, `token_hash`, `expires_at
 `treaty_terms` (`key`, `value` JSONB, `currency` nullable, `status`,
 `derived_from_candidate_id`, `review_id`; `UNIQUE(treaty_version_id, key)`).
 
-**Documents & retrieval**
-`documents` · `document_parses` · `document_pages` · `document_chunks`
-(`ordinal`, `page_from`, `page_to`, `section_path`, `heading`, `text`,
-`embedding halfvec(N)` nullable, `embedding_model` nullable) · `citations`.
+**Documents & retrieval** *(built in Phase 2; migration 0002)*
+`documents` (immutable: `kind`, `original_filename`, `content_type`, `byte_size`,
+`sha256`, `storage_key`, `status`, `uploaded_by`; `UNIQUE(organization_id, sha256)`
+dedupes re-uploads) ·
+`document_parses` (one per parse run: `parser_name`, `parser_version`, `status`,
+`page_count`, `ocr_used`, `error`, `started_at`/`finished_at`, `superseded_at`) ·
+`document_pages` (`parse_id`, `page_number`, `width`, `height`, `text`;
+`UNIQUE(parse_id, page_number)`; invariant `text == "\n".join(block texts)`) ·
+`document_chunks` (`parse_id`, `ordinal`, `page_from`, `page_to`, `section_path`,
+`heading`, `text`, `char_start`/`char_end` into the document's full text;
+`UNIQUE(parse_id, ordinal)`) · `citations`.
+Embeddings (`embedding halfvec(N)`, `embedding_model`) and the `vector` extension
+are **deferred to Phase 3** so the dimension matches the chosen model.
 
 **Losses**
 `loss_imports` (`storage_key`, `sha256`, `column_mapping` JSONB, `status`, `report`

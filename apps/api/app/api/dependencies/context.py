@@ -13,7 +13,9 @@ from app.core.config import Settings, get_settings
 from app.db.session import get_sessionmaker
 from app.domain.organizations import Role
 from app.services.auth import AuthenticatedContext, AuthService
+from app.services.documents import DocumentService, ParseEnqueuer
 from app.services.errors import AuthenticationError, PermissionDeniedError
+from app.storage import ObjectStore, build_object_store
 
 
 async def get_db_session() -> AsyncIterator[AsyncSession]:
@@ -53,6 +55,37 @@ async def current_context(
 
 
 AuthedContext = Annotated[AuthenticatedContext, Depends(current_context)]
+
+
+def get_object_store(settings: AppSettings) -> ObjectStore:
+    return build_object_store(settings)
+
+
+ObjectStoreDep = Annotated[ObjectStore, Depends(get_object_store)]
+
+
+async def get_parse_enqueuer() -> ParseEnqueuer:
+    # Imported lazily so the Procrastinate connector is not constructed at import time.
+    from app.jobs.tasks import enqueue_parse_document
+
+    return enqueue_parse_document
+
+
+def get_document_service(
+    session: DbSession,
+    settings: AppSettings,
+    store: ObjectStoreDep,
+    enqueue_parse: Annotated[ParseEnqueuer, Depends(get_parse_enqueuer)],
+) -> DocumentService:
+    return DocumentService(
+        session,
+        store,
+        enqueue_parse=enqueue_parse,
+        max_upload_bytes=settings.document_max_upload_mb * 1024 * 1024,
+    )
+
+
+DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 
 
 def require_role(

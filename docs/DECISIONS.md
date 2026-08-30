@@ -19,6 +19,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0012 | Immutable `TreatyVersion` + immutable `RecoveryCalculation`; append-only audit | Accepted |
 | 0013 | REST + generated TypeScript client; no GraphQL | Accepted |
 | 0014 | No Kubernetes / Kafka / microservices for MVP | Accepted |
+| 0015 | Parse and chunk in one job; embeddings split out in Phase 3 | Accepted |
 
 ---
 
@@ -96,6 +97,12 @@ Cloud parsers (Textract / Azure DI / Google Doc AI) are future adapters.
 
 **Consequences.** API image stays lean. Worker image is large — acceptable, isolated,
 deployed independently. Interface stays minimal (2–3 methods) until proven otherwise.
+
+**Status (2026-08-30).** Interface + `PyMuPDFParser` shipped and running in Phase 2.
+`DoclingParser` is a documented stub (raises, with the implementation contract in its
+docstring) behind the `docling` optional extra and `CEDEON_DOCUMENT_PARSER=docling`.
+Implementing and verifying it — plus a dedicated worker image with pre-baked models —
+is a tracked follow-up; it cannot run in CI.
 
 ## ADR-0006 — Retrieval on PostgreSQL
 
@@ -237,3 +244,23 @@ speculative caching layer. If implementation drifts toward these, stop.
 
 **Consequences.** A small team can operate the whole system. Re-evaluate individual
 items against real, measured constraints — never speculatively.
+
+## ADR-0015 — Parse and chunk in one job; embeddings split out later
+
+**Context.** The Phase 2 roadmap sketched `parse_document → chunk_document` as two
+jobs. Chunking needs the parser's block structure (headings), which is not persisted
+— only page text is. Splitting the jobs would force either a `document_blocks` table
+or re-deriving structure.
+
+**Decision.** The `parse_document` Procrastinate job does parse **and** chunk in one
+transaction, holding the `ParsedDocument` (with blocks) in memory. Chunks store
+`char_start`/`char_end` offsets into the document's canonical full text
+(`"\n\n".join(page.text)`), so `full_text[start:end] == chunk.text` exactly.
+
+Embedding generation **will** be its own job in Phase 3 (it is slow, rate-limited,
+and re-runnable independent of parsing) — `parse_document` will enqueue it. The
+`vector` extension and the `embedding` column land then, sized to the chosen model.
+
+**Consequences.** Fewer moving parts now; the expensive/independent step is isolated
+when it actually exists. A future structure-only re-chunk (e.g. tuning chunk sizes
+without re-OCR) would need block persistence — deferred until needed.

@@ -61,7 +61,9 @@ services:
       CEDEON_DATABASE_URL: postgresql+asyncpg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_DATABASE_URL_SYNC: postgresql+psycopg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_SESSION_SECRET: local-dev-session-secret-change-me-0000000000000000
+      CEDEON_OBJECT_STORE: s3
       CEDEON_S3_ENDPOINT_URL: http://minio:9000
+      CEDEON_S3_BUCKET: cedeon-local
       CEDEON_S3_ACCESS_KEY_ID: cedeon
       CEDEON_S3_SECRET_ACCESS_KEY: cedeon-secret
       CEDEON_LOG_JSON: "true"
@@ -82,6 +84,12 @@ services:
       CEDEON_DATABASE_URL: postgresql+asyncpg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_DATABASE_URL_SYNC: postgresql+psycopg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_SESSION_SECRET: local-dev-session-secret-change-me-0000000000000000
+      CEDEON_OBJECT_STORE: s3
+      CEDEON_S3_ENDPOINT_URL: http://minio:9000
+      CEDEON_S3_BUCKET: cedeon-local
+      CEDEON_S3_ACCESS_KEY_ID: cedeon
+      CEDEON_S3_SECRET_ACCESS_KEY: cedeon-secret
+      CEDEON_DOCUMENT_PARSER: pymupdf
       CEDEON_LOG_JSON: "true"
     command: >
       sh -c "

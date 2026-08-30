@@ -24,12 +24,15 @@ log = get_logger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     init_engine()
+    from app.jobs.app import procrastinate_app
+
     log.info("api.startup", env=settings.env, version=__version__)
-    try:
-        yield
-    finally:
-        await dispose_engine()
-        log.info("api.shutdown")
+    async with procrastinate_app.open_async():
+        try:
+            yield
+        finally:
+            await dispose_engine()
+            log.info("api.shutdown")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

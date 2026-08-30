@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from logging.config import fileConfig
+from typing import Any
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -19,6 +20,16 @@ target_metadata = Base.metadata
 settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.database_url_sync)
 
+# Procrastinate manages its own schema (`procrastinate schema --apply`); keep it
+# out of Alembic autogenerate.
+_IGNORED_TABLE_PREFIXES = ("procrastinate_",)
+
+
+def _include_name(name: str | None, type_: str, _parent_names: Any) -> bool:
+    if type_ == "table" and name is not None:
+        return not name.startswith(_IGNORED_TABLE_PREFIXES)
+    return True
+
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -28,6 +39,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_name=_include_name,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -45,6 +57,7 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            include_name=_include_name,
         )
         with context.begin_transaction():
             context.run_migrations()
