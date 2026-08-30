@@ -83,6 +83,20 @@
         "title": "Body_uploadDocument",
         "type": "object"
       },
+      "Body_uploadLossImport": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadLossImport",
+        "type": "object"
+      },
       "CalcStepOut": {
         "additionalProperties": false,
         "properties": {
@@ -105,6 +119,57 @@
           "result"
         ],
         "title": "CalcStepOut",
+        "type": "object"
+      },
+      "CanonicalFieldList": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalFieldOut"
+            },
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fields"
+        ],
+        "title": "CanonicalFieldList",
+        "type": "object"
+      },
+      "CanonicalFieldOut": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "kind",
+          "required",
+          "hint"
+        ],
+        "title": "CanonicalFieldOut",
         "type": "object"
       },
       "CedentCreate": {
@@ -270,6 +335,87 @@
         "title": "CitationOut",
         "type": "object"
       },
+      "ColumnMappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Mapping",
+            "type": "object"
+          }
+        },
+        "required": [
+          "mapping"
+        ],
+        "title": "ColumnMappingIn",
+        "type": "object"
+      },
+      "CommitImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "event_name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Name"
+          },
+          "loss_event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss Event Id"
+          }
+        },
+        "title": "CommitImportIn",
+        "type": "object"
+      },
+      "CommitResultOut": {
+        "additionalProperties": false,
+        "properties": {
+          "committed": {
+            "title": "Committed",
+            "type": "integer"
+          },
+          "events_created": {
+            "title": "Events Created",
+            "type": "integer"
+          },
+          "loss_event_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Loss Event Ids",
+            "type": "array"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "committed",
+          "skipped",
+          "events_created",
+          "loss_event_ids"
+        ],
+        "title": "CommitResultOut",
+        "type": "object"
+      },
       "DocumentDetail": {
         "additionalProperties": false,
         "properties": {
@@ -410,6 +556,121 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ImportReportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "committable": {
+            "title": "Committable",
+            "type": "integer"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "distinct_events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Distinct Events",
+            "type": "array"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "gross_incurred_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Gross Incurred By Currency",
+            "type": "object"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/RowIssueOut"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "integer"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "warnings": {
+            "title": "Warnings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_rows",
+          "ok",
+          "warnings",
+          "errors",
+          "committable",
+          "currencies",
+          "distinct_events",
+          "gross_incurred_by_currency",
+          "issues"
+        ],
+        "title": "ImportReportOut",
+        "type": "object"
+      },
+      "ImportRowOut": {
+        "additionalProperties": false,
+        "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/RowIssueOut"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "parsed": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed"
+          },
+          "raw": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Raw",
+            "type": "object"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LossRowStatus"
+          }
+        },
+        "required": [
+          "row_number",
+          "status",
+          "raw",
+          "parsed",
+          "issues"
+        ],
+        "title": "ImportRowOut",
+        "type": "object"
+      },
       "LayerOut": {
         "additionalProperties": false,
         "properties": {
@@ -498,6 +759,355 @@
         ],
         "title": "LoginRequest",
         "type": "object"
+      },
+      "LossEventCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "catastrophe_code": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catastrophe Code"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "LossEventCreate",
+        "type": "object"
+      },
+      "LossEventCurrencyTotal": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_count": {
+            "title": "Claim Count",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "gross_incurred": {
+            "title": "Gross Incurred",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "claim_count",
+          "gross_incurred"
+        ],
+        "title": "LossEventCurrencyTotal",
+        "type": "object"
+      },
+      "LossEventDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/LossEventOut"
+          },
+          "losses": {
+            "items": {
+              "$ref": "#/components/schemas/UnderlyingLossOut"
+            },
+            "title": "Losses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "event",
+          "losses"
+        ],
+        "title": "LossEventDetail",
+        "type": "object"
+      },
+      "LossEventList": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/LossEventOut"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "LossEventList",
+        "type": "object"
+      },
+      "LossEventOut": {
+        "additionalProperties": false,
+        "properties": {
+          "catastrophe_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catastrophe Code"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "date_of_loss_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Loss From"
+          },
+          "date_of_loss_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Loss To"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "event_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Identifier"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/LossEventCurrencyTotal"
+            },
+            "title": "Totals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "event_identifier",
+          "catastrophe_code",
+          "currency",
+          "date_of_loss_from",
+          "date_of_loss_to",
+          "description",
+          "created_at",
+          "totals"
+        ],
+        "title": "LossEventOut",
+        "type": "object"
+      },
+      "LossImportDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "loss_import": {
+            "$ref": "#/components/schemas/LossImportOut"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "loss_import",
+          "rows"
+        ],
+        "title": "LossImportDetail",
+        "type": "object"
+      },
+      "LossImportList": {
+        "additionalProperties": false,
+        "properties": {
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/LossImportOut"
+            },
+            "title": "Imports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "imports"
+        ],
+        "title": "LossImportList",
+        "type": "object"
+      },
+      "LossImportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "column_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Column Mapping",
+            "type": "object"
+          },
+          "committed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Committed At"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "header_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Header Columns",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportReportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LossImportStatus"
+          }
+        },
+        "required": [
+          "id",
+          "original_filename",
+          "content_type",
+          "row_count",
+          "status",
+          "header_columns",
+          "column_mapping",
+          "report",
+          "created_at",
+          "committed_at"
+        ],
+        "title": "LossImportOut",
+        "type": "object"
+      },
+      "LossImportStatus": {
+        "enum": [
+          "uploaded",
+          "mapped",
+          "validated",
+          "committed",
+          "failed"
+        ],
+        "title": "LossImportStatus",
+        "type": "string"
+      },
+      "LossRowStatus": {
+        "enum": [
+          "ok",
+          "warning",
+          "error",
+          "skipped"
+        ],
+        "title": "LossRowStatus",
+        "type": "string"
       },
       "MeResponse": {
         "additionalProperties": false,
@@ -1152,6 +1762,42 @@
         "title": "Role",
         "type": "string"
       },
+      "RowIssueOut": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "level",
+          "field",
+          "message"
+        ],
+        "title": "RowIssueOut",
+        "type": "object"
+      },
       "SessionInfo": {
         "additionalProperties": false,
         "properties": {
@@ -1663,6 +2309,136 @@
         "title": "TreatyVersionSummary",
         "type": "object"
       },
+      "UnderlyingLossOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cause_of_loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause Of Loss"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "date_of_loss": {
+            "format": "date",
+            "title": "Date Of Loss",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "gross_case_reserve": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Case Reserve"
+          },
+          "gross_incurred": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Incurred",
+            "type": "string"
+          },
+          "gross_paid": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Paid"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "loss_import_id": {
+            "format": "uuid",
+            "title": "Loss Import Id",
+            "type": "string"
+          },
+          "reported_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "id",
+          "claim_id",
+          "date_of_loss",
+          "reported_date",
+          "gross_incurred",
+          "gross_paid",
+          "gross_case_reserve",
+          "currency",
+          "status",
+          "cause_of_loss",
+          "location",
+          "description",
+          "loss_import_id"
+        ],
+        "title": "UnderlyingLossOut",
+        "type": "object"
+      },
       "UserProfile": {
         "additionalProperties": false,
         "properties": {
@@ -2162,6 +2938,375 @@
         "summary": "Liveness probe",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/loss-events": {
+      "get": {
+        "operationId": "listLossEvents",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossEventList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Loss Events",
+        "tags": [
+          "loss-events"
+        ]
+      },
+      "post": {
+        "operationId": "createLossEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LossEventCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossEventOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Loss Event",
+        "tags": [
+          "loss-events"
+        ]
+      }
+    },
+    "/loss-events/{event_id}": {
+      "get": {
+        "operationId": "getLossEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossEventDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Loss Event",
+        "tags": [
+          "loss-events"
+        ]
+      }
+    },
+    "/loss-imports": {
+      "get": {
+        "operationId": "listLossImports",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossImportList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Loss Imports",
+        "tags": [
+          "loss-imports"
+        ]
+      },
+      "post": {
+        "operationId": "uploadLossImport",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadLossImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload a loss CSV; the raw file and every row are kept",
+        "tags": [
+          "loss-imports"
+        ]
+      }
+    },
+    "/loss-imports/fields": {
+      "get": {
+        "operationId": "listLossFields",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanonicalFieldList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The canonical loss fields a CSV column can map onto",
+        "tags": [
+          "loss-imports"
+        ]
+      }
+    },
+    "/loss-imports/{import_id}": {
+      "get": {
+        "operationId": "getLossImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossImportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Loss Import",
+        "tags": [
+          "loss-imports"
+        ]
+      }
+    },
+    "/loss-imports/{import_id}/commit": {
+      "post": {
+        "operationId": "commitLossImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit valid rows to immutable underlying losses, grouped into events",
+        "tags": [
+          "loss-imports"
+        ]
+      }
+    },
+    "/loss-imports/{import_id}/content": {
+      "get": {
+        "operationId": "getLossImportContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream the original uploaded CSV (auth-checked)",
+        "tags": [
+          "loss-imports"
+        ]
+      }
+    },
+    "/loss-imports/{import_id}/mapping": {
+      "post": {
+        "operationId": "setLossImportMapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnMappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossImportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the column mapping and re-run validation",
+        "tags": [
+          "loss-imports"
         ]
       }
     },

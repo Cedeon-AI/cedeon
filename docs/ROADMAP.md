@@ -14,8 +14,8 @@ deterministic recovery working," choose the latter.
 | 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ✅ **Complete** (2026-08-30) |
 | 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live model call code-complete, pending workspace-scoped key to verify |
 | 4 | Executable XOL model + deterministic calculation engine | ✅ **Complete** (2026-08-30) |
-| 5 | Loss import (CSV → mapping → validation → underlying losses) | ⏭️ **Next** |
-| 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⬜ |
+| 5 | Loss import (CSV → mapping → validation → underlying losses) | ✅ **Complete** (2026-08-30) — **no AI** |
+| 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⏭️ **Next** |
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ⬜ |
 | 8 | Recovery Packet + human review / approval flow | ⬜ |
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ⬜ |
@@ -228,8 +228,32 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   Read-only `POST /treaties/{id}/recovery-preview` runs the engine against a
   *validated* treaty (no persistence — Phase 6 owns `RecoveryCandidate`); shown as a
   "what-if" card on Treaty Detail with the calculation trace visible.
-- **P5:** `loss_imports` → `loss_import_rows` (raw JSONB) → column mapping →
-  validation report → `underlying_losses`. Keep raw file + mapping + rows forever.
+- **P5:** ✅ **Complete (2026-08-30). No AI in this pipeline.** Migration `0005`:
+  `loss_imports` (raw file in object storage + sha256 dedupe + `header_columns` +
+  `column_mapping` + `report` JSONB), `loss_import_rows` (immutable `raw` JSONB per
+  row + `parsed` + `status` + `issues`), `loss_events`, `underlying_losses`
+  (immutable snapshot of a committed row; `NUMERIC(20,2)` money, `gross_incurred >= 0`
+  CHECK, `UNIQUE(loss_import_row_id)`, `RESTRICT` on the import/row FKs so provenance
+  can't be deleted out from under a loss). `app/domain/losses/` is pure: a
+  `CanonicalField` schema (`FIELD_SPECS`, required = claim_id / date_of_loss /
+  currency) plus `validate_rows` — deterministic parsing (6 date formats, `$`/comma
+  stripping, `HALF_EVEN` cents), duplicate-claim detection flagged on *every*
+  offending row, `gross_incurred` derived from paid + case reserve when absent,
+  a tolerance warning when incurred ≠ paid + reserve, and per-currency incurred
+  totals that exclude errored rows. Flow: `POST /loss-imports` (multipart CSV,
+  stdlib `csv`) → `POST /loss-imports/{id}/mapping` (re-runs validation, returns the
+  report) → `POST /loss-imports/{id}/commit` (valid rows → `underlying_losses`,
+  grouped into a find-or-create `LossEvent` by the `loss_event_identifier` column or
+  a supplied `loss_event_id`; event date range + currency recomputed; errored rows
+  skipped and left on the import). `GET /loss-events`, `POST /loss-events`,
+  `GET /loss-events/{id}` (claim schedule + per-currency totals). Every step writes an
+  `audit_events` row. **27 new tests** (148 total): pure-validation unit tests and an
+  API slice that uploads the synthetic 10-claim hurricane CSV, maps it, and commits
+  losses summing to exactly **USD 58,700,000.00** in one event — the gross loss the
+  Phase 4 engine turns into the `$8.7M` layer recovery. Web: `/loss-imports` (list +
+  upload), `/loss-imports/{id}` (column-mapping workspace with header-name
+  auto-guess, validation report, row preview, commit), `/loss-events` (+ manual
+  create), `/loss-events/{id}` (claim schedule). Nav items enabled.
 - **P6:** `RecoveryCandidate` from `(treaty_version, layer, loss_event)`;
   immutable `recovery_calculations` + `recovery_allocations`; currency-mismatch flag;
   queue + detail UI.

@@ -1,0 +1,138 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, Input } from "@/components/ui/field";
+import { createLossEvent, listLossEvents } from "@/lib/api";
+import { formatMoney } from "@/lib/utils";
+
+export function LossEventsView() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ name: "", catastrophe_code: "" });
+
+  const events = useQuery({
+    queryKey: ["loss-events"],
+    queryFn: async () => (await listLossEvents({ throwOnError: true })).data.events,
+  });
+
+  const add = useMutation({
+    mutationFn: async () => {
+      const { data } = await createLossEvent({
+        body: {
+          name: form.name.trim(),
+          catastrophe_code: form.catastrophe_code.trim() || null,
+        },
+        throwOnError: true,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      setForm({ name: "", catastrophe_code: "" });
+      queryClient.invalidateQueries({ queryKey: ["loss-events"] });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Loss events</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          A loss event groups underlying claims from one occurrence. Committing a loss import
+          creates or extends events; you can also create one here and commit into it.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>New loss event</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="grid gap-3 md:grid-cols-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (form.name.trim()) add.mutate();
+            }}
+          >
+            <Field label="Name" htmlFor="evtname">
+              <Input
+                id="evtname"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Hurricane Demo 2027"
+              />
+            </Field>
+            <Field label="Catastrophe code (optional)" htmlFor="evtcode">
+              <Input
+                id="evtcode"
+                value={form.catastrophe_code}
+                onChange={(e) => setForm({ ...form, catastrophe_code: e.target.value })}
+                placeholder="PCS 2027-XX"
+              />
+            </Field>
+            <div className="md:col-span-3">
+              <Button type="submit" disabled={add.isPending}>
+                {add.isPending ? "Creating…" : "Create event"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Events</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {events.data && events.data.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-border">
+                  <th className="py-2 font-medium">Event</th>
+                  <th className="py-2 font-medium">Dates</th>
+                  <th className="py-2 font-medium">Claims</th>
+                  <th className="py-2 text-right font-medium">Gross incurred</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.data.map((evt) => {
+                  const claims = evt.totals.reduce((sum, t) => sum + t.claim_count, 0);
+                  return (
+                    <tr key={evt.id} className="border-b border-border/60 last:border-0">
+                      <td className="py-2.5">
+                        <Link
+                          href={`/loss-events/${evt.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {evt.name}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 text-muted-foreground">
+                        {evt.date_of_loss_from
+                          ? `${evt.date_of_loss_from} → ${evt.date_of_loss_to}`
+                          : "—"}
+                      </td>
+                      <td className="py-2.5 text-muted-foreground">{claims}</td>
+                      <td className="py-2.5 text-right font-medium">
+                        {evt.totals.length > 0
+                          ? evt.totals
+                              .map((t) => formatMoney(t.gross_incurred, t.currency))
+                              .join(" · ")
+                          : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm text-muted-foreground">No loss events yet.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

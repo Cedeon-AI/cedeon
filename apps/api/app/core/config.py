@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     document_parser: Literal["pymupdf", "docling"] = "pymupdf"
     document_max_upload_mb: int = 50
 
+    # Loss import pipeline
+    loss_import_max_upload_mb: int = 25
+
     # AI providers — accept the bare vendor env names too (ANTHROPIC_API_KEY etc.).
     anthropic_api_key: str | None = Field(
         default=None,

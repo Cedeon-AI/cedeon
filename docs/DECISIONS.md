@@ -21,6 +21,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0014 | No Kubernetes / Kafka / microservices for MVP | Accepted |
 | 0015 | Parse and chunk in one job; embeddings split out in Phase 3 | Accepted |
 | 0016 | Defer hybrid retrieval / embeddings to Phase 7 | Accepted |
+| 0017 | Loss import is a deterministic mapping pipeline; no AI | Accepted |
 
 ---
 
@@ -295,3 +296,30 @@ has no embeddings API) out of Phase 3.
 **Consequences.** Simpler Phase 3, one fewer vendor decision now. If a customer
 brings a 200-page treaty before Phase 7, retrieval moves up — the chunk table and
 `ParsedDocument` structure already support it.
+
+## ADR-0017 — Loss import is a deterministic mapping pipeline; no AI
+
+**Context.** Customer claim schedules arrive as CSV with idiosyncratic column names,
+date formats, and money formatting. It is tempting to let an LLM "just read the
+file". But underlying losses feed the calculation engine directly — an LLM
+misreading `1,234` as `1234000` or guessing a date is exactly the class of error
+ADR-0010 forbids from touching money.
+
+**Decision.** The Phase 5 pipeline (`app/domain/losses/`, `app/services/losses.py`)
+contains **zero AI**. `POST /loss-imports` stores the raw file (object storage,
+`sha256`-deduped) and every row verbatim in `loss_import_rows.raw` (JSONB, never
+mutated). The human maps CSV columns to `CanonicalField`s (a UI convenience guesses
+from header names; the human confirms). `validate_rows` is pure and deterministic:
+a fixed list of accepted date formats, explicit money parsing (`$`/comma strip,
+`HALF_EVEN` to cents), duplicate-claim detection, and `gross_incurred` derived from
+`gross_paid + gross_case_reserve` only by exact addition. Malformed rows are
+**flagged, never dropped or "fixed"**. `commit` turns only OK/warning rows into
+immutable `underlying_losses`; errored rows stay on the import for the human to
+correct and re-upload. `loss_import_id` / `loss_import_row_id` are `RESTRICT` FKs so
+a loss can always be traced to the exact source row.
+
+**Consequences.** Onboarding a genuinely messy schedule is more manual than an
+"AI import" would feel. That is the point — the number that reaches the engine is
+one a human mapped and the code parsed, with the original a click away. If fuzzy
+column-name suggestion ever needs a model, it stays advisory and on the *mapping*
+step, never the values.

@@ -9,7 +9,8 @@ const NAV: { label: string; href: string; soon?: boolean }[] = [
   { label: "Documents", href: "/documents" },
   { label: "Programs", href: "/programs" },
   { label: "Treaty library", href: "/treaties" },
-  { label: "Loss imports", href: "/loss-imports", soon: true },
+  { label: "Loss imports", href: "/loss-imports" },
+  { label: "Loss events", href: "/loss-events" },
   { label: "Recovery candidates", href: "/recovery-candidates", soon: true },
 ];
 

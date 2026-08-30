@@ -11,6 +11,12 @@ from app.db.models.extraction import (
     TreatyTermCandidate,
 )
 from app.db.models.identity import Membership, Organization, User, UserSession
+from app.db.models.losses import (
+    LossEvent,
+    LossImport,
+    LossImportRow,
+    UnderlyingLoss,
+)
 from app.db.models.reinsurance import (
     Cedent,
     ReinsuranceProgram,
@@ -32,6 +38,9 @@ __all__ = [
     "DocumentChunk",
     "DocumentPage",
     "DocumentParse",
+    "LossEvent",
+    "LossImport",
+    "LossImportRow",
     "Membership",
     "Organization",
     "PromptVersion",
@@ -44,6 +53,7 @@ __all__ = [
     "TreatyTerm",
     "TreatyTermCandidate",
     "TreatyVersion",
+    "UnderlyingLoss",
     "User",
     "UserSession",
 ]

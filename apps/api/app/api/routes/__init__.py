@@ -6,6 +6,7 @@ from app.api.routes import (
     auth,
     documents,
     health,
+    losses,
     memberships,
     organizations,
     reinsurance,
@@ -20,5 +21,7 @@ api_router.include_router(memberships.router)
 api_router.include_router(documents.router)
 api_router.include_router(reinsurance.router)
 api_router.include_router(treaties.router)
+api_router.include_router(losses.imports_router)
+api_router.include_router(losses.events_router)
 
 __all__ = ["api_router"]

@@ -134,15 +134,26 @@ dedupes re-uploads) ·
 Embeddings (`embedding halfvec(N)`, `embedding_model`) and the `vector` extension
 are **deferred to Phase 3** so the dimension matches the chosen model.
 
-**Losses**
-`loss_imports` (`storage_key`, `sha256`, `column_mapping` JSONB, `status`, `report`
-JSONB) · `loss_import_rows` (`row_number`, `raw` JSONB, `parsed` JSONB, `errors`
-JSONB, `status`) · `loss_events` (`name`, `event_identifier` nullable,
-`catastrophe_code` nullable, `date_of_loss_from/to`, `currency`) ·
-`underlying_losses` (`claim_id`, `loss_event_id` nullable, `date_of_loss`,
-`reported_date`, `gross_paid`, `gross_case_reserve`, `gross_incurred`, `currency`,
-`status`, `cause_of_loss`, `location`, `description`;
-`CHECK (gross_incurred = gross_paid + gross_case_reserve)` tolerance-checked).
+**Losses** *(built in Phase 5; migration 0005 — no AI in this pipeline)*
+`loss_imports` (immutable raw file: `original_filename`, `content_type`,
+`storage_key`, `sha256` + `UNIQUE(organization_id, sha256)` dedupe, `row_count`,
+`header_columns` JSONB, `column_mapping` JSONB `field→column`, `status`
+uploaded/mapped/validated/committed/failed, `report` JSONB, `uploaded_by`,
+`committed_at`) ·
+`loss_import_rows` (`row_number`, `raw` JSONB *(never mutated)*, `parsed` JSONB,
+`status` ok/warning/error/skipped, `issues` JSONB `[{row_number,level,field,message}]`;
+`UNIQUE(loss_import_id, row_number)`) ·
+`loss_events` (`name`, `event_identifier` nullable, `catastrophe_code` nullable,
+`program_id` nullable, `date_of_loss_from/to`, `currency` nullable — all derived
+from committed losses or set manually) ·
+`underlying_losses` — immutable snapshot of one committed row: (`claim_id`,
+`loss_event_id` nullable `SET NULL`, `loss_import_id` / `loss_import_row_id`
+**`RESTRICT`** so provenance survives, `date_of_loss`, `reported_date`,
+`gross_paid`, `gross_case_reserve`, `gross_incurred` `NUMERIC(20,2) NOT NULL`,
+`currency`, `status`, `cause_of_loss`, `location`, `description`;
+`UNIQUE(loss_import_row_id)` — a row commits once; `CHECK (gross_incurred >= 0)`).
+The paid + case-reserve = incurred relationship is a **tolerance warning in
+`validate_rows`**, not a DB CHECK (a row may carry only incurred).
 
 **Recovery**
 `recovery_candidates` (`treaty_version_id`, `treaty_layer_id`, `loss_event_id`,
@@ -210,7 +221,8 @@ erDiagram
     TREATY_TERM_CANDIDATES }o--o| CITATIONS : "evidenced by"
 
     LOSS_IMPORTS ||--o{ LOSS_IMPORT_ROWS : contains
-    LOSS_IMPORT_ROWS ||--o| UNDERLYING_LOSSES : "commits to"
+    LOSS_IMPORT_ROWS ||--o| UNDERLYING_LOSSES : "commits to (RESTRICT)"
+    LOSS_IMPORTS ||--o{ UNDERLYING_LOSSES : "provenance (RESTRICT)"
     LOSS_EVENTS ||--o{ UNDERLYING_LOSSES : aggregates
 
     TREATY_VERSIONS ||--o{ RECOVERY_CANDIDATES : "evaluated for"

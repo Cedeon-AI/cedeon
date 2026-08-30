@@ -15,6 +15,7 @@ from app.domain.organizations import Role
 from app.services.auth import AuthenticatedContext, AuthService
 from app.services.documents import DocumentService, ParseEnqueuer
 from app.services.errors import AuthenticationError, PermissionDeniedError
+from app.services.losses import LossEventService, LossImportService
 from app.services.reinsurance import ExtractEnqueuer, TreatyService
 from app.storage import ObjectStore, build_object_store
 
@@ -103,6 +104,28 @@ def get_document_service(
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
+
+
+def get_loss_import_service(
+    session: DbSession,
+    settings: AppSettings,
+    store: ObjectStoreDep,
+) -> LossImportService:
+    return LossImportService(
+        session,
+        store,
+        max_upload_bytes=settings.loss_import_max_upload_mb * 1024 * 1024,
+    )
+
+
+LossImportServiceDep = Annotated[LossImportService, Depends(get_loss_import_service)]
+
+
+def get_loss_event_service(session: DbSession) -> LossEventService:
+    return LossEventService(session)
+
+
+LossEventServiceDep = Annotated[LossEventService, Depends(get_loss_event_service)]
 
 
 def require_role(
