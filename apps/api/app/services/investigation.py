@@ -107,6 +107,11 @@ class InvestigationService:
             raise InvestigationInputError("the treaty version has no source document")
         document_id = version.source_document_id
 
+        if await self._runs.has_active_run(
+            organization_id, AgentType.RECOVERY_INVESTIGATOR, candidate.id
+        ):
+            raise ConflictError("an investigation is already running for this candidate")
+
         spec = self._settings.recovery_investigator_model
         started = dt.datetime.now(dt.UTC)
         run = AgentRun(

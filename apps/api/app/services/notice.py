@@ -141,6 +141,9 @@ class NoticeService:
         if not recipient_vo.name or not recipient_vo.organisation:
             raise ValidationError("the notice recipient needs a name and an organisation")
 
+        if await self._runs.has_active_run(organization_id, AgentType.NOTICE_DRAFTER, candidate.id):
+            raise ConflictError("a notice draft is already running for this candidate")
+
         context = await self._build_context(organization_id, candidate, calc, kind, recipient_vo)
 
         spec = self._settings.notice_drafter_model

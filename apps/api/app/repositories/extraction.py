@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,6 +16,10 @@ from app.db.models.extraction import (
     ToolCall,
     TreatyTermCandidate,
 )
+from app.domain.ai import AgentRunStatus, AgentType
+
+# A RUNNING agent_run older than this is treated as crashed, not in-flight.
+_STALE_RUN_AFTER = dt.timedelta(minutes=15)
 
 
 class AgentRunRepository:
@@ -31,6 +36,25 @@ class AgentRunRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def has_active_run(
+        self, organization_id: UUID, agent_type: AgentType, subject_id: UUID
+    ) -> bool:
+        """True if a non-stale RUNNING agent_run already covers this subject —
+        used to reject a duplicate enqueue (double click + a job retry racing)."""
+        cutoff = dt.datetime.now(dt.UTC) - _STALE_RUN_AFTER
+        result = await self._session.execute(
+            select(AgentRun.id)
+            .where(
+                AgentRun.organization_id == organization_id,
+                AgentRun.agent_type == agent_type,
+                AgentRun.subject_id == subject_id,
+                AgentRun.status == AgentRunStatus.RUNNING,
+                AgentRun.started_at >= cutoff,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
 
 class ToolCallRepository:

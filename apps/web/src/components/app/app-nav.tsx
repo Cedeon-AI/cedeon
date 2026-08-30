@@ -12,6 +12,7 @@ const NAV: { label: string; href: string; soon?: boolean }[] = [
   { label: "Loss imports", href: "/loss-imports" },
   { label: "Loss events", href: "/loss-events" },
   { label: "Recovery candidates", href: "/recovery-candidates" },
+  { label: "Activity", href: "/activity" },
 ];
 
 export function AppNav() {

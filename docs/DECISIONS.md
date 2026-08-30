@@ -26,6 +26,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0019 | Investigator retrieval is lexical (Postgres FTS); vector arm deferred | Accepted |
 | 0020 | Recovery Packet: classified statements, immutable versions, edit = regenerate | Accepted |
 | 0021 | Notice drafter: whitelist of approved facts in, draft out, no send action | Accepted |
+| 0022 | Observability = `agent_runs` + `audit_events` + job hardening; OTel optional | Accepted |
 
 ---
 
@@ -155,6 +156,19 @@ reconciliation across weeks, notice/acknowledgement chains, saga rollback).
 Simpler ops, simpler local dev, faster to ship. If long workflows arrive, migrating
 the handful of multi-step sequences into Temporal is a contained change. Do not use
 Celery alongside Procrastinate.
+
+**Status (2026-08-30) — the Phase 10 decision point: Temporal is NOT adopted.**
+After building all ten phases, no long-running, multi-party, compensating workflow
+exists. Every job is short (parse / extract / calculate / investigate / draft) or a
+human waiting on an entity `status`. The three MVP "sequences" (document → treaty,
+loss import → recovery, candidate → packet → notice) are each a straight line of
+short steps with a human gate, fully modelled by entity state machines + one
+`audit_events` row per transition. Procrastinate + state machines stay. Phase 10
+hardened this path instead: `RetryStrategy` on the AI/parse jobs, an in-flight guard
+(`AgentRunRepository.has_active_run`) so retries and double-submits can't double-run,
+and an observability surface (ADR-0022). Revisit only if a genuine saga appears
+(settlement reconciliation across weeks, reinsurer-acknowledgement chains with
+rollback) — the job interface is still the seam.
 
 ## ADR-0008 — Cedeon canonical model; ACORD as a future adapter
 
@@ -437,3 +451,31 @@ and the human is unavoidably in the loop before anything leaves Cedeon (sending
 happens in the user's own mail / broker system). Adding a real send integration
 later is a deliberate new decision with its own ADR and its own approval gate — it
 is not a small extension of this phase.
+
+## ADR-0022 — Observability is `agent_runs` + `audit_events` + job hardening; OTel is optional
+
+**Context.** Phase 10 asked for "OTel dashboards, AI cost/latency views, audit
+views". Standing up a self-hosted trace/metrics stack (Grafana/Tempo/Loki) for a
+pilot is disproportionate ops, and it would make the *primary* record of what
+happened live in an external system with its own retention and access model —
+wrong for a product whose value is auditability.
+
+**Decision.** The first-class record is in Postgres, already written on every path:
+`agent_runs` (provider, model, prompt version, token counts, `cost_usd`, latency,
+status, error, correlation id) + `tool_calls` + the append-only `audit_events`
+(one row per state transition, `BEFORE UPDATE OR DELETE` trigger). Phase 10 surfaces
+it: `app/repositories/activity.py` / `app/services/activity.py` and
+`GET /activity/{agent-runs,audit,ai-spend}`, plus an **Activity** screen. Durability
+on the same path: a `RetryStrategy` (backoff) on the parse + AI jobs for transient
+provider/storage failures, and `AgentRunRepository.has_active_run` — a non-stale
+`RUNNING` run for the same subject makes a second attempt a `ConflictError` (which
+the job logs and returns, rather than retrying). `/readyz` also probes the object
+store. OpenTelemetry stays wired but **off by default** (`CEDEON_OTEL_ENABLED` +
+an OTLP endpoint) — an add-on for teams that already run a collector, never a
+dependency; the DB tables are complete without it.
+
+**Consequences.** Zero new infra; the audit trail and AI-cost view work the moment
+the app is up, with the same backup and tenant-isolation story as everything else.
+`ai-spend` is exact per-org accounting from `response.usage`, not sampled traces.
+If trace-level latency breakdowns or cross-service spans are ever needed, flip OTel
+on — no code change to the recorded model.

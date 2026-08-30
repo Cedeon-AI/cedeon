@@ -291,7 +291,7 @@ GET    /recovery-candidates/{id}/agent-runs/{run}/tool-calls   investigator tool
 GET    /recovery-candidates/{id}/packet ; POST .../packet (regenerate)
 POST   /recovery-packets/{id}/versions/{v}/review
 POST   /recovery-candidates/{id}/notices           draft only
-GET    /audit-events?entity_type=&entity_id=
+GET    /activity/agent-runs · /agent-runs/{id} · /audit · /ai-spend          observability   [Phase 10]
 ```
 
 ---
@@ -341,7 +341,7 @@ def allocate_recovery(
 | 8 | Recovery Candidates | Queue by status (Needs Review / Confirmed / Rejected / Notice Drafted) |
 | 9 | Recovery Candidate Detail | Deterministic calculation · treaty/layer · underlying losses · AI investigation · citations · missing evidence · notice obligations · human decision |
 | 10 | Recovery Packet | Audit-friendly artifact. HTML first; PDF export later. FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visually distinct. |
-| 11 | AI / Audit Detail | What model ran · prompt version · tools invoked · evidence · AI output · human edits. Enough to explain a decision — **not** an AgentOps product. |
+| 11 | **Activity** *(Phase 10)* | Three tabs: **AI runs** (every `agent_run` — model, prompt version, tokens, cost, latency, status; drill in for tool calls + structured output) · **Audit log** (the append-only feed, filterable by action / actor) · **AI spend** (per-agent + per-day token / cost / failure rollup). Enough to explain a decision — **not** an AgentOps product. |
 
 Design language: calm, dense, and legible — this is a review tool for financial
 professionals. Every AI-authored statement in the UI is visually badged and carries

@@ -28,7 +28,13 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ✅ **Complete** (2026-08-30) — live-verified |
 | 8 | Recovery Packet + human review / approval flow | ✅ **Complete** (2026-08-30) — **no AI** |
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ✅ **Complete** (2026-08-30) — live-verified |
-| 10 | Durability + observability hardening (evaluate Temporal *here*) | ⏭️ **Next** |
+| 10 | Durability + observability hardening (evaluate Temporal *here*) | ✅ **Complete** (2026-08-30) — Temporal **not adopted** |
+
+**The 10-phase MVP is complete.** Full pipeline: treaty → parsed document → AI-extracted
+terms with provenance → human validation → executable XOL treaty → loss ingestion →
+deterministic `RecoveryCalculation` → `RecoveryCandidate` → Recovery Investigator →
+Recovery Packet → human review → notice draft — all built, tested (219 backend + 4 live
+evals), and running through the containerized stack.
 
 **First meaningful success criterion:** a reinsurance professional uploads a
 real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and Cedeon
@@ -361,9 +367,27 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   (no admission / agreement / payment), and invents no email address. Web:
   `/recovery-candidates/{id}/notices` — draft form, the rendered notice, edit /
   approve / reject, history.
-- **P10:** OTel dashboards, AI cost/latency views, calculation-trace viewer, audit
-  views. **Decision point:** adopt Temporal only if real long-running multi-party
-  compensating workflows have emerged; otherwise keep Procrastinate + state machines.
+- **P10:** ✅ **Complete (2026-08-30).**
+  **The Temporal decision point:** the evaluation found **no** long-running,
+  multi-party, compensating workflows — every job is short (parse / extract /
+  calculate / investigate / draft) or a human waiting on a status. **Temporal is
+  not adopted**; Procrastinate + entity state machines + the append-only audit log
+  remain (ADR-0007 status updated, ADR-0022).
+  **Durability:** the four AI/parse jobs now carry a `RetryStrategy` (exponential /
+  linear backoff) for transient provider / storage failures; `AgentRunRepository.has_active_run`
+  gives each AI service an in-flight guard so a double click plus a job retry
+  racing cannot start a second run (a non-stale `RUNNING` `agent_run` for the same
+  subject → `ConflictError`, which the job treats as a no-op, not a retry).
+  `/readyz` now also probes the object store.
+  **Observability:** `app/repositories/activity.py` + `app/services/activity.py` +
+  `GET /activity/agent-runs` (+ `/{id}` with tool calls + structured output),
+  `GET /activity/audit` (filterable feed of the append-only log), and
+  `GET /activity/ai-spend` (per-agent + per-day token / cost / failure rollup).
+  Web: an **Activity** screen (AI runs · Audit log · AI spend — screen 11).
+  **11 new tests** (219 total): the activity API slice, the in-flight guard + stale
+  fallback, and a retry-strategy check. OpenTelemetry stays wired-but-off
+  (`CEDEON_OTEL_ENABLED`) — the `agent_runs` / `audit_events` tables are the
+  first-class record; OTLP export is the optional add-on, not a dependency.
 
 ## End-of-phase ritual (every phase)
 

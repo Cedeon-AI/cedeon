@@ -29,6 +29,7 @@ from app.repositories.extraction import (
     TermCandidateRepository,
 )
 from app.repositories.reinsurance import TreatyVersionRepository
+from app.services.errors import ConflictError
 
 log = get_logger(__name__)
 
@@ -81,6 +82,11 @@ class TreatyExtractionService:
             f"[page {c.page_from}] {c.section_path or c.heading or ''}\n{c.text}".strip()
             for c in chunks
         ]
+
+        if await self._runs.has_active_run(
+            organization_id, AgentType.TREATY_EXTRACTION, version.id
+        ):
+            raise ConflictError("an extraction is already running for this treaty version")
 
         version.status = TreatyVersionStatus.EXTRACTING
         started = dt.datetime.now(dt.UTC)
