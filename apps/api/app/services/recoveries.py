@@ -1,21 +1,51 @@
-"""Read-only 'what would this treaty recover' preview.
+"""Recovery services.
 
-Uses the deterministic engine against a *validated* treaty version. Nothing is
-persisted — the real RecoveryCandidate machinery is Phase 6."""
+``RecoveryPreviewService`` is a read-only "what would this treaty recover" probe
+(nothing persisted). ``RecoveryCandidateService`` persists the real thing: a
+reviewable candidate for one ``(treaty_version, treaty_layer, loss_event)`` triple,
+carrying an immutable calculation each time the deterministic engine runs.
+
+No AI anywhere in this module — the recovery figure is deterministic code
+(ADR-0010). The Recovery Investigator agent (Phase 7) investigates a candidate; it
+never computes the number.
+"""
 
 from __future__ import annotations
 
+import datetime as dt
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import get_correlation_id
+from app.db.models.extraction import Review
+from app.db.models.recoveries import RecoveryAllocation, RecoveryCalculation, RecoveryCandidate
+from app.db.models.reinsurance import TreatyLayer, TreatyVersion
+from app.domain.audit import ActorType, AuditRecord
 from app.domain.money import Money, MoneyError
-from app.domain.recoveries import Participation, RecoveryCalculation, calculate_recovery
+from app.domain.recoveries import (
+    ENGINE_VERSION,
+    Participation,
+    RecoveryCandidateStatus,
+    calculate_recovery,
+    recovery_input_hash,
+)
+from app.domain.recoveries import (
+    RecoveryCalculation as RecoveryCalculationResult,
+)
+from app.domain.reviews import ReviewDecision, ReviewSubjectType
 from app.domain.treaties import TreatyVersionStatus
+from app.repositories.audit import AuditRepository
+from app.repositories.extraction import ReviewRepository
+from app.repositories.losses import LossEventRepository, UnderlyingLossRepository
+from app.repositories.recoveries import RecoveryCandidateRepository
 from app.repositories.reinsurance import TreatyRepository, TreatyVersionRepository
 from app.services.auth import AuthenticatedContext
 from app.services.errors import ConflictError, NotFoundError, ValidationError
+
+_VALID_VERSION_STATES = (TreatyVersionStatus.VALIDATED, TreatyVersionStatus.ACTIVE)
+_REVIEW_DECISIONS = (ReviewDecision.CONFIRM, ReviewDecision.REJECT, ReviewDecision.REQUEST_INFO)
 
 
 class RecoveryPreviewService:
@@ -25,17 +55,14 @@ class RecoveryPreviewService:
 
     async def preview(
         self, context: AuthenticatedContext, treaty_id: UUID, *, gross_loss_amount: str
-    ) -> RecoveryCalculation:
+    ) -> RecoveryCalculationResult:
         treaty = await self._treaties.get(context.organization.id, treaty_id)
         if treaty is None or treaty.current_version_id is None:
             raise NotFoundError("treaty not found")
         version = await self._versions.get(context.organization.id, treaty.current_version_id)
         if version is None:
             raise NotFoundError("treaty version not found")
-        if version.status not in (
-            TreatyVersionStatus.VALIDATED,
-            TreatyVersionStatus.ACTIVE,
-        ):
+        if version.status not in _VALID_VERSION_STATES:
             raise ConflictError("the treaty must be validated before a recovery can be computed")
         if not version.layers:
             raise ConflictError("the validated treaty version has no layer")
@@ -48,18 +75,349 @@ class RecoveryPreviewService:
         except (InvalidOperation, MoneyError) as exc:
             raise ValidationError(f"gross loss is not a valid amount: {exc}") from exc
 
-        participations = [
-            Participation(
-                key=str(p.reinsurer_id),
-                label=p.reinsurer.name,
-                share=Decimal(p.placed_share),
-            )
-            for p in version.participations
-        ]
-
         return calculate_recovery(
+            gross_loss=gross_loss,
+            attachment=Money(Decimal(layer.attachment), currency),
+            limit=Money(Decimal(layer.limit), currency),
+            participations=_participations(version),
+        )
+
+
+class RecoveryCandidateService:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+        self._candidates = RecoveryCandidateRepository(session)
+        self._treaties = TreatyRepository(session)
+        self._versions = TreatyVersionRepository(session)
+        self._events = LossEventRepository(session)
+        self._losses = UnderlyingLossRepository(session)
+        self._reviews = ReviewRepository(session)
+        self._audit = AuditRepository(session)
+
+    # --- reading --------------------------------------------------
+
+    async def list_candidates(
+        self, context: AuthenticatedContext, *, status: RecoveryCandidateStatus | None = None
+    ) -> list[RecoveryCandidate]:
+        return await self._candidates.list(context.organization.id, status=status)
+
+    async def get_candidate(
+        self, context: AuthenticatedContext, candidate_id: UUID
+    ) -> RecoveryCandidate:
+        candidate = await self._candidates.get(context.organization.id, candidate_id)
+        if candidate is None:
+            raise NotFoundError("recovery candidate not found")
+        return candidate
+
+    async def candidate_reviews(
+        self, context: AuthenticatedContext, candidate_id: UUID
+    ) -> list[Review]:
+        return await self._reviews.list_for_subject(context.organization.id, candidate_id)
+
+    def current_calculation(self, candidate: RecoveryCandidate) -> RecoveryCalculation | None:
+        return next(
+            (c for c in candidate.calculations if c.id == candidate.current_calculation_id), None
+        )
+
+    # --- create --------------------------------------------------
+
+    async def create(
+        self, context: AuthenticatedContext, *, treaty_id: UUID, loss_event_id: UUID
+    ) -> RecoveryCandidate:
+        org_id = context.organization.id
+        version, layer = await self._executable_layer(context, treaty_id)
+        event_id, gross_loss, mismatch = await self._gross_for_event(
+            org_id, loss_event_id, layer.currency
+        )
+
+        existing = await self._candidates.get_by_inputs(
+            org_id,
+            treaty_version_id=version.id,
+            treaty_layer_id=layer.id,
+            loss_event_id=event_id,
+        )
+        if existing is not None:
+            return existing
+
+        candidate = RecoveryCandidate(
+            organization_id=org_id,
+            treaty_id=treaty_id,
+            treaty_version_id=version.id,
+            treaty_layer_id=layer.id,
+            loss_event_id=event_id,
+            status=RecoveryCandidateStatus.NEEDS_REVIEW,
+            currency=layer.currency,
+            gross_event_incurred=gross_loss.amount,
+            currency_mismatch=mismatch,
+            created_by=context.user.id,
+        )
+        self._candidates.add(candidate)
+        await self._session.flush()
+
+        calc = await self._run_and_store(candidate, version, layer, gross_loss)
+        candidate.current_calculation_id = calc.id
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=org_id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="recovery_candidate.created",
+                entity_type="recovery_candidate",
+                entity_id=candidate.id,
+                summary=(
+                    f"{context.user.email} created a recovery candidate — "
+                    f"{calc.layer_recovery} {calc.currency} layer recovery"
+                ),
+                payload={
+                    "treaty_version_id": str(version.id),
+                    "loss_event_id": str(event_id),
+                    "layer_recovery": str(calc.layer_recovery),
+                    "engine_version": calc.engine_version,
+                    "currency_mismatch": mismatch,
+                },
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        return await self.get_candidate(context, candidate.id)
+
+    # --- recalculate ------------------------------------------
+
+    async def recalculate(
+        self, context: AuthenticatedContext, candidate_id: UUID
+    ) -> RecoveryCandidate:
+        org_id = context.organization.id
+        candidate = await self.get_candidate(context, candidate_id)
+
+        version = await self._versions.get(org_id, candidate.treaty_version_id)
+        if version is None:
+            raise NotFoundError("the candidate's treaty version no longer exists")
+        layer = next((x for x in version.layers if x.id == candidate.treaty_layer_id), None)
+        if layer is None:
+            raise NotFoundError("the candidate's treaty layer no longer exists")
+
+        _, gross_loss, mismatch = await self._gross_for_event(
+            org_id, candidate.loss_event_id, layer.currency
+        )
+        new_hash = self._input_hash(candidate, layer, version, gross_loss)
+        current = self.current_calculation(candidate)
+        if current is not None and current.input_hash == new_hash:
+            return candidate  # inputs unchanged — nothing to recompute
+
+        calc = await self._run_and_store(candidate, version, layer, gross_loss)
+        candidate.current_calculation_id = calc.id
+        candidate.gross_event_incurred = gross_loss.amount
+        candidate.currency_mismatch = mismatch
+        reverted = candidate.status is RecoveryCandidateStatus.CONFIRMED
+        if reverted:
+            candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
+            candidate.reviewed_at = None
+            candidate.reviewed_by = None
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=org_id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="recovery_candidate.recalculated",
+                entity_type="recovery_candidate",
+                entity_id=candidate.id,
+                summary=(
+                    f"{context.user.email} recalculated — {calc.layer_recovery} {calc.currency}"
+                    + (" (reverted to needs review)" if reverted else "")
+                ),
+                payload={
+                    "layer_recovery": str(calc.layer_recovery),
+                    "reverted_to_needs_review": reverted,
+                },
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        return await self.get_candidate(context, candidate.id)
+
+    # --- review ---------------------------------------------
+
+    async def review(
+        self,
+        context: AuthenticatedContext,
+        candidate_id: UUID,
+        *,
+        decision: ReviewDecision,
+        reason: str | None = None,
+    ) -> RecoveryCandidate:
+        if decision not in _REVIEW_DECISIONS:
+            raise ValidationError(
+                f"a recovery candidate can be confirmed, rejected, or sent back for info "
+                f"— not {decision.value!r}"
+            )
+        candidate = await self.get_candidate(context, candidate_id)
+        if candidate.status in (
+            RecoveryCandidateStatus.CONFIRMED,
+            RecoveryCandidateStatus.NOTICE_DRAFTED,
+        ):
+            raise ConflictError(f"this candidate is already {candidate.status.value}")
+        if decision is ReviewDecision.CONFIRM and self.current_calculation(candidate) is None:
+            raise ConflictError("the candidate has no calculation to confirm")
+
+        status_before = candidate.status
+        if decision is ReviewDecision.CONFIRM:
+            candidate.status = RecoveryCandidateStatus.CONFIRMED
+        elif decision is ReviewDecision.REJECT:
+            candidate.status = RecoveryCandidateStatus.REJECTED
+        else:  # REQUEST_INFO — stays open for follow-up
+            candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
+        candidate.reviewed_at = dt.datetime.now(dt.UTC)
+        candidate.reviewed_by = context.user.id
+
+        self._reviews.add(
+            Review(
+                organization_id=context.organization.id,
+                subject_type=ReviewSubjectType.RECOVERY_CANDIDATE,
+                subject_id=candidate.id,
+                reviewer_id=context.user.id,
+                decision=decision,
+                value_before={"status": status_before.value},
+                value_after={"status": candidate.status.value},
+                reason=reason,
+            )
+        )
+        self._audit.record(
+            AuditRecord(
+                organization_id=context.organization.id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="recovery_candidate.reviewed",
+                entity_type="recovery_candidate",
+                entity_id=candidate.id,
+                summary=f"{context.user.email} {decision.value} recovery candidate",
+                payload={"decision": decision.value, "status": candidate.status.value},
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        return await self.get_candidate(context, candidate.id)
+
+    # --- helpers ------------------------------------------
+
+    async def _executable_layer(
+        self, context: AuthenticatedContext, treaty_id: UUID
+    ) -> tuple[TreatyVersion, TreatyLayer]:
+        treaty = await self._treaties.get(context.organization.id, treaty_id)
+        if treaty is None or treaty.current_version_id is None:
+            raise NotFoundError("treaty not found")
+        version = await self._versions.get(context.organization.id, treaty.current_version_id)
+        if version is None:
+            raise NotFoundError("treaty version not found")
+        if version.status not in _VALID_VERSION_STATES:
+            raise ConflictError("the treaty must be validated before a recovery can be computed")
+        if not version.layers:
+            raise ConflictError("the validated treaty version has no layer")
+        return version, min(version.layers, key=lambda x: x.layer_no)
+
+    async def _gross_for_event(
+        self, organization_id: UUID, loss_event_id: UUID, currency: str
+    ) -> tuple[UUID, Money, bool]:
+        event = await self._events.get(organization_id, loss_event_id)
+        if event is None:
+            raise NotFoundError("loss event not found")
+        losses = await self._losses.for_event(organization_id, loss_event_id)
+        if not losses:
+            raise ConflictError("this loss event has no committed underlying losses")
+
+        in_currency = [x for x in losses if x.currency == currency]
+        mismatch = any(x.currency != currency for x in losses)
+        gross = sum((Decimal(x.gross_incurred) for x in in_currency), Decimal("0"))
+        return event.id, Money.round(gross, currency), mismatch
+
+    async def _run_and_store(
+        self,
+        candidate: RecoveryCandidate,
+        version: TreatyVersion,
+        layer: TreatyLayer,
+        gross_loss: Money,
+    ) -> RecoveryCalculation:
+        currency = layer.currency
+        participations = _participations(version)
+        result = calculate_recovery(
             gross_loss=gross_loss,
             attachment=Money(Decimal(layer.attachment), currency),
             limit=Money(Decimal(layer.limit), currency),
             participations=participations,
         )
+        calc = RecoveryCalculation(
+            organization_id=candidate.organization_id,
+            engine_version=result.engine_version,
+            treaty_version_id=version.id,
+            treaty_layer_id=layer.id,
+            currency=currency,
+            inputs={
+                "gross_loss": str(gross_loss.amount),
+                "attachment": str(Decimal(layer.attachment)),
+                "limit": str(Decimal(layer.limit)),
+                "participations": [
+                    {"reinsurer_id": p.key, "reinsurer_name": p.label, "share": str(p.share)}
+                    for p in participations
+                ],
+            },
+            gross_loss=result.xol.gross_loss.amount,
+            attachment=result.xol.attachment.amount,
+            amount_above_attachment=result.xol.amount_above_attachment.amount,
+            layer_limit=result.xol.limit.amount,
+            layer_recovery=result.xol.layer_recovery.amount,
+            cedent_retention=result.cedent_retention.amount,
+            total_ceded=result.total_ceded.amount,
+            trace=[
+                {"label": s.label, "expression": s.expression, "result": s.result}
+                for s in result.xol.trace
+            ],
+            input_hash=self._input_hash(candidate, layer, version, gross_loss),
+            recovery_candidate_id=candidate.id,
+        )
+        self._session.add(calc)
+        await self._session.flush()
+        for allocation in result.allocations:
+            self._session.add(
+                RecoveryAllocation(
+                    organization_id=candidate.organization_id,
+                    recovery_calculation_id=calc.id,
+                    reinsurer_id=UUID(allocation.key),
+                    participation_share=allocation.share,
+                    allocated_recovery=allocation.amount.amount,
+                )
+            )
+        await self._session.flush()
+        return calc
+
+    @staticmethod
+    def _input_hash(
+        candidate: RecoveryCandidate,
+        layer: TreatyLayer,
+        version: TreatyVersion,
+        gross_loss: Money,
+    ) -> str:
+        return recovery_input_hash(
+            engine_version=ENGINE_VERSION,
+            treaty_version_id=str(version.id),
+            treaty_layer_id=str(layer.id),
+            loss_event_id=str(candidate.loss_event_id),
+            currency=layer.currency,
+            gross_loss=gross_loss.amount,
+            attachment=Decimal(layer.attachment),
+            limit=Decimal(layer.limit),
+            participations=[
+                (str(p.reinsurer_id), Decimal(p.placed_share)) for p in version.participations
+            ],
+        )
+
+
+def _participations(version: TreatyVersion) -> list[Participation]:
+    return [
+        Participation(
+            key=str(p.reinsurer_id),
+            label=p.reinsurer.name,
+            share=Decimal(p.placed_share),
+        )
+        for p in version.participations
+    ]

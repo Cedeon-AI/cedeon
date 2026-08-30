@@ -15,8 +15,8 @@ deterministic recovery working," choose the latter.
 | 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live extraction verified end-to-end against Anthropic (`pytest -m live`, `claude-opus-5`) |
 | 4 | Executable XOL model + deterministic calculation engine | ✅ **Complete** (2026-08-30) |
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ✅ **Complete** (2026-08-30) — **no AI** |
-| 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⏭️ **Next** |
-| 7 | Recovery Investigator (one bounded read-only agent + evals) | ⬜ |
+| 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ✅ **Complete** (2026-08-30) — **no AI** |
+| 7 | Recovery Investigator (one bounded read-only agent + evals) | ⏭️ **Next** |
 | 8 | Recovery Packet + human review / approval flow | ⬜ |
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ⬜ |
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ⬜ |
@@ -254,9 +254,33 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   upload), `/loss-imports/{id}` (column-mapping workspace with header-name
   auto-guess, validation report, row preview, commit), `/loss-events` (+ manual
   create), `/loss-events/{id}` (claim schedule). Nav items enabled.
-- **P6:** `RecoveryCandidate` from `(treaty_version, layer, loss_event)`;
-  immutable `recovery_calculations` + `recovery_allocations`; currency-mismatch flag;
-  queue + detail UI.
+- **P6:** ✅ **Complete (2026-08-30). No AI (ADR-0010/0018).** Migration `0006`:
+  `recovery_candidates` (mutable review object, one per
+  `(treaty_version, treaty_layer, loss_event)` — `UNIQUE`, re-POST returns the
+  existing one; `status`, `currency`, `gross_event_incurred`, `currency_mismatch`,
+  `current_calculation_id`), immutable `recovery_calculations` (`engine_version`,
+  frozen `inputs` JSONB, every engine output + `trace` + `input_hash`) and
+  immutable `recovery_allocations` (penny-exact per-participant share). All FKs to
+  executable truth are `RESTRICT`; the candidate↔calculation circular FK is added
+  post-`create_table` so `alembic check` stays clean.
+  `app/domain/recoveries/candidate.py` adds `RecoveryCandidateStatus` and the pure
+  `recovery_input_hash` (SHA-256 over engine version + version/layer/event ids +
+  gross/attachment/limit + sorted participations; scale-insensitive). Flow:
+  `POST /recovery-candidates {treaty_id, loss_event_id}` → validated version + its
+  layer, deterministic gross = Σ `gross_incurred` of the event's losses **in the
+  layer currency** (others flagged, excluded — no FX), `calculate_recovery(...)`,
+  persist, `status = NEEDS_REVIEW`. `POST /{id}/recalculate` re-runs the engine and
+  stores a **new** calculation row only when `input_hash` changed (a later import
+  committed into the event), reverting a `CONFIRMED` candidate to `NEEDS_REVIEW`.
+  `POST /{id}/review` — `confirm` | `reject` | `request_info`, each an append-only
+  `reviews` row + `audit_events`. **19 new tests** (167 total): the input-hash unit
+  suite and an API slice where the golden validated treaty + the Hurricane Demo
+  event produce `layer_recovery = 8,700,000.00`, allocations
+  `4.35M / 2.61M / 1.74M`, `Σ == layer_recovery`; plus recalc-on-new-loss
+  (`60.7M → 10.7M`, capped at the 20M limit) and the currency-mismatch path. Web:
+  `/recovery-candidates` (queue, status filter, create form) and
+  `/recovery-candidates/{id}` (calculation + trace + allocations, review actions,
+  recalculate, calculation & review history). Nav enabled.
 - **P7:** Recovery Investigator (PydanticAI agent, typed read-only tools, bounded,
   `agent_runs` / `tool_calls`), structured `RecoveryInvestigation` + normalised
   findings with citations. Investigator eval suite.

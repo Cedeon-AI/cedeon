@@ -9,6 +9,7 @@ from app.api.routes import (
     losses,
     memberships,
     organizations,
+    recoveries,
     reinsurance,
     treaties,
 )
@@ -23,5 +24,6 @@ api_router.include_router(reinsurance.router)
 api_router.include_router(treaties.router)
 api_router.include_router(losses.imports_router)
 api_router.include_router(losses.events_router)
+api_router.include_router(recoveries.router)
 
 __all__ = ["api_router"]

@@ -13,14 +13,17 @@ from app.domain.recoveries.calculations import (
     calculate_recovery,
     calculate_xol_recovery,
 )
+from app.domain.recoveries.candidate import RecoveryCandidateStatus, recovery_input_hash
 
 __all__ = [
     "ENGINE_VERSION",
     "ParticipantAllocation",
     "Participation",
     "RecoveryCalculation",
+    "RecoveryCandidateStatus",
     "XolRecoveryResult",
     "allocate_recovery",
     "calculate_recovery",
     "calculate_xol_recovery",
+    "recovery_input_hash",
 ]

@@ -155,14 +155,28 @@ from committed losses or set manually) ·
 The paid + case-reserve = incurred relationship is a **tolerance warning in
 `validate_rows`**, not a DB CHECK (a row may carry only incurred).
 
-**Recovery**
-`recovery_candidates` (`treaty_version_id`, `treaty_layer_id`, `loss_event_id`,
-`status`, `currency`, `gross_event_incurred`, `current_calculation_id`) ·
-`recovery_calculations` (`engine_version`, `treaty_version_id`, `treaty_layer_id`,
-`inputs` JSONB, `gross_loss`, `attachment`, `amount_above_attachment`, `layer_limit`,
-`layer_recovery`, `trace` JSONB, `input_hash`) · `recovery_allocations`
-(`recovery_calculation_id`, `reinsurer_id`, `participation_share`,
-`allocated_recovery`, `rounding_adjustment`) ·
+**Recovery** *(candidates + calculations built in Phase 6; migration 0006 — no AI)*
+`recovery_candidates` — the mutable review object, **one per**
+`(treaty_version_id, treaty_layer_id, loss_event_id)` (`UNIQUE`; re-creating
+returns the existing row): (`treaty_id`, `status`
+draft/needs_review/in_review/confirmed/rejected/notice_drafted, `currency`,
+`gross_event_incurred` `NUMERIC(20,2)`, `currency_mismatch` bool,
+`current_calculation_id` → `recovery_calculations` (circular, added post-create),
+`created_by`, `reviewed_at`/`reviewed_by`). FKs to treaty/version/layer/event are
+`RESTRICT`. ·
+`recovery_calculations` — **immutable**, one row per engine run: (`engine_version`,
+`treaty_version_id`, `treaty_layer_id`, frozen `inputs` JSONB, `currency`,
+`gross_loss`, `attachment`, `amount_above_attachment`, `layer_limit`,
+`layer_recovery`, `cedent_retention`, `total_ceded`, `trace` JSONB, `input_hash`
+SHA-256 of all inputs). Recalculation writes a new row only when `input_hash`
+differs; `recovery_candidates.current_calculation_id` moves and a `CONFIRMED`
+candidate reverts to `NEEDS_REVIEW`. ·
+`recovery_allocations` — **immutable**: (`recovery_calculation_id`, `reinsurer_id`
+`RESTRICT`, `participation_share` `NUMERIC(9,6)`, `allocated_recovery`
+`NUMERIC(20,2)`; `UNIQUE(recovery_calculation_id, reinsurer_id)`). The
+largest-remainder penny split already sums to the layer recovery exactly, so a
+stored `rounding_adjustment` column is deferred (derivable as
+`allocated_recovery − layer_recovery × share` when a reconciliation view needs it). ·
 `recovery_investigations` (`agent_run_id`, `status`, `summary`,
 `applicability_assessment`, `confidence`, `output` JSONB) ·
 `recovery_investigation_findings` (`investigation_id`, `kind`, `text`,

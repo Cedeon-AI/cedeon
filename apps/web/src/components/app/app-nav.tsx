@@ -11,7 +11,7 @@ const NAV: { label: string; href: string; soon?: boolean }[] = [
   { label: "Treaty library", href: "/treaties" },
   { label: "Loss imports", href: "/loss-imports" },
   { label: "Loss events", href: "/loss-events" },
-  { label: "Recovery candidates", href: "/recovery-candidates", soon: true },
+  { label: "Recovery candidates", href: "/recovery-candidates" },
 ];
 
 export function AppNav() {

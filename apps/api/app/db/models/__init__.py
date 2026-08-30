@@ -17,6 +17,11 @@ from app.db.models.losses import (
     LossImportRow,
     UnderlyingLoss,
 )
+from app.db.models.recoveries import (
+    RecoveryAllocation,
+    RecoveryCalculation,
+    RecoveryCandidate,
+)
 from app.db.models.reinsurance import (
     Cedent,
     ReinsuranceProgram,
@@ -44,6 +49,9 @@ __all__ = [
     "Membership",
     "Organization",
     "PromptVersion",
+    "RecoveryAllocation",
+    "RecoveryCalculation",
+    "RecoveryCandidate",
     "ReinsuranceProgram",
     "Reinsurer",
     "Review",

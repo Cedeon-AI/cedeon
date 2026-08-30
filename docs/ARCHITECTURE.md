@@ -281,11 +281,12 @@ POST   /loss-imports/{id}/mapping         customer col → canonical field
 POST   /loss-imports/{id}/validate        → import report
 POST   /loss-imports/{id}/commit          → underlying_losses
 CRUD   /loss-events ;  POST /loss-events/{id}/losses  (attach)
-POST   /recovery-candidates               (treaty_version, layer, loss_event) → calc → candidate
-GET    /recovery-candidates?status=needs_review
-GET    /recovery-candidates/{id}          calc + allocations + investigation + findings
-POST   /recovery-candidates/{id}/investigate     enqueue Recovery Investigator
-POST   /recovery-candidates/{id}/review           confirm|edit|reject|request_info
+POST   /recovery-candidates               (treaty, loss_event) → deterministic calc → candidate   [Phase 6]
+GET    /recovery-candidates?status=needs_review                                                   [Phase 6]
+GET    /recovery-candidates/{id}          calc + allocations + calculation/review history          [Phase 6]
+POST   /recovery-candidates/{id}/recalculate      re-run engine; new immutable calc iff inputs changed  [Phase 6]
+POST   /recovery-candidates/{id}/review           confirm|reject|request_info                      [Phase 6]
+POST   /recovery-candidates/{id}/investigate     enqueue Recovery Investigator                     [Phase 7]
 GET    /recovery-candidates/{id}/packet ; POST .../packet (regenerate)
 POST   /recovery-packets/{id}/versions/{v}/review
 POST   /recovery-candidates/{id}/notices           draft only

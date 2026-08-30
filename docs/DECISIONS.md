@@ -22,6 +22,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0015 | Parse and chunk in one job; embeddings split out in Phase 3 | Accepted |
 | 0016 | Defer hybrid retrieval / embeddings to Phase 7 | Accepted |
 | 0017 | Loss import is a deterministic mapping pipeline; no AI | Accepted |
+| 0018 | Recovery candidate ↔ calculation split; content hash gates recompute | Accepted |
 
 ---
 
@@ -323,3 +324,32 @@ a loss can always be traced to the exact source row.
 one a human mapped and the code parsed, with the original a click away. If fuzzy
 column-name suggestion ever needs a model, it stays advisory and on the *mapping*
 step, never the values.
+
+## ADR-0018 — Recovery candidate ↔ calculation split; a content hash gates recompute
+
+**Context.** A recovery figure is reviewed, then acted on. The reviewed object is
+mutable (its status changes; a human confirms it) but the *number* must be a frozen,
+auditable artifact tied to exact inputs. Inputs can also legitimately change after a
+candidate exists — Phase 5 lets a second loss import commit into the same loss
+event — and a stale confirmation must not silently stand.
+
+**Decision.** Two entities. `recovery_candidates` is the mutable review object, one
+per `(treaty_version, treaty_layer, loss_event)` (re-`POST` returns the existing
+row). Every run of the deterministic engine writes an **immutable**
+`recovery_calculations` row (+ `recovery_allocations`) with the full input set,
+`trace`, and a `recovery_input_hash` — a pure SHA-256 over engine version, the
+version/layer/event ids, gross/attachment/limit, and the sorted participations
+(scale-insensitive so `50000000` and `50000000.00` agree).
+`current_calculation_id` points at the live one. `POST /{id}/recalculate` recomputes
+the hash from current inputs: unchanged → no-op; changed → a new calculation row,
+`current_calculation_id` moves, and a `CONFIRMED` candidate reverts to
+`NEEDS_REVIEW`. Gross event incurred is `Σ gross_incurred` over the event's losses
+**in the layer currency only** (ADR-0009 — no FX); any other-currency loss sets
+`currency_mismatch` and is excluded. No AI in this path (ADR-0010).
+
+**Consequences.** Full calculation history per candidate; a confirmation can never
+outlive the inputs it was based on. The candidate is pinned to one *executable
+version* — a re-validated treaty is a new version and would need a new candidate,
+which is correct. `recalculate` is explicit (a button), not automatic on loss
+commit; a background "mark candidates stale" pass can be added later without schema
+change since the hash is already stored.

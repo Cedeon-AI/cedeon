@@ -121,6 +121,38 @@
         "title": "CalcStepOut",
         "type": "object"
       },
+      "CalculationAllocationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "allocated_recovery": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Allocated Recovery",
+            "type": "string"
+          },
+          "participation_share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Participation Share",
+            "type": "string"
+          },
+          "reinsurer_id": {
+            "format": "uuid",
+            "title": "Reinsurer Id",
+            "type": "string"
+          },
+          "reinsurer_name": {
+            "title": "Reinsurer Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reinsurer_id",
+          "reinsurer_name",
+          "participation_share",
+          "allocated_recovery"
+        ],
+        "title": "CalculationAllocationOut",
+        "type": "object"
+      },
       "CanonicalFieldList": {
         "additionalProperties": false,
         "properties": {
@@ -414,6 +446,27 @@
           "loss_event_ids"
         ],
         "title": "CommitResultOut",
+        "type": "object"
+      },
+      "CreateRecoveryCandidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "loss_event_id": {
+            "format": "uuid",
+            "title": "Loss Event Id",
+            "type": "string"
+          },
+          "treaty_id": {
+            "format": "uuid",
+            "title": "Treaty Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "treaty_id",
+          "loss_event_id"
+        ],
+        "title": "CreateRecoveryCandidateRequest",
         "type": "object"
       },
       "DocumentDetail": {
@@ -1515,6 +1568,261 @@
         "title": "ProgramOut",
         "type": "object"
       },
+      "RecoveryCalculationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationAllocationOut"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "amount_above_attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Above Attachment",
+            "type": "string"
+          },
+          "attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Attachment",
+            "type": "string"
+          },
+          "cedent_retention": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cedent Retention",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "gross_loss": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Loss",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "layer_limit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Layer Limit",
+            "type": "string"
+          },
+          "layer_recovery": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Layer Recovery",
+            "type": "string"
+          },
+          "total_ceded": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Ceded",
+            "type": "string"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/CalcStepOut"
+            },
+            "title": "Trace",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "engine_version",
+          "currency",
+          "gross_loss",
+          "attachment",
+          "amount_above_attachment",
+          "layer_limit",
+          "layer_recovery",
+          "cedent_retention",
+          "total_ceded",
+          "input_hash",
+          "trace",
+          "allocations",
+          "created_at"
+        ],
+        "title": "RecoveryCalculationOut",
+        "type": "object"
+      },
+      "RecoveryCandidateDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "calculations": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryCalculationOut"
+            },
+            "title": "Calculations",
+            "type": "array"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/RecoveryCandidateOut"
+          },
+          "current_calculation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecoveryCalculationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryReviewOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidate",
+          "current_calculation",
+          "calculations",
+          "reviews"
+        ],
+        "title": "RecoveryCandidateDetail",
+        "type": "object"
+      },
+      "RecoveryCandidateList": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryCandidateOut"
+            },
+            "title": "Candidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidates"
+        ],
+        "title": "RecoveryCandidateList",
+        "type": "object"
+      },
+      "RecoveryCandidateOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "currency_mismatch": {
+            "title": "Currency Mismatch",
+            "type": "boolean"
+          },
+          "current_calculation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Calculation Id"
+          },
+          "gross_event_incurred": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Event Incurred",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "loss_event_id": {
+            "format": "uuid",
+            "title": "Loss Event Id",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecoveryCandidateStatus"
+          },
+          "treaty_id": {
+            "format": "uuid",
+            "title": "Treaty Id",
+            "type": "string"
+          },
+          "treaty_layer_id": {
+            "format": "uuid",
+            "title": "Treaty Layer Id",
+            "type": "string"
+          },
+          "treaty_version_id": {
+            "format": "uuid",
+            "title": "Treaty Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "treaty_id",
+          "treaty_version_id",
+          "treaty_layer_id",
+          "loss_event_id",
+          "currency",
+          "gross_event_incurred",
+          "currency_mismatch",
+          "current_calculation_id",
+          "created_at",
+          "reviewed_at"
+        ],
+        "title": "RecoveryCandidateOut",
+        "type": "object"
+      },
+      "RecoveryCandidateStatus": {
+        "description": "docs/PRODUCT.md \u2014 Recovery Candidate lifecycle.\n\nNEEDS_REVIEW \u2500\u25b6 IN_REVIEW \u2500\u25b6 CONFIRMED \u2500\u25b6 NOTICE_DRAFTED\n                      \u2514\u2500\u2500\u25b6 REJECTED\n(inputs change \u2192 recalculation \u2192 new immutable RecoveryCalculation;\n a CONFIRMED candidate reverts to NEEDS_REVIEW)",
+        "enum": [
+          "draft",
+          "needs_review",
+          "in_review",
+          "confirmed",
+          "rejected",
+          "notice_drafted"
+        ],
+        "title": "RecoveryCandidateStatus",
+        "type": "string"
+      },
       "RecoveryPreviewRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1601,6 +1909,37 @@
           "trace"
         ],
         "title": "RecoveryPreviewResponse",
+        "type": "object"
+      },
+      "RecoveryReviewOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "created_at"
+        ],
+        "title": "RecoveryReviewOut",
         "type": "object"
       },
       "RegisterRequest": {
@@ -1702,6 +2041,31 @@
         ],
         "title": "ReviewDecision",
         "type": "string"
+      },
+      "ReviewRecoveryCandidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewRecoveryCandidateRequest",
+        "type": "object"
       },
       "ReviewRequest": {
         "additionalProperties": false,
@@ -3473,6 +3837,233 @@
         "summary": "Readiness probe (checks the database)",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/recovery-candidates": {
+      "get": {
+        "operationId": "listRecoveryCandidates",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecoveryCandidateStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recovery Candidates",
+        "tags": [
+          "recovery-candidates"
+        ]
+      },
+      "post": {
+        "operationId": "createRecoveryCandidate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecoveryCandidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create a recovery candidate (validated treaty + loss event \u2192 deterministic calc)",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}": {
+      "get": {
+        "operationId": "getRecoveryCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recovery Candidate",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}/recalculate": {
+      "post": {
+        "operationId": "recalculateRecoveryCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Re-run the engine; a new immutable calculation is stored only if inputs changed",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}/review": {
+      "post": {
+        "operationId": "reviewRecoveryCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRecoveryCandidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Human decision: confirm | reject | request_info",
+        "tags": [
+          "recovery-candidates"
         ]
       }
     },
