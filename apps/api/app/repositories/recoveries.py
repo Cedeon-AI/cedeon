@@ -14,10 +14,11 @@ from app.db.models.recoveries import (
     RecoveryCandidate,
     RecoveryInvestigation,
     RecoveryInvestigationFinding,
+    RecoveryNotice,
     RecoveryPacket,
     RecoveryPacketVersion,
 )
-from app.domain.recoveries import RecoveryCandidateStatus
+from app.domain.recoveries import NoticeKind, RecoveryCandidateStatus
 
 _WITH_CALCULATIONS = (
     selectinload(RecoveryCandidate.calculations)
@@ -165,3 +166,46 @@ class RecoveryPacketRepository:
             )
         )
         return result.scalar_one_or_none()
+
+
+class RecoveryNoticeRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, obj: object) -> None:
+        self._session.add(obj)
+
+    async def get(self, organization_id: UUID, notice_id: UUID) -> RecoveryNotice | None:
+        result = await self._session.execute(
+            select(RecoveryNotice).where(
+                RecoveryNotice.id == notice_id,
+                RecoveryNotice.organization_id == organization_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list_for_candidate(
+        self, organization_id: UUID, candidate_id: UUID
+    ) -> list[RecoveryNotice]:
+        result = await self._session.execute(
+            select(RecoveryNotice)
+            .where(
+                RecoveryNotice.organization_id == organization_id,
+                RecoveryNotice.recovery_candidate_id == candidate_id,
+            )
+            .order_by(RecoveryNotice.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def active_of_kind(
+        self, organization_id: UUID, candidate_id: UUID, kind: NoticeKind
+    ) -> list[RecoveryNotice]:
+        result = await self._session.execute(
+            select(RecoveryNotice).where(
+                RecoveryNotice.organization_id == organization_id,
+                RecoveryNotice.recovery_candidate_id == candidate_id,
+                RecoveryNotice.kind == kind,
+                RecoveryNotice.superseded_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())

@@ -90,6 +90,16 @@ async def get_investigate_enqueuer() -> InvestigateEnqueuer:
     return enqueue_investigate_recovery
 
 
+# (organization_id, candidate_id, *, kind, recipient, actor_id | None) -> None
+NoticeEnqueuer = Callable[..., Awaitable[None]]
+
+
+async def get_notice_enqueuer() -> NoticeEnqueuer:
+    from app.jobs.tasks import enqueue_draft_notice
+
+    return enqueue_draft_notice
+
+
 def get_treaty_service(
     session: DbSession,
     enqueue_extract: Annotated[ExtractEnqueuer, Depends(get_extract_enqueuer)],

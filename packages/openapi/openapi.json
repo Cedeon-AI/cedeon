@@ -630,6 +630,23 @@
         "title": "DocumentStatus",
         "type": "string"
       },
+      "DraftNoticeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/NoticeKind"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/NoticeRecipientModel"
+          }
+        },
+        "required": [
+          "kind",
+          "recipient"
+        ],
+        "title": "DraftNoticeRequest",
+        "type": "object"
+      },
       "FindingKind": {
         "enum": [
           "relevant_clause",
@@ -1397,6 +1414,118 @@
         ],
         "title": "MemberOut",
         "type": "object"
+      },
+      "NoticeKind": {
+        "enum": [
+          "initial_loss_advice",
+          "reinsurer_notification"
+        ],
+        "title": "NoticeKind",
+        "type": "string"
+      },
+      "NoticeRecipientModel": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "organisation": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Organisation",
+            "type": "string"
+          },
+          "role": {
+            "default": "",
+            "maxLength": 150,
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "organisation"
+        ],
+        "title": "NoticeRecipientModel",
+        "type": "object"
+      },
+      "NoticeReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "body_markdown": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Markdown"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recipient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeRecipientModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "NoticeReviewRequest",
+        "type": "object"
+      },
+      "NoticeStatus": {
+        "enum": [
+          "draft",
+          "approved",
+          "rejected",
+          "superseded"
+        ],
+        "title": "NoticeStatus",
+        "type": "string"
       },
       "OrganizationSummary": {
         "additionalProperties": false,
@@ -2328,6 +2457,171 @@
           "findings"
         ],
         "title": "RecoveryInvestigationOut",
+        "type": "object"
+      },
+      "RecoveryNoticeList": {
+        "additionalProperties": false,
+        "properties": {
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryNoticeOut"
+            },
+            "title": "Notices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "notices"
+        ],
+        "title": "RecoveryNoticeList",
+        "type": "object"
+      },
+      "RecoveryNoticeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Run Id"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "body_markdown": {
+            "title": "Body Markdown",
+            "type": "string"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "context": {
+            "additionalProperties": true,
+            "title": "Context",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_figures": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Key Figures",
+            "type": "object"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoticeKind"
+          },
+          "notes_for_reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes For Reviewer"
+          },
+          "recipient": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Recipient",
+            "type": "object"
+          },
+          "recovery_candidate_id": {
+            "format": "uuid",
+            "title": "Recovery Candidate Id",
+            "type": "string"
+          },
+          "recovery_packet_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Packet Version Id"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NoticeStatus"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "used_only_provided_facts": {
+            "title": "Used Only Provided Facts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "recovery_candidate_id",
+          "kind",
+          "status",
+          "recipient",
+          "subject",
+          "body_markdown",
+          "key_figures",
+          "caveats",
+          "used_only_provided_facts",
+          "notes_for_reviewer",
+          "context",
+          "agent_run_id",
+          "recovery_packet_version_id",
+          "review_note",
+          "approved_at",
+          "superseded",
+          "created_at"
+        ],
+        "title": "RecoveryNoticeOut",
         "type": "object"
       },
       "RecoveryPacketDetail": {
@@ -4779,6 +5073,100 @@
         ]
       }
     },
+    "/recovery-candidates/{candidate_id}/notices": {
+      "get": {
+        "operationId": "listRecoveryNotices",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryNoticeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recovery Notices",
+        "tags": [
+          "recovery-candidates"
+        ]
+      },
+      "post": {
+        "operationId": "draftRecoveryNotice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftNoticeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue the notice drafter (whitelist of approved facts in; draft out; never sent)",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
     "/recovery-candidates/{candidate_id}/packet": {
       "get": {
         "operationId": "getRecoveryPacket",
@@ -4956,6 +5344,102 @@
         "summary": "Human decision: confirm | reject | request_info",
         "tags": [
           "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-notices/{notice_id}": {
+      "get": {
+        "operationId": "getRecoveryNotice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryNoticeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recovery Notice",
+        "tags": [
+          "recovery-notices"
+        ]
+      }
+    },
+    "/recovery-notices/{notice_id}/review": {
+      "post": {
+        "operationId": "reviewRecoveryNotice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoticeReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryNoticeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Human decision on a draft notice: confirm | reject | request_info | edit",
+        "tags": [
+          "recovery-notices"
         ]
       }
     },

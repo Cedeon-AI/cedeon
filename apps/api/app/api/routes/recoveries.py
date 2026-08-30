@@ -14,16 +14,20 @@ from app.api.dependencies.context import (
     AuthedContext,
     DbSession,
     InvestigateEnqueuer,
+    NoticeEnqueuer,
     get_investigate_enqueuer,
+    get_notice_enqueuer,
 )
 from app.api.schemas.recoveries import (
     AgentRunToolCalls,
     CalcStepOut,
     CalculationAllocationOut,
     CreateRecoveryCandidateRequest,
+    DraftNoticeRequest,
     GeneratePacketResponse,
     InvestigationCitationOut,
     InvestigationFindingOut,
+    NoticeReviewRequest,
     PacketCitationOut,
     PacketContentOut,
     PacketReviewRequest,
@@ -34,6 +38,8 @@ from app.api.schemas.recoveries import (
     RecoveryCandidateList,
     RecoveryCandidateOut,
     RecoveryInvestigationOut,
+    RecoveryNoticeList,
+    RecoveryNoticeOut,
     RecoveryPacketDetail,
     RecoveryPacketVersionOut,
     RecoveryPacketVersionSummary,
@@ -46,17 +52,20 @@ from app.db.models.recoveries import (
     RecoveryCalculation,
     RecoveryCandidate,
     RecoveryInvestigation,
+    RecoveryNotice,
     RecoveryPacket,
     RecoveryPacketVersion,
 )
 from app.domain.recoveries import RecoveryCandidateStatus
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
+from app.services.notice import NoticeReview, NoticeService
 from app.services.packet import PacketReview, RecoveryPacketService
 from app.services.recoveries import RecoveryCandidateService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
 packets_router = APIRouter(prefix="/recovery-packets", tags=["recovery-packets"])
+notices_router = APIRouter(prefix="/recovery-notices", tags=["recovery-notices"])
 
 
 def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
@@ -419,3 +428,108 @@ async def get_recovery_packet_html(
         content=version.rendered_html or "<!doctype html><title>Empty packet</title>",
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+# --- recovery notice ----------------------------------------------
+
+
+def _notice_out(notice: RecoveryNotice) -> RecoveryNoticeOut:
+    return RecoveryNoticeOut(
+        id=notice.id,
+        recovery_candidate_id=notice.recovery_candidate_id,
+        kind=notice.kind,
+        status=notice.status,
+        recipient=dict(notice.recipient),
+        subject=notice.subject,
+        body_markdown=notice.body_markdown,
+        key_figures=dict(notice.key_figures),
+        caveats=list(notice.caveats),
+        used_only_provided_facts=notice.used_only_provided_facts,
+        notes_for_reviewer=notice.notes_for_reviewer,
+        context=dict(notice.context),
+        agent_run_id=notice.agent_run_id,
+        recovery_packet_version_id=notice.recovery_packet_version_id,
+        review_note=notice.review_note,
+        approved_at=notice.approved_at,
+        superseded=notice.superseded_at is not None,
+        created_at=notice.created_at,
+    )
+
+
+@router.post(
+    "/{candidate_id}/notices",
+    response_model=RecoveryCandidateOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Queue the notice drafter (whitelist of approved facts in; draft out; never sent)",
+    operation_id="draftRecoveryNotice",
+)
+async def draft_recovery_notice(
+    candidate_id: UUID,
+    payload: DraftNoticeRequest,
+    context: AuthedContext,
+    session: DbSession,
+    settings: AppSettings,
+    enqueue: Annotated[NoticeEnqueuer, Depends(get_notice_enqueuer)],
+) -> RecoveryCandidateOut:
+    if not settings.ai_enabled:
+        raise ConflictError("AI is disabled in this environment")
+    candidate = await RecoveryCandidateService(session).get_candidate(context, candidate_id)
+    if candidate.status.value not in ("confirmed", "notice_drafted"):
+        raise ConflictError("confirm the recovery candidate before drafting a notice")
+    await enqueue(
+        context.organization.id,
+        candidate.id,
+        kind=payload.kind.value,
+        recipient=payload.recipient.model_dump(),
+        actor_id=context.user.id,
+    )
+    return _candidate_out(candidate)
+
+
+@router.get(
+    "/{candidate_id}/notices",
+    response_model=RecoveryNoticeList,
+    operation_id="listRecoveryNotices",
+)
+async def list_recovery_notices(
+    candidate_id: UUID, context: AuthedContext, session: DbSession, settings: AppSettings
+) -> RecoveryNoticeList:
+    notices = await NoticeService(session, settings).list_for_candidate(context, candidate_id)
+    return RecoveryNoticeList(notices=[_notice_out(n) for n in notices])
+
+
+@notices_router.get(
+    "/{notice_id}", response_model=RecoveryNoticeOut, operation_id="getRecoveryNotice"
+)
+async def get_recovery_notice(
+    notice_id: UUID, context: AuthedContext, session: DbSession, settings: AppSettings
+) -> RecoveryNoticeOut:
+    notice = await NoticeService(session, settings).get_notice(context, notice_id)
+    return _notice_out(notice)
+
+
+@notices_router.post(
+    "/{notice_id}/review",
+    response_model=RecoveryNoticeOut,
+    summary="Human decision on a draft notice: confirm | reject | request_info | edit",
+    operation_id="reviewRecoveryNotice",
+)
+async def review_recovery_notice(
+    notice_id: UUID,
+    payload: NoticeReviewRequest,
+    context: AuthedContext,
+    session: DbSession,
+    settings: AppSettings,
+) -> RecoveryNoticeOut:
+    notice = await NoticeService(session, settings).review(
+        context,
+        notice_id,
+        NoticeReview(
+            decision=payload.decision,
+            subject=payload.subject,
+            body_markdown=payload.body_markdown,
+            recipient=payload.recipient.model_dump() if payload.recipient else None,
+            reason=payload.reason,
+        ),
+    )
+    return _notice_out(notice)

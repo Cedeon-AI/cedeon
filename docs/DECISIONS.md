@@ -25,6 +25,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0018 | Recovery candidate ↔ calculation split; content hash gates recompute | Accepted |
 | 0019 | Investigator retrieval is lexical (Postgres FTS); vector arm deferred | Accepted |
 | 0020 | Recovery Packet: classified statements, immutable versions, edit = regenerate | Accepted |
+| 0021 | Notice drafter: whitelist of approved facts in, draft out, no send action | Accepted |
 
 ---
 
@@ -407,3 +408,32 @@ wording change, not a recomputation. Overrides accumulate on the packet, so a
 regenerate after a new investigation keeps prior human wording. Statement keys are
 stable strings; renaming one in `assemble_packet` orphans its overrides (acceptable
 — overrides are advisory text, not data).
+
+## ADR-0021 — Notice drafter: a whitelist of approved facts in, a draft out, no send action
+
+**Context.** The last step of the recovery flow is telling the broker / reinsurer.
+That is external-facing correspondence stating a money figure — the highest-stakes
+place for the model to invent a party, a date, a policy number, or a number, or to
+imply that something has been agreed or paid. The SECURITY principles forbid
+autonomous notice sending outright.
+
+**Decision.** The notice drafter (`app/ai/notice/`) is a **single `output_type`
+call with no tools** — the same shape as extraction, not the tool-loop investigator.
+It receives a `NoticeContext`: a fixed whitelist assembled by deterministic code
+from confirmed / validated state only (cedent, treaty, layer, loss event, the
+deterministic recovery figure, the validated notice provision, the participants,
+the caller-supplied recipient). It gets **no raw document text and no unvalidated
+AI output**. The prompt tells it to use only those facts, to copy figures verbatim,
+to present the recovery as *indicative, subject to the reinsurer's review and the
+treaty terms*, and never to state that anything is agreed, paid, or accepted; the
+schema carries a `used_only_provided_facts` self-attestation the eval checks.
+It runs only after the candidate is `CONFIRMED`. Output is a `DRAFT` that a human
+edits (in place, with `reviews` before/after) and approves. **There is no send
+endpoint, service method, job, or tool anywhere** — a notice's terminal state is
+`APPROVED`; a test asserts no `send` operation exists in the OpenAPI document.
+
+**Consequences.** The generated text is bounded to facts a human already validated,
+and the human is unavoidably in the loop before anything leaves Cedeon (sending
+happens in the user's own mail / broker system). Adding a real send integration
+later is a deliberate new decision with its own ADR and its own approval gate — it
+is not a small extension of this phase.

@@ -24,6 +24,7 @@ from app.db.models.recoveries import (
     RecoveryCandidate,
     RecoveryInvestigation,
     RecoveryInvestigationFinding,
+    RecoveryNotice,
     RecoveryPacket,
     RecoveryPacketVersion,
 )
@@ -59,6 +60,7 @@ __all__ = [
     "RecoveryCandidate",
     "RecoveryInvestigation",
     "RecoveryInvestigationFinding",
+    "RecoveryNotice",
     "RecoveryPacket",
     "RecoveryPacketVersion",
     "ReinsuranceProgram",

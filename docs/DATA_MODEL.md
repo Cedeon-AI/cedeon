@@ -203,8 +203,18 @@ nullable `SET NULL`, `generated_by`, `review_note`, `approved_by` / `approved_at
 new row and supersedes the rest. Each statement is classed **FACT / CALCULATION /
 AI_INTERPRETATION / HUMAN_DECISION**; a human edit is a `reviews` row + an entry in
 `recovery_packets.human_overrides`, folded into the next generated version. ·
-`recovery_notices` (`kind`, `status`, `recipient` JSONB, `body_markdown`,
-`agent_run_id`, `approved_by` nullable, `approved_at`) — **never auto-sent in MVP**.
+`recovery_notices` *(Phase 9; migration 0009)* — one per recovery candidate:
+(`recovery_candidate_id` CASCADE, `recovery_packet_version_id` nullable SET NULL,
+`agent_run_id` nullable SET NULL, `kind` initial_loss_advice / reinsurer_notification,
+`status` draft/approved/rejected/superseded, `recipient` JSONB, `subject`,
+`body_markdown`, `context` JSONB — the whitelist of approved facts that was used,
+`key_figures` JSONB, `caveats` JSONB, `used_only_provided_facts` bool,
+`notes_for_reviewer`, `generated_by`, `review_note`, `approved_by` / `approved_at`,
+`superseded_at`). Mutable while `DRAFT` (a human edits the prose, `reviews` captures
+before/after); frozen on approval; re-drafting supersedes the prior notice of that
+kind. **There is deliberately no send action** — the drafter is one `output_type`
+call with no tools, from a whitelist of approved values, and a notice's terminal
+state is `APPROVED` (AI_ARCHITECTURE.md §2c, ADR-0021). **Never auto-sent.**
 
 **Review & audit**
 `reviews` (`subject_type`, `subject_id`, `reviewer_id`, `decision`, `value_before`

@@ -91,6 +91,14 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
               Recovery packet →
             </Link>
           ) : null}
+          {candidate.status === "confirmed" || candidate.status === "notice_drafted" ? (
+            <Link
+              href={`/recovery-candidates/${candidateId}/notices`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Notices →
+            </Link>
+          ) : null}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Gross event incurred {formatMoney(candidate.gross_event_incurred, candidate.currency)} ·{" "}

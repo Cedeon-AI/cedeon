@@ -134,13 +134,24 @@ optional citation, `unresolved_questions`, guardrail flags including
 **grounds** every must-cite finding against real page text before persisting
 (ADR-0011) and records `agent_runs` + `tool_calls`. Live eval green.
 
-### 2c. Notice drafter — Phase 9
+### 2c. Notice drafter — **structured output, not an agent**
 
-Runs **only after** a human confirms the recovery candidate. Drafts Initial Loss
-Advice / broker / reinsurer notifications from **approved facts and calculations
-only** — it receives a whitelist of approved values, not free access. Output is a
-draft. **Never auto-sent.** Human approval required to send (sending itself is out of
-MVP scope).
+Runs **only after** a human confirms the recovery candidate. Drafts an Initial Loss
+Advice or a Reinsurer Notification of Loss from **approved facts and calculations
+only** — it receives a `NoticeContext` whitelist, not free access, and no raw
+document text. Output is a draft. **Never auto-sent.**
+
+**Status (2026-08-30) — shipped in Phase 9 (ADR-0021).** `app/ai/notice/` — one
+PydanticAI `output_type=NoticeDraft` call, **no tools**, timeout-bounded.
+`app/domain/recoveries/notice.py` builds the `NoticeContext` (cedent, treaty, layer,
+loss event, the deterministic recovery figure, the validated notice provision, the
+participants, the recipient) deterministically from confirmed / validated state.
+The schema carries a `used_only_provided_facts` self-attestation the eval checks.
+`NoticeService.draft` (run by the `draft_recovery_notice` job) records an
+`agent_run`; the candidate advances to `NOTICE_DRAFTED`. A human edits (in place, on
+the draft, `reviews` before/after) and approves. **There is no send action anywhere
+in the codebase** — a notice's terminal state is `APPROVED`; a test asserts the
+OpenAPI document contains no `send` operation. Live eval green.
 
 ## 3. Retrieval / RAG
 

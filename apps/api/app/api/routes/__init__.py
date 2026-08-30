@@ -26,5 +26,6 @@ api_router.include_router(losses.imports_router)
 api_router.include_router(losses.events_router)
 api_router.include_router(recoveries.router)
 api_router.include_router(recoveries.packets_router)
+api_router.include_router(recoveries.notices_router)
 
 __all__ = ["api_router"]

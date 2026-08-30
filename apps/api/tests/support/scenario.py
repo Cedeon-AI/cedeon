@@ -93,3 +93,21 @@ async def committed_hurricane_event(
         await client.post(f"/loss-imports/{uploaded['id']}/commit", json={"event_name": event_name})
     ).json()
     return str(commit["loss_event_ids"][0])
+
+
+async def confirmed_recovery_candidate(
+    client: AsyncClient, object_store: object, session: object, **kw: object
+) -> tuple[GoldenTreaty, str]:
+    """Validated golden treaty + committed Hurricane Demo event → candidate → CONFIRMED."""
+    golden = await validated_golden_treaty(client, object_store, session, **kw)  # type: ignore[arg-type]
+    event_id = await committed_hurricane_event(client)
+    candidate = (
+        await client.post(
+            "/recovery-candidates",
+            json={"treaty_id": golden.treaty_id, "loss_event_id": event_id},
+        )
+    ).json()
+    await client.post(
+        f"/recovery-candidates/{candidate['id']}/review", json={"decision": "confirm"}
+    )
+    return golden, candidate["id"]

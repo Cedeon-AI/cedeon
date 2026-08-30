@@ -32,7 +32,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin
 from app.domain.ai import ApplicabilityAssessment, FindingKind, InvestigationStatus
-from app.domain.recoveries import PacketVersionStatus, RecoveryCandidateStatus
+from app.domain.recoveries import (
+    NoticeKind,
+    NoticeStatus,
+    PacketVersionStatus,
+    RecoveryCandidateStatus,
+)
 
 _candidate_status = SAEnum(
     RecoveryCandidateStatus,
@@ -64,6 +69,16 @@ _packet_version_status = SAEnum(
     length=12,
     create_constraint=False,
     name="recovery_packet_version_status",
+)
+_notice_kind = SAEnum(
+    NoticeKind, native_enum=False, length=32, create_constraint=False, name="recovery_notice_kind"
+)
+_notice_status = SAEnum(
+    NoticeStatus,
+    native_enum=False,
+    length=12,
+    create_constraint=False,
+    name="recovery_notice_status",
 )
 
 MONEY = Numeric(20, 2)
@@ -341,3 +356,54 @@ class RecoveryAllocation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
 
     calculation: Mapped[RecoveryCalculation] = relationship(back_populates="allocations")
     reinsurer: Mapped[Any] = relationship("Reinsurer")
+
+
+class RecoveryNotice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A drafted notice for one recovery candidate. Mutable while DRAFT (a human
+    edits the prose); frozen on APPROVE. Re-drafting supersedes the prior notice of
+    the same kind. Cedeon never sends it — there is no send action (AI_ARCH §2c)."""
+
+    __tablename__ = "recovery_notices"
+    __table_args__ = (
+        Index("ix_recovery_notices_candidate", "recovery_candidate_id", "created_at"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    recovery_candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_candidates.id", ondelete="CASCADE"), nullable=False
+    )
+    recovery_packet_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recovery_packet_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    agent_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    kind: Mapped[NoticeKind] = mapped_column(_notice_kind, nullable=False)
+    status: Mapped[NoticeStatus] = mapped_column(
+        _notice_status, nullable=False, default=NoticeStatus.DRAFT
+    )
+    recipient: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    subject: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    body_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    key_figures: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    caveats: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
+    used_only_provided_facts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notes_for_reviewer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generated_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

@@ -100,10 +100,16 @@ def investigate_calls() -> list[tuple[object, object, object]]:
 
 
 @pytest.fixture
-def app(db: None, object_store, parse_calls, extract_calls, investigate_calls):
+def notice_calls() -> list[dict[str, object]]:
+    return []
+
+
+@pytest.fixture
+def app(db: None, object_store, parse_calls, extract_calls, investigate_calls, notice_calls):
     from app.api.dependencies.context import (
         get_extract_enqueuer,
         get_investigate_enqueuer,
+        get_notice_enqueuer,
         get_object_store,
         get_parse_enqueuer,
     )
@@ -123,9 +129,15 @@ def app(db: None, object_store, parse_calls, extract_calls, investigate_calls):
     ) -> None:
         investigate_calls.append((organization_id, candidate_id, actor_id))
 
+    async def _record_notice(
+        organization_id: object, candidate_id: object, **kwargs: object
+    ) -> None:
+        notice_calls.append({"org": organization_id, "candidate": candidate_id, **kwargs})
+
     application.dependency_overrides[get_parse_enqueuer] = lambda: _record_parse
     application.dependency_overrides[get_extract_enqueuer] = lambda: _record_extract
     application.dependency_overrides[get_investigate_enqueuer] = lambda: _record_investigate
+    application.dependency_overrides[get_notice_enqueuer] = lambda: _record_notice
     return application
 
 

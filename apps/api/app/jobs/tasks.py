@@ -87,3 +87,44 @@ async def enqueue_investigate_recovery(
         candidate_id=str(candidate_id),
         actor_id=str(actor_id) if actor_id else None,
     )
+
+
+@procrastinate_app.task(name="draft_recovery_notice", queue="ai", pass_context=False)
+async def draft_recovery_notice(
+    *,
+    organization_id: str,
+    candidate_id: str,
+    kind: str,
+    recipient: dict[str, Any],
+    actor_id: str | None = None,
+) -> dict[str, Any]:
+    settings = get_settings()
+    async with job_session() as session:
+        from app.domain.recoveries import NoticeKind
+        from app.services.notice import NoticeService
+
+        notice = await NoticeService(session, settings).draft(
+            UUID(organization_id),
+            UUID(candidate_id),
+            kind=NoticeKind(kind),
+            recipient={k: str(v) for k, v in recipient.items()},
+            actor_id=UUID(actor_id) if actor_id else None,
+        )
+    return {"recovery_notice_id": str(notice.id), "status": notice.status.value}
+
+
+async def enqueue_draft_notice(
+    organization_id: UUID,
+    candidate_id: UUID,
+    *,
+    kind: str,
+    recipient: dict[str, str],
+    actor_id: UUID | None = None,
+) -> None:
+    await draft_recovery_notice.defer_async(
+        organization_id=str(organization_id),
+        candidate_id=str(candidate_id),
+        kind=kind,
+        recipient=recipient,
+        actor_id=str(actor_id) if actor_id else None,
+    )

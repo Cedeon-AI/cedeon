@@ -14,6 +14,15 @@ from app.domain.recoveries.calculations import (
     calculate_xol_recovery,
 )
 from app.domain.recoveries.candidate import RecoveryCandidateStatus, recovery_input_hash
+from app.domain.recoveries.notice import (
+    NoticeContext,
+    NoticeInputs,
+    NoticeKind,
+    NoticeParticipant,
+    NoticeRecipient,
+    NoticeStatus,
+    build_notice_context,
+)
 from app.domain.recoveries.packet import (
     PacketContent,
     PacketInputs,
@@ -25,6 +34,12 @@ from app.domain.recoveries.packet_html import render_packet_html
 
 __all__ = [
     "ENGINE_VERSION",
+    "NoticeContext",
+    "NoticeInputs",
+    "NoticeKind",
+    "NoticeParticipant",
+    "NoticeRecipient",
+    "NoticeStatus",
     "PacketContent",
     "PacketInputs",
     "PacketStatementClass",
@@ -36,6 +51,7 @@ __all__ = [
     "XolRecoveryResult",
     "allocate_recovery",
     "assemble_packet",
+    "build_notice_context",
     "calculate_recovery",
     "calculate_xol_recovery",
     "recovery_input_hash",

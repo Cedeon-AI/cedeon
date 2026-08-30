@@ -27,8 +27,8 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ✅ **Complete** (2026-08-30) — **no AI** |
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ✅ **Complete** (2026-08-30) — live-verified |
 | 8 | Recovery Packet + human review / approval flow | ✅ **Complete** (2026-08-30) — **no AI** |
-| 9 | Notice draft (draft only, human approval, never auto-sent) | ⏭️ **Next** |
-| 10 | Durability + observability hardening (evaluate Temporal *here*) | ⬜ |
+| 9 | Notice draft (draft only, human approval, never auto-sent) | ✅ **Complete** (2026-08-30) — live-verified |
+| 10 | Durability + observability hardening (evaluate Temporal *here*) | ⏭️ **Next** |
 
 **First meaningful success criterion:** a reinsurance professional uploads a
 real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and Cedeon
@@ -336,8 +336,31 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   + audit, regenerate supersedes, edit → before/after + new version). Web:
   `/recovery-candidates/{id}/packet` — the classified packet, review actions,
   inline statement editing, version list, "open printable HTML".
-- **P9:** Notice drafter — approved-values whitelist in, draft out, human approval to
-  send, never auto-sent.
+- **P9:** ✅ **Complete (2026-08-30). Live-verified.** Migration `0009`:
+  `recovery_notices` (per candidate; mutable while `DRAFT`, frozen on approval;
+  re-drafting supersedes the prior notice of the same kind). `app/domain/recoveries/notice.py`
+  is pure: `NoticeContext` is the **whitelist of approved values** the drafter may
+  use — cedent / treaty / layer / loss-event / the deterministic recovery figure /
+  the validated notice provision / the participants — and `to_prompt()` is its
+  deterministic serialization. **No raw document text, no unvalidated AI output.**
+  `app/ai/notice/`: one PydanticAI `output_type=NoticeDraft` call — **no tools**,
+  timeout-bounded. The drafter runs only after the candidate is `CONFIRMED`
+  (`NoticeService.draft`, via the `draft_recovery_notice` job), records an
+  `agent_run`, and the candidate advances to `NOTICE_DRAFTED`. Review is
+  `confirm` (freeze) | `reject` | `request_info` | `edit` (in-place on the draft,
+  before/after in `reviews`). `POST /recovery-candidates/{id}/notices`,
+  `GET .../notices`, `GET /recovery-notices/{id}`, `POST /recovery-notices/{id}/review`
+  — and **deliberately no send action anywhere**: a notice's terminal state is
+  `APPROVED` and a human takes it from there. **16 new tests** (208 + 3 live): the
+  context-whitelist unit suite, an API slice (draft from confirmed candidate →
+  body carries the `8,700,000.00` figure + treaty + recipient, `used_only_provided_facts`,
+  candidate → notice_drafted, agent_run + audit; edit before/after; approve freezes;
+  can't draft an unconfirmed candidate; a test asserting *no* `send` operation
+  exists), and a **live eval** (`pytest -m live`, `claude-opus-5`) checking the
+  draft uses only provided facts, keeps the figure unchanged, stays indicative
+  (no admission / agreement / payment), and invents no email address. Web:
+  `/recovery-candidates/{id}/notices` — draft form, the rendered notice, edit /
+  approve / reject, history.
 - **P10:** OTel dashboards, AI cost/latency views, calculation-trace viewer, audit
   views. **Decision point:** adopt Temporal only if real long-running multi-party
   compensating workflows have emerged; otherwise keep Procrastinate + state machines.

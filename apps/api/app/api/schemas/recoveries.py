@@ -9,6 +9,8 @@ from pydantic import Field
 from app.api.schemas import ApiModel
 from app.domain.ai import ApplicabilityAssessment, FindingKind, InvestigationStatus
 from app.domain.recoveries import (
+    NoticeKind,
+    NoticeStatus,
     PacketStatementClass,
     PacketVersionStatus,
     RecoveryCandidateStatus,
@@ -231,3 +233,51 @@ class PacketReviewRequest(ApiModel):
     reason: str | None = Field(default=None, max_length=2000)
     statement_key: str | None = Field(default=None, max_length=120)
     value: str | None = Field(default=None, max_length=2000)
+
+
+# --- recovery notice -----------------------------------------------
+
+
+class NoticeRecipientModel(ApiModel):
+    name: str = Field(min_length=1, max_length=200)
+    organisation: str = Field(min_length=1, max_length=200)
+    role: str = Field(default="", max_length=150)
+    email: str = Field(default="", max_length=200)
+
+
+class DraftNoticeRequest(ApiModel):
+    kind: NoticeKind
+    recipient: NoticeRecipientModel
+
+
+class NoticeReviewRequest(ApiModel):
+    decision: ReviewDecision
+    subject: str | None = Field(default=None, max_length=300)
+    body_markdown: str | None = Field(default=None, max_length=20000)
+    recipient: NoticeRecipientModel | None = None
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class RecoveryNoticeOut(ApiModel):
+    id: UUID
+    recovery_candidate_id: UUID
+    kind: NoticeKind
+    status: NoticeStatus
+    recipient: dict[str, str]
+    subject: str
+    body_markdown: str
+    key_figures: dict[str, str]
+    caveats: list[str]
+    used_only_provided_facts: bool
+    notes_for_reviewer: str | None
+    context: dict
+    agent_run_id: UUID | None
+    recovery_packet_version_id: UUID | None
+    review_note: str | None
+    approved_at: dt.datetime | None
+    superseded: bool
+    created_at: dt.datetime
+
+
+class RecoveryNoticeList(ApiModel):
+    notices: list[RecoveryNoticeOut]
