@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import { FileText } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { NoticeKind, RecoveryNoticeOut } from "@/lib/api";
 import {
   asProblem,
@@ -73,26 +74,23 @@ export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href={`/recovery-candidates/${candidateId}`}
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          ← Recovery candidate
-        </Link>
-        <h1 className="mt-2 text-xl font-semibold tracking-tight">Notices</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Drafted from a whitelist of approved facts only, after the recovery is confirmed. Every
-          draft is for human review — <strong>Cedeon never sends anything.</strong>
-        </p>
-      </div>
+      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery candidate</BackLink>
+      <PageHeader
+        title="Notices"
+        description={
+          <>
+            Drafted from a whitelist of approved facts only, after the recovery is confirmed. Every
+            draft is for human review — <strong>Cedeon never sends anything.</strong>
+          </>
+        }
+      />
 
       {!confirmed ? (
-        <Card>
-          <CardContent className="py-8 text-sm text-muted-foreground">
-            Confirm the recovery candidate before drafting a notice.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          title="Recovery not confirmed yet"
+          description="Confirm the recovery candidate before drafting a notice."
+        />
       ) : (
         <Card>
           <CardHeader>
@@ -107,18 +105,17 @@ export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
               }}
             >
               <Field label="Notice type" htmlFor="n-kind">
-                <select
+                <Select
                   id="n-kind"
                   value={kind}
                   onChange={(e) => setKind(e.target.value as NoticeKind)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   {NOTICE_KINDS.map((k) => (
                     <option key={k} value={k}>
                       {noticeKindLabel(k)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Recipient organisation" htmlFor="n-org">
                 <Input
@@ -230,10 +227,10 @@ function NoticeCard({ notice, onReviewed }: { notice: RecoveryNoticeOut; onRevie
         {editing ? (
           <>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-            <textarea
+            <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="min-h-64 w-full rounded-md border border-input bg-background p-3 font-mono text-xs"
+              className="min-h-64 p-3 font-mono text-xs"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => review.mutate({ decision: "edit", withEdit: true })}>
@@ -271,11 +268,10 @@ function NoticeCard({ notice, onReviewed }: { notice: RecoveryNoticeOut; onRevie
 
         {open && !editing ? (
           <div className="space-y-2">
-            <textarea
+            <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Optional note (recorded with the decision)"
-              className="min-h-14 w-full rounded-md border border-input bg-background p-2 text-sm"
             />
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => review.mutate({ decision: "confirm" })}>

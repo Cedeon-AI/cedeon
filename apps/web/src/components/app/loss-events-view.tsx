@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Waves } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { createLossEvent, listLossEvents } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 
@@ -37,13 +39,10 @@ export function LossEventsView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Loss events</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A loss event groups underlying claims from one occurrence. Committing a loss import
-          creates or extends events; you can also create one here and commit into it.
-        </p>
-      </div>
+      <PageHeader
+        title="Loss events"
+        description="A loss event groups underlying claims from one occurrence. Committing a loss import creates or extends events; you can also create one here and commit into it."
+      />
 
       <Card>
         <CardHeader>
@@ -75,7 +74,7 @@ export function LossEventsView() {
             </Field>
             <div className="md:col-span-3">
               <Button type="submit" disabled={add.isPending}>
-                {add.isPending ? "Creating…" : "Create event"}
+                <Plus /> {add.isPending ? "Creating…" : "Create event"}
               </Button>
             </div>
           </form>
@@ -129,7 +128,11 @@ export function LossEventsView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">No loss events yet.</p>
+            <EmptyState
+              icon={<Waves />}
+              title="No loss events yet"
+              description="Create one above, or commit a loss import."
+            />
           )}
         </CardContent>
       </Card>

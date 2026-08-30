@@ -6,6 +6,7 @@ import { RecoveryPreview } from "@/components/app/recovery-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackLink, PageHeader } from "@/components/ui/page-header";
 import { getTreaty } from "@/lib/api";
 import { formatShare, isBusy, termLabel, versionStatus } from "@/lib/treaties";
 import { formatMoney } from "@/lib/utils";
@@ -27,20 +28,23 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/treaties" className="text-sm text-muted-foreground hover:underline">
-          ← Treaty library
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">
+      <BackLink href="/treaties">Treaty library</BackLink>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
             {treaty.data?.treaty.name ?? "Treaty"}
-          </h1>
-          {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {treaty.data?.treaty.cedent_name} · {treaty.data?.treaty.program_name}
-        </p>
-      </div>
+            {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
+          </span>
+        }
+        description={`${treaty.data?.treaty.cedent_name ?? ""} · ${treaty.data?.treaty.program_name ?? ""}`}
+        actions={
+          version?.status === "needs_validation" ? (
+            <Button asChild size="sm">
+              <Link href={`/treaties/${treatyId}/validate`}>Validate terms</Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {version?.status === "needs_validation" ? (
         <Card className="border-warning/40 bg-warning/5">

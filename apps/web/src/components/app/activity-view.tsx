@@ -1,51 +1,36 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Activity, ScrollText } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/field";
+import { FilterTabs } from "@/components/ui/filter-tabs";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { actorTone, agentLabel, runStatusTone, usd } from "@/lib/activity";
 import type { AgentRunSummary } from "@/lib/api";
 import { getAgentRun, getAiSpend, listAgentRuns, listAuditEvents } from "@/lib/api";
 
 type Tab = "runs" | "audit" | "spend";
 
+const TABS = [
+  { label: "AI runs", value: "runs" },
+  { label: "Audit log", value: "audit" },
+  { label: "AI spend", value: "spend" },
+] as const;
+
 export function ActivityView() {
   const [tab, setTab] = useState<Tab>("runs");
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Activity</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          What the AI did, what happened, and what it cost. Every model call is recorded on{" "}
-          <span className="font-mono text-xs">agent_runs</span>; every state transition on the
-          append-only audit log.
-        </p>
-      </div>
+      <PageHeader
+        title="Activity"
+        description="What the AI did, what happened, and what it cost. Every model call is recorded on agent_runs; every state transition on the append-only audit log."
+      />
 
-      <div className="flex gap-1 text-sm">
-        {(
-          [
-            ["runs", "AI runs"],
-            ["audit", "Audit log"],
-            ["spend", "AI spend"],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={
-              tab === key
-                ? "rounded-md bg-muted px-3 py-1.5 font-medium"
-                : "rounded-md px-3 py-1.5 text-muted-foreground hover:bg-muted/60"
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <FilterTabs options={TABS} value={tab} onChange={setTab} size="md" />
 
       {tab === "runs" ? <AgentRuns /> : null}
       {tab === "audit" ? <AuditLog /> : null}
@@ -114,7 +99,11 @@ function AgentRuns() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">No AI runs yet.</p>
+            <EmptyState
+              icon={<Activity />}
+              title="No AI runs yet"
+              description="Investigations and drafts appear here once you run them."
+            />
           )}
         </CardContent>
       </Card>
@@ -224,10 +213,10 @@ function AuditLog() {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Audit log</CardTitle>
-        <select
+        <Select
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+          className="h-8 w-auto px-2 text-xs"
         >
           <option value="">all actions</option>
           {actions.map((a) => (
@@ -235,7 +224,7 @@ function AuditLog() {
               {a}
             </option>
           ))}
-        </select>
+        </Select>
       </CardHeader>
       <CardContent>
         {events.data && events.data.length > 0 ? (
@@ -254,7 +243,11 @@ function AuditLog() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No audit events.</p>
+          <EmptyState
+            icon={<ScrollText />}
+            title="No audit events"
+            description="Every state transition will be recorded here."
+          />
         )}
       </CardContent>
     </Card>

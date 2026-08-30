@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BackLink, PageHeader } from "@/components/ui/page-header";
 import { getLossEvent } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 
@@ -21,19 +21,15 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/loss-events" className="text-sm text-muted-foreground hover:underline">
-          ← Loss events
-        </Link>
-        <h1 className="mt-2 text-xl font-semibold tracking-tight">{event.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {event.event_identifier ? `${event.event_identifier} · ` : ""}
-          {event.date_of_loss_from
+      <BackLink href="/loss-events">Loss events</BackLink>
+      <PageHeader
+        title={event.name}
+        description={`${event.event_identifier ? `${event.event_identifier} · ` : ""}${
+          event.date_of_loss_from
             ? `${event.date_of_loss_from} → ${event.date_of_loss_to}`
-            : "no dated losses"}
-          {event.catastrophe_code ? ` · ${event.catastrophe_code}` : ""}
-        </p>
-      </div>
+            : "no dated losses"
+        }${event.catastrophe_code ? ` · ${event.catastrophe_code}` : ""}`}
+      />
 
       <div className="flex flex-wrap gap-3">
         {event.totals.map((total) => (

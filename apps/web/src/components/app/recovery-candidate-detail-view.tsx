@@ -7,6 +7,8 @@ import { RecoveryInvestigationPanel } from "@/components/app/recovery-investigat
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/field";
+import { BackLink, PageHeader } from "@/components/ui/page-header";
 import type { RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
 import {
   getRecoveryCandidate,
@@ -75,45 +77,48 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/recovery-candidates" className="text-sm text-muted-foreground hover:underline">
-          ← Recovery candidates
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">Recovery candidate</h1>
-          <Badge tone={status.tone}>{status.label}</Badge>
-          {candidate.currency_mismatch ? <Badge tone="warning">currency mismatch</Badge> : null}
-          {calc ? (
+      <BackLink href="/recovery-candidates">Recovery candidates</BackLink>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            Recovery candidate
+            <Badge tone={status.tone}>{status.label}</Badge>
+            {candidate.currency_mismatch ? <Badge tone="warning">currency mismatch</Badge> : null}
+          </span>
+        }
+        description={
+          <>
+            Gross event incurred {formatMoney(candidate.gross_event_incurred, candidate.currency)} ·{" "}
             <Link
-              href={`/recovery-candidates/${candidateId}/packet`}
-              className="text-sm font-medium text-primary hover:underline"
+              href={`/loss-events/${candidate.loss_event_id}`}
+              className="text-primary hover:underline"
             >
-              Recovery packet →
-            </Link>
-          ) : null}
-          {candidate.status === "confirmed" || candidate.status === "notice_drafted" ? (
+              loss event
+            </Link>{" "}
+            ·{" "}
             <Link
-              href={`/recovery-candidates/${candidateId}/notices`}
-              className="text-sm font-medium text-primary hover:underline"
+              href={`/treaties/${candidate.treaty_id}`}
+              className="text-primary hover:underline"
             >
-              Notices →
+              treaty
             </Link>
-          ) : null}
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Gross event incurred {formatMoney(candidate.gross_event_incurred, candidate.currency)} ·{" "}
-          <Link
-            href={`/loss-events/${candidate.loss_event_id}`}
-            className="text-primary hover:underline"
-          >
-            loss event
-          </Link>{" "}
-          ·{" "}
-          <Link href={`/treaties/${candidate.treaty_id}`} className="text-primary hover:underline">
-            treaty
-          </Link>
-        </p>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            {calc ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/recovery-candidates/${candidateId}/packet`}>Recovery packet</Link>
+              </Button>
+            ) : null}
+            {candidate.status === "confirmed" || candidate.status === "notice_drafted" ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/recovery-candidates/${candidateId}/notices`}>Notices</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {candidate.currency_mismatch ? (
         <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
@@ -148,11 +153,10 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
               </p>
               {open ? (
                 <>
-                  <textarea
+                  <Textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Optional note (recorded with the decision)"
-                    className="min-h-16 w-full rounded-md border border-input bg-background p-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2">
                     <Button

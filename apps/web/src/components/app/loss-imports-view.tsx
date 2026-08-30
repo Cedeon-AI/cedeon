@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileSpreadsheet, Upload } from "lucide-react";
 import Link from "next/link";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { listLossImports } from "@/lib/api";
 import { importStatus, uploadLossImportFile } from "@/lib/losses";
 
@@ -40,14 +42,10 @@ export function LossImportsView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Loss imports</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload a claim schedule as CSV. Cedeon keeps the raw file and every row, you map the
-          columns to canonical fields, and validated rows commit to immutable underlying losses. No
-          AI touches this pipeline.
-        </p>
-      </div>
+      <PageHeader
+        title="Loss imports"
+        description="Upload a claim schedule as CSV. Cedeon keeps the raw file and every row, you map the columns to canonical fields, and validated rows commit to immutable underlying losses. No AI touches this pipeline."
+      />
 
       <Card>
         <CardHeader>
@@ -62,7 +60,7 @@ export function LossImportsView() {
             className="hidden"
           />
           <Button onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending ? "Uploading…" : "Choose CSV"}
+            <Upload /> {upload.isPending ? "Uploading…" : "Choose CSV"}
           </Button>
           {error ? <span className="text-sm text-danger">{error}</span> : null}
         </CardContent>
@@ -111,9 +109,11 @@ export function LossImportsView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No imports yet. Upload a claim CSV to get started.
-            </p>
+            <EmptyState
+              icon={<FileSpreadsheet />}
+              title="No imports yet"
+              description="Upload a claim CSV to get started."
+            />
           )}
         </CardContent>
       </Card>

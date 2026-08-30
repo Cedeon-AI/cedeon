@@ -1,13 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Sigma } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field } from "@/components/ui/field";
+import { Field, Select } from "@/components/ui/field";
+import { FilterTabs } from "@/components/ui/filter-tabs";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { RecoveryCandidateStatus } from "@/lib/api";
 import {
   asProblem,
@@ -70,13 +73,10 @@ export function RecoveryCandidatesView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Recovery candidates</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A validated treaty plus a loss event, run through the deterministic engine. The number is
-          code, not an LLM — you review and confirm it.
-        </p>
-      </div>
+      <PageHeader
+        title="Recovery candidates"
+        description="A validated treaty plus a loss event, run through the deterministic engine. The number is code, not an LLM — you review and confirm it."
+      />
 
       <Card>
         <CardHeader>
@@ -91,11 +91,10 @@ export function RecoveryCandidatesView() {
             }}
           >
             <Field label="Validated treaty" htmlFor="rc-treaty">
-              <select
+              <Select
                 id="rc-treaty"
                 value={form.treaty_id}
                 onChange={(e) => setForm({ ...form, treaty_id: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">Select…</option>
                 {validatedTreaties.map((t) => (
@@ -103,14 +102,13 @@ export function RecoveryCandidatesView() {
                     {t.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Loss event" htmlFor="rc-event">
-              <select
+              <Select
                 id="rc-event"
                 value={form.loss_event_id}
                 onChange={(e) => setForm({ ...form, loss_event_id: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">Select…</option>
                 {events.data?.map((evt) => (
@@ -118,7 +116,7 @@ export function RecoveryCandidatesView() {
                     {evt.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <div className="flex items-end">
               <Button type="submit" disabled={create.isPending}>
@@ -138,22 +136,7 @@ export function RecoveryCandidatesView() {
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Queue</CardTitle>
-          <div className="flex gap-1 text-xs">
-            {CANDIDATE_FILTERS.map((f) => (
-              <button
-                key={f.value || "all"}
-                type="button"
-                onClick={() => setFilter(f.value)}
-                className={
-                  filter === f.value
-                    ? "rounded bg-primary px-2 py-1 text-primary-foreground"
-                    : "rounded px-2 py-1 text-muted-foreground hover:bg-muted"
-                }
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          <FilterTabs options={CANDIDATE_FILTERS} value={filter} onChange={setFilter} />
         </CardHeader>
         <CardContent>
           {candidates.data && candidates.data.length > 0 ? (
@@ -197,7 +180,11 @@ export function RecoveryCandidatesView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">No recovery candidates in this view.</p>
+            <EmptyState
+              icon={<Sigma />}
+              title="No recovery candidates in this view"
+              description="Pair a validated treaty with a loss event above to create one."
+            />
           )}
         </CardContent>
       </Card>

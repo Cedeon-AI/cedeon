@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import { ExternalLink, FileText } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/field";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { PacketStatementOut, RecoveryPacketVersionOut } from "@/lib/api";
 import {
   asProblem,
@@ -75,50 +76,45 @@ export function RecoveryPacketView({ candidateId }: { candidateId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href={`/recovery-candidates/${candidateId}`}
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          ← Recovery candidate
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">Recovery packet</h1>
-          {version ? (
-            <Badge tone={packetVersionStatus(version.status).tone}>
-              v{version.version_no} · {packetVersionStatus(version.status).label}
-            </Badge>
-          ) : null}
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          An audit-friendly artifact. Every statement is one of four classes; AI statements carry
-          their citation. Nothing here is computed — it assembles the deterministic calculation, the
-          investigator's findings, and your decisions.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
-          {generate.isPending ? "Assembling…" : version ? "Regenerate" : "Generate packet"}
-        </Button>
-        {version && packetId ? (
-          <a
-            href={`/api/recovery-packets/${packetId}/versions/${version.id}/html`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-primary hover:underline"
-          >
-            Open printable HTML →
-          </a>
-        ) : null}
-      </div>
+      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery candidate</BackLink>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            Recovery packet
+            {version ? (
+              <Badge tone={packetVersionStatus(version.status).tone}>
+                v{version.version_no} · {packetVersionStatus(version.status).label}
+              </Badge>
+            ) : null}
+          </span>
+        }
+        description="An audit-friendly artifact. Every statement is one of four classes; AI statements carry their citation. Nothing here is computed — it assembles the deterministic calculation, the investigator's findings, and your decisions."
+        actions={
+          <>
+            <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
+              {generate.isPending ? "Assembling…" : version ? "Regenerate" : "Generate packet"}
+            </Button>
+            {version && packetId ? (
+              <Button asChild variant="secondary">
+                <a
+                  href={`/api/recovery-packets/${packetId}/versions/${version.id}/html`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Printable HTML <ExternalLink />
+                </a>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {!version ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No packet yet. Generate one once the candidate has a calculation.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          title="No packet yet"
+          description="Generate one once the candidate has a calculation."
+        />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
           <div className="space-y-4">
@@ -280,11 +276,10 @@ function ReviewCard({
       <CardContent className="space-y-3">
         {open ? (
           <>
-            <textarea
+            <Textarea
               value={reason}
               onChange={(e) => onReason(e.target.value)}
               placeholder="Optional note (recorded with the decision)"
-              className="min-h-16 w-full rounded-md border border-input bg-background p-2 text-sm"
             />
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => onReview("confirm")} disabled={pending}>

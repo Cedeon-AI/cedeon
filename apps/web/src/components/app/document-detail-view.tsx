@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FilterTabs } from "@/components/ui/filter-tabs";
+import { BackLink, PageHeader } from "@/components/ui/page-header";
 import { getDocument, getDocumentChunks, getDocumentPages } from "@/lib/api";
 import { isProcessing, statusLabel, statusTone } from "@/lib/documents";
 
@@ -55,29 +56,25 @@ export function DocumentDetailView({ documentId }: { documentId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/documents" className="text-sm text-muted-foreground hover:underline">
-          ← Documents
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">
+      <BackLink href="/documents">Documents</BackLink>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
             {doc?.original_filename ?? "Document"}
-          </h1>
-          {doc ? <Badge tone={statusTone(doc.status)}>{statusLabel(doc.status)}</Badge> : null}
-        </div>
-        {detail.data?.current_parse ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Parsed with {detail.data.current_parse.parser_name}{" "}
-            {detail.data.current_parse.parser_version} · {detail.data.current_parse.page_count}{" "}
-            pages
-          </p>
-        ) : null}
-        {doc?.status === "parse_failed" && detail.data?.current_parse?.error ? (
-          <p className="mt-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-            {detail.data.current_parse.error}
-          </p>
-        ) : null}
-      </div>
+            {doc ? <Badge tone={statusTone(doc.status)}>{statusLabel(doc.status)}</Badge> : null}
+          </span>
+        }
+        description={
+          detail.data?.current_parse
+            ? `Parsed with ${detail.data.current_parse.parser_name} ${detail.data.current_parse.parser_version} · ${detail.data.current_parse.page_count} pages`
+            : undefined
+        }
+      />
+      {doc?.status === "parse_failed" && detail.data?.current_parse?.error ? (
+        <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {detail.data.current_parse.error}
+        </p>
+      ) : null}
 
       {!parsed ? (
         <Card>
@@ -93,22 +90,14 @@ export function DocumentDetailView({ documentId }: { documentId: string }) {
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Page text</CardTitle>
               {pages.data && pages.data.length > 1 ? (
-                <div className="flex items-center gap-1 text-xs">
-                  {pages.data.map((p) => (
-                    <button
-                      key={p.page_number}
-                      type="button"
-                      onClick={() => setActivePage(p.page_number)}
-                      className={
-                        p.page_number === (page?.page_number ?? 1)
-                          ? "rounded bg-primary px-2 py-1 text-primary-foreground"
-                          : "rounded px-2 py-1 text-muted-foreground hover:bg-muted"
-                      }
-                    >
-                      {p.page_number}
-                    </button>
-                  ))}
-                </div>
+                <FilterTabs
+                  options={pages.data.map((p) => ({
+                    label: String(p.page_number),
+                    value: String(p.page_number),
+                  }))}
+                  value={String(page?.page_number ?? 1)}
+                  onChange={(v) => setActivePage(Number(v))}
+                />
               ) : null}
             </CardHeader>
             <CardContent>

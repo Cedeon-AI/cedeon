@@ -29,6 +29,7 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 8 | Recovery Packet + human review / approval flow | ✅ **Complete** (2026-08-30) — **no AI** |
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ✅ **Complete** (2026-08-30) — live-verified |
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ✅ **Complete** (2026-08-30) — Temporal **not adopted** |
+| — | UI refresh — design system, marketing site, app shell (no backend change) | ✅ **Complete** (2026-08-30) — ADR-0023; trust-class language unchanged |
 
 **The 10-phase MVP is complete.** Full pipeline: treaty → parsed document → AI-extracted
 terms with provenance → human validation → executable XOL treaty → loss ingestion →

@@ -479,3 +479,48 @@ the app is up, with the same backup and tenant-isolation story as everything els
 `ai-spend` is exact per-org accounting from `response.usage`, not sampled traces.
 If trace-level latency breakdowns or cross-service spans are ever needed, flip OTel
 on — no code change to the recorded model.
+
+## ADR-0023 — Frontend design system: Tailwind v4 tokens + Radix/lucide primitives; no CSS-in-JS, no component framework
+
+**Context.** The MVP UI worked but read as a scaffold: one flat card style, ad-hoc
+`<svg>` marks, a single-section landing page, an undifferentiated sidebar. A design
+pass was asked for, benchmarked against a modern SaaS marketing site. The question
+was how much library to take on.
+
+**Decision.** Stay on the stack already chosen (Next 15 App Router, Tailwind v4,
+hand-rolled shadcn-style primitives) and close the gap with **design execution and
+content breadth**, not a framework. Concretely:
+
+- **Tokens.** `globals.css` `@theme` gains elevation (`--shadow-xs..lg`, `--shadow-glow`),
+  gradient/glow utilities (`.hero-glow`, `.text-gradient`, `.dot-backdrop`), a
+  `--border-strong` / `--elevated` surface pair, and a fuller radius scale — all
+  theme-aware (light / `prefers-color-scheme` / `[data-theme]`). **The four trust
+  colours (`fact` / `calculation` / `ai` / `human`) are unchanged and remain the
+  product's primary visual signature** (ADR-0020).
+- **Primitives.** Add `@radix-ui/react-{accordion,tabs,slot,dialog}` (accessible
+  FAQ / tabs / `asChild` / mobile sheet), `lucide-react` (line icons, replacing
+  emoji and ad-hoc SVG), and `clsx` + `tailwind-merge` (`cn` now merges conflicting
+  classes). `components/ui/` gains `Accordion`, `Tabs`, `PageHeader`, `Stat`,
+  `EmptyState`, `Section`/`Container`/`SectionHeading`, `Separator`, `Skeleton`;
+  `Button`/`Badge`/`Card`/`Field` get richer variants. No CSS-in-JS, no MUI/Chakra/
+  Mantine, no Tailwind plugin beyond `@tailwindcss/postcss`.
+- **Marketing.** The `(marketing)` route group becomes a real site: sticky nav +
+  4-column footer, a hero with a self-contained HTML product mockup (the Recovery
+  Packet, showing the four trust classes), and sections for how-it-works, platform,
+  who-it's-for, a comparison table (Cedeon vs manual bordereau review vs generic AI
+  assistant), the worked `$20M xs $50M / $58.7M / $8.7M` example with the engine
+  trace, security, "what Cedeon is not", and an FAQ accordion — plus `/security`
+  and `/about` pages. `motion` stays confined here.
+- **App shell.** Grouped icon sidebar (Overview / Contracts / Losses / Recovery /
+  Oversight) with a Radix-dialog mobile sheet; a sticky top bar with an avatar
+  monogram. All 17 app views take a consistent polish pass: `PageHeader` /
+  `BackLink`, `EmptyState` for empty lists, the `Select` / `Textarea` / `FilterTabs`
+  primitives in place of ad-hoc markup. The investigation panel is retinted to the
+  `ai` (purple) trust colour, since its summary and findings *are* AI interpretation.
+
+**Consequences.** ~+7 small runtime deps, all tree-shakeable; marketing `/` first-load
+JS ≈ 161 kB. `motion` still never enters the `(app)` bundle. No visual regression to
+the trust-class language or the validation workspace. The copy in the new marketing
+sections restates existing doc positions (PRODUCT §1/§1a, the non-goals) — it does
+**not** expand product scope, and no `FinancialException`/generic-finding abstraction
+is implied.

@@ -39,8 +39,8 @@ export function RecoveryInvestigationPanel({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>
-          AI investigation <Badge tone="info">AI interpretation</Badge>
+        <CardTitle className="flex items-center gap-2">
+          AI investigation <Badge tone="ai">AI interpretation</Badge>
         </CardTitle>
         <Button
           size="sm"
@@ -98,7 +98,7 @@ export function RecoveryInvestigationPanel({
             ) : null}
 
             {current.summary ? (
-              <p className="rounded-md border-l-2 border-calculation/40 bg-calculation/5 px-3 py-2 text-sm">
+              <p className="rounded-md border-l-2 border-ai/40 bg-ai/5 px-3 py-2 text-sm">
                 {current.summary}
               </p>
             ) : null}
@@ -118,8 +118,8 @@ export function RecoveryInvestigationPanel({
                     </div>
                     <p className="mt-1.5">{f.text}</p>
                     {f.citation ? (
-                      <p className="mt-1 border-l-2 border-calculation/40 bg-calculation/5 px-2 py-1 text-xs text-muted-foreground">
-                        <span className="font-medium text-calculation">
+                      <p className="mt-1 border-l-2 border-ai/40 bg-ai/5 px-2 py-1 text-xs text-muted-foreground">
+                        <span className="font-medium text-ai">
                           p.{f.citation.page_number}
                           {f.citation.section ? ` · ${f.citation.section}` : ""}
                         </span>

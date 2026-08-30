@@ -1,12 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { createTreaty, listDocuments, listPrograms, listTreaties } from "@/lib/api";
 import { isBusy, versionStatus } from "@/lib/treaties";
 
@@ -55,13 +57,10 @@ export function TreatiesView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Treaty library</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create a treaty from a parsed treaty document. Cedeon extracts the terms; you validate
-          them.
-        </p>
-      </div>
+      <PageHeader
+        title="Treaty library"
+        description="Create a treaty from a parsed treaty document. Cedeon extracts the terms; you validate them."
+      />
 
       <Card>
         <CardHeader>
@@ -76,11 +75,10 @@ export function TreatiesView() {
             }}
           >
             <Field label="Program" htmlFor="tprogram">
-              <select
+              <Select
                 id="tprogram"
                 value={form.program_id}
                 onChange={(e) => setForm({ ...form, program_id: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">Select…</option>
                 {programs.data?.map((p) => (
@@ -88,7 +86,7 @@ export function TreatiesView() {
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Treaty name" htmlFor="tname">
               <Input
@@ -99,11 +97,10 @@ export function TreatiesView() {
               />
             </Field>
             <Field label="Source document" htmlFor="tdoc">
-              <select
+              <Select
                 id="tdoc"
                 value={form.source_document_id}
                 onChange={(e) => setForm({ ...form, source_document_id: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">None (add later)</option>
                 {parsedTreatyDocs.map((d) => (
@@ -111,11 +108,11 @@ export function TreatiesView() {
                     {d.original_filename}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <div className="md:col-span-3">
               <Button type="submit" disabled={add.isPending}>
-                {add.isPending ? "Creating…" : "Create treaty"}
+                <Plus /> {add.isPending ? "Creating…" : "Create treaty"}
               </Button>
               {parsedTreatyDocs.length === 0 ? (
                 <span className="ml-3 text-xs text-muted-foreground">
@@ -173,7 +170,11 @@ export function TreatiesView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">No treaties yet.</p>
+            <EmptyState
+              icon={<ScrollText />}
+              title="No treaties yet"
+              description="Create one from a parsed treaty document above."
+            />
           )}
         </CardContent>
       </Card>

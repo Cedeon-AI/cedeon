@@ -87,7 +87,8 @@ this swap does not touch domain or API code. See [ADR-0007](DECISIONS.md).
 | Concern | Choice | Notes |
 | --- | --- | --- |
 | Framework | Next.js 15 (App Router), React 19, TypeScript strict | Next 16 acceptable; 15 is the conservative default. |
-| Styling | Tailwind CSS + shadcn/ui | |
+| Styling | Tailwind CSS v4 (`@theme` tokens, light + dark) + hand-rolled shadcn-style primitives in `components/ui/` | Tokens in `globals.css`: surfaces, elevation, gradients, the four trust colours (`fact`/`calculation`/`ai`/`human`). See ADR-0023. |
+| Primitives | Radix UI (`@radix-ui/react-{accordion,tabs,slot,dialog}`), `lucide-react` icons, `clsx` + `tailwind-merge` (`cn`) | ADR-0023. |
 | Server state | TanStack Query | Against same-origin `/api` |
 | Forms | React Hook Form + Zod | |
 | API client | `@hey-api/openapi-ts` (types + TanStack Query hooks) | Generated from FastAPI OpenAPI. **No hand-written DTOs.** |
@@ -330,7 +331,7 @@ def allocate_recovery(
 
 | # | Screen | Purpose |
 | --- | --- | --- |
-| 0 | **Marketing / landing** | `(marketing)` route group. Visually rich, animated (`motion`). The only place animation libs load. |
+| 0 | **Marketing / landing** | `(marketing)` route group: sticky nav + 4-column footer, a hero with an HTML product mockup, and sections for how-it-works, platform, who-it's-for, a Cedeon vs manual-review vs generic-assistant comparison table, the worked `$8.7M` example, security, "what Cedeon is not", and an FAQ accordion. Plus `/security` and `/about` pages. Visually rich, animated (`motion`) — the only place animation libs load. |
 | 1 | Dashboard | Treaties, active programs, loss events, recovery candidates, needs-review queue, outstanding notices |
 | 2 | Programs | List / manage reinsurance programs |
 | 3 | Treaty Library | Treaty · version · effective dates · status · validation state |
@@ -345,7 +346,10 @@ def allocate_recovery(
 
 Design language: calm, dense, and legible — this is a review tool for financial
 professionals. Every AI-authored statement in the UI is visually badged and carries
-its citation. Light and dark themes.
+its citation. Light and dark themes. The app shell is a grouped icon sidebar
+(Overview / Contracts / Losses / Recovery / Oversight) with a mobile sheet;
+shared primitives (`Button`, `Badge`, `Card`, `PageHeader`, `Stat`, `EmptyState`,
+`Tabs`, `Accordion`) live in `components/ui/`. See ADR-0023.
 
 ---
 

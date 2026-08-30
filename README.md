@@ -45,6 +45,8 @@ product is **Cedeon Recovery Intelligence**:
 
 **The 10-phase MVP is complete** — the full pipeline runs end to end through the containerized stack.
 
+- **UI refresh** (2026-08-30). A design-system and content pass on `apps/web` with no backend change ([ADR-0023](docs/DECISIONS.md)): Tailwind v4 token additions (elevation, gradients), Radix + `lucide-react` primitives, a real multi-section marketing site (`/`, `/security`, `/about`) with a comparison table and the worked `$8.7M` example, and a grouped icon sidebar for the app shell. The FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visual language is unchanged.
+
 ## Quickstart
 
 Prereqs: Docker, `uv`, `pnpm`, and [`just`](https://github.com/casey/just)

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/field";
+import { FilterTabs } from "@/components/ui/filter-tabs";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { ReviewDecision, TermCandidateOut } from "@/lib/api";
 import {
   asProblem,
@@ -89,61 +91,50 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
   if (treaty.data && treaty.data.treaty.current_version?.status === "validated") {
     return (
       <div className="space-y-4">
-        <BackLink treatyId={treatyId} />
-        <Card>
-          <CardContent className="py-10 text-center">
-            <p className="font-medium">This treaty version is already validated.</p>
-            <Link
-              href={`/treaties/${treatyId}`}
-              className="mt-2 inline-block text-sm text-primary hover:underline"
-            >
-              View the treaty →
-            </Link>
-          </CardContent>
-        </Card>
+        <BackLink href={`/treaties/${treatyId}`}>Back to treaty</BackLink>
+        <EmptyState
+          title="This treaty version is already validated"
+          action={
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/treaties/${treatyId}`}>View the treaty</Link>
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <BackLink treatyId={treatyId} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Validation workspace</h1>
-          <p className="text-sm text-muted-foreground">
-            {treaty.data?.treaty.name} — confirm each term against the treaty text.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {validateError ? <span className="text-sm text-danger">{validateError}</span> : null}
-          <Button onClick={() => validate.mutate()} disabled={validate.isPending}>
-            {validate.isPending ? "Validating…" : "Validate treaty"}
-          </Button>
-        </div>
-      </div>
+      <BackLink href={`/treaties/${treatyId}`}>Back to treaty</BackLink>
+      <PageHeader
+        title="Validation workspace"
+        description={`${treaty.data?.treaty.name ?? ""} — confirm each term against the treaty text.`}
+        actions={
+          <>
+            {validateError ? <span className="text-sm text-danger">{validateError}</span> : null}
+            <Button onClick={() => validate.mutate()} disabled={validate.isPending}>
+              {validate.isPending ? "Validating…" : "Validate treaty"}
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* LEFT — the treaty document */}
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Treaty document</CardTitle>
-            <div className="flex gap-1 text-xs">
-              {workspace.data?.pages.map((p) => (
-                <button
-                  key={p.page_number}
-                  type="button"
-                  onClick={() => setActivePage(p.page_number)}
-                  className={
-                    p.page_number === (page?.page_number ?? 1)
-                      ? "rounded bg-primary px-2 py-1 text-primary-foreground"
-                      : "rounded px-2 py-1 text-muted-foreground hover:bg-muted"
-                  }
-                >
-                  {p.page_number}
-                </button>
-              ))}
-            </div>
+            {workspace.data && workspace.data.pages.length > 1 ? (
+              <FilterTabs
+                options={workspace.data.pages.map((p) => ({
+                  label: String(p.page_number),
+                  value: String(p.page_number),
+                }))}
+                value={String(page?.page_number ?? 1)}
+                onChange={(v) => setActivePage(Number(v))}
+              />
+            ) : null}
           </CardHeader>
           <CardContent>
             <pre className="max-h-[34rem] overflow-auto whitespace-pre-wrap font-sans text-sm leading-relaxed">
@@ -213,14 +204,6 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function BackLink({ treatyId }: { treatyId: string }) {
-  return (
-    <Link href={`/treaties/${treatyId}`} className="text-sm text-muted-foreground hover:underline">
-      ← Back to treaty
-    </Link>
   );
 }
 

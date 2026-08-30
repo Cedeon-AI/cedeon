@@ -1,10 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FolderTree, Plus } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { createCedent, createProgram, listCedents, listPrograms } from "@/lib/api";
 
 export function ProgramsView() {
@@ -52,12 +54,10 @@ export function ProgramsView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Programs</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A reinsurance program groups a cedent's treaties for a treaty year.
-        </p>
-      </div>
+      <PageHeader
+        title="Programs"
+        description="A reinsurance program groups a cedent's treaties for a treaty year."
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -102,11 +102,10 @@ export function ProgramsView() {
               }}
             >
               <Field label="Cedent" htmlFor="cedent">
-                <select
+                <Select
                   id="cedent"
                   value={form.cedent_id}
                   onChange={(e) => setForm({ ...form, cedent_id: e.target.value })}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="">Select a cedent…</option>
                   {cedents.data?.map((c) => (
@@ -114,7 +113,7 @@ export function ProgramsView() {
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Program name" htmlFor="pname">
                 <Input
@@ -133,7 +132,7 @@ export function ProgramsView() {
                 />
               </Field>
               <Button type="submit" disabled={addProgram.isPending}>
-                {addProgram.isPending ? "Creating…" : "Create program"}
+                <Plus /> {addProgram.isPending ? "Creating…" : "Create program"}
               </Button>
             </form>
           </CardContent>
@@ -167,7 +166,11 @@ export function ProgramsView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">No programs yet.</p>
+            <EmptyState
+              icon={<FolderTree />}
+              title="No programs yet"
+              description="Add a cedent, then create a program above."
+            />
           )}
         </CardContent>
       </Card>

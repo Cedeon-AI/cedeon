@@ -7,7 +7,8 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import { BackLink, PageHeader } from "@/components/ui/page-header";
 import type { ImportReportOut, ImportRowOut } from "@/lib/api";
 import {
   asProblem,
@@ -118,18 +119,16 @@ export function LossImportDetailView({ importId }: { importId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/loss-imports" className="text-sm text-muted-foreground hover:underline">
-          ← Loss imports
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{loss.original_filename}</h1>
-          <Badge tone={status.tone}>{status.label}</Badge>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {loss.row_count} data rows · {headers.length} columns
-        </p>
-      </div>
+      <BackLink href="/loss-imports">Loss imports</BackLink>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            {loss.original_filename}
+            <Badge tone={status.tone}>{status.label}</Badge>
+          </span>
+        }
+        description={`${loss.row_count} data rows · ${headers.length} columns`}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -151,11 +150,11 @@ export function LossImportDetailView({ importId }: { importId: string }) {
                     <span className="block text-xs text-muted-foreground">{f.hint}</span>
                   ) : null}
                 </div>
-                <select
+                <Select
                   value={effectiveMapping[f.field] ?? NONE}
                   disabled={committed}
                   onChange={(e) => setField(f.field, e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
+                  className="h-9 px-2"
                 >
                   <option value={NONE}>— not mapped —</option>
                   {headers.map((column) => (
@@ -163,7 +162,7 @@ export function LossImportDetailView({ importId }: { importId: string }) {
                       {column}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             ))}
             {!committed ? (
@@ -201,11 +200,10 @@ export function LossImportDetailView({ importId }: { importId: string }) {
                 </Field>
                 {(events.data ?? []).length > 0 ? (
                   <Field label="…or add to an existing event" htmlFor="evtexisting">
-                    <select
+                    <Select
                       id="evtexisting"
                       value={existingEventId}
                       onChange={(e) => setExistingEventId(e.target.value)}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     >
                       <option value={NONE}>New event(s) from the CSV</option>
                       {events.data?.map((evt) => (
@@ -213,7 +211,7 @@ export function LossImportDetailView({ importId }: { importId: string }) {
                           {evt.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </Field>
                 ) : null}
                 <Button onClick={() => commit.mutate()} disabled={commit.isPending}>

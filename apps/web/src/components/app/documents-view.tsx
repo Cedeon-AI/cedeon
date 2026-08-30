@@ -1,11 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Upload } from "lucide-react";
 import Link from "next/link";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/field";
+import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { type DocumentKind, listDocuments } from "@/lib/api";
 import { isProcessing, statusLabel, statusTone, uploadDocumentFile } from "@/lib/documents";
 
@@ -55,30 +58,27 @@ export function DocumentsView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Documents</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload treaty PDFs. Cedeon parses them into pages and clause-aware chunks — the evidence
-          base for term extraction.
-        </p>
-      </div>
+      <PageHeader
+        title="Documents"
+        description="Upload treaty PDFs. Cedeon parses them into pages and clause-aware chunks — the evidence base for term extraction."
+      />
 
       <Card>
         <CardHeader>
           <CardTitle>Upload a document</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
-          <select
+          <Select
             value={kind}
             onChange={(e) => setKind(e.target.value as DocumentKind)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm capitalize"
+            className="w-auto capitalize"
           >
             {KINDS.map((k) => (
               <option key={k} value={k}>
                 {k.replace("_", " ")}
               </option>
             ))}
-          </select>
+          </Select>
           <input
             ref={fileRef}
             type="file"
@@ -87,7 +87,7 @@ export function DocumentsView() {
             className="hidden"
           />
           <Button onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending ? "Uploading…" : "Choose PDF"}
+            <Upload /> {upload.isPending ? "Uploading…" : "Choose PDF"}
           </Button>
           {error ? <span className="text-sm text-danger">{error}</span> : null}
         </CardContent>
@@ -135,9 +135,11 @@ export function DocumentsView() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No documents yet. Upload a treaty PDF to get started.
-            </p>
+            <EmptyState
+              icon={<FileText />}
+              title="No documents yet"
+              description="Upload a treaty PDF to get started."
+            />
           )}
         </CardContent>
       </Card>
