@@ -12,7 +12,7 @@ deterministic recovery working," choose the latter.
 | 0 | Architecture review + docs | ✅ **Complete** — verdict *Partially agree* (Temporal deferred) |
 | 1 | Foundation (monorepo, API, web, DB, auth, CI) — **no AI** | ✅ **Complete** (2026-08-30) |
 | 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ✅ **Complete** (2026-08-30) |
-| 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live model call code-complete, pending workspace-scoped key to verify |
+| 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live extraction verified end-to-end against Anthropic (`pytest -m live`, `claude-opus-5`) |
 | 4 | Executable XOL model + deterministic calculation engine | ✅ **Complete** (2026-08-30) |
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ✅ **Complete** (2026-08-30) — **no AI** |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⏭️ **Next** |
