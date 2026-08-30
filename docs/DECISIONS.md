@@ -497,6 +497,16 @@ content breadth**, not a framework. Concretely:
   theme-aware (light / `prefers-color-scheme` / `[data-theme]`). **The four trust
   colours (`fact` / `calculation` / `ai` / `human`) are unchanged and remain the
   product's primary visual signature** (ADR-0020).
+- **Theme.** Light is the default — the audience works beside light treaty PDFs and
+  bordereaux, dense financial tables read better light, and the Recovery Packet
+  artifact is light. A `ThemeToggle` (System / Light / Dark, `lucide` icons) in the
+  app top bar, the marketing footer and the auth panel persists to
+  `localStorage["cedeon-theme"]`; a tiny inline script in the root layout stamps
+  `data-theme` before first paint so there is no flash. "System" (the default) leaves
+  the attribute off and follows the OS. Dark-first was considered and rejected: it
+  would mean re-tuning the trust-colour tints for a dark ground and re-shooting the
+  marketing screenshots, and it cuts against the institutional "sits beside the
+  document" positioning.
 - **Primitives.** Add `@radix-ui/react-{accordion,tabs,slot,dialog}` (accessible
   FAQ / tabs / `asChild` / mobile sheet), `lucide-react` (line icons, replacing
   emoji and ad-hoc SVG), and `clsx` + `tailwind-merge` (`cn` now merges conflicting

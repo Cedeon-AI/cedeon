@@ -20,10 +20,18 @@ export const metadata: Metadata = {
     "Upload your reinsurance treaties and loss data. Cedeon understands the contracts, monitors the losses, identifies potential recoveries, and prepares an evidence-backed recovery package for human review.",
 };
 
+/**
+ * Stamp the saved theme onto <html> before first paint so there is no flash.
+ * "system" (or nothing saved) leaves the attribute off and lets the OS setting win.
+ */
+const themeScript = `(function(){try{var t=localStorage.getItem("cedeon-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t;}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${mono.variable} min-h-dvh antialiased`}>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static no-flash theme script, runs before paint */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const TRUST = [
   { label: "Fact", cls: "text-fact bg-fact/10 border-fact/30" },
@@ -60,7 +61,10 @@ export function AuthCard({
       </div>
 
       {/* form panel */}
-      <div className="flex flex-col items-center justify-center px-6 py-12">
+      <div className="relative flex flex-col items-center justify-center px-6 py-12">
+        <div className="absolute right-6 top-6">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-sm">
           <Link href="/" className="mb-8 inline-block lg:hidden">
             <Logo />

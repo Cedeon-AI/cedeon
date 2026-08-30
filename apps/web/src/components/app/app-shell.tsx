@@ -4,6 +4,7 @@ import { AppNav } from "@/components/app/app-nav";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { Session } from "@/lib/session";
 
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
@@ -33,6 +34,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             </span>
           </div>
           <div className="flex items-center gap-2.5">
+            <ThemeToggle className="hidden sm:inline-flex" />
             <span className="hidden text-sm text-muted-foreground md:inline">
               {session.user.email}
             </span>
