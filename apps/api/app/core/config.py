@@ -75,7 +75,14 @@ class Settings(BaseSettings):
     )
     # Per-task model config (provider:model). Do not hard-code model names elsewhere.
     treaty_extraction_model: str = "anthropic:claude-opus-5"
+    recovery_investigator_model: str = "anthropic:claude-opus-5"
     ai_enabled: bool = True
+
+    # Recovery Investigator bounds (docs/AI_ARCHITECTURE.md §2b — bounded, read-only).
+    investigator_request_limit: int = 12
+    investigator_tool_calls_limit: int = 24
+    investigator_total_tokens_limit: int = 200_000
+    investigator_timeout_seconds: int = 120
 
     # Telemetry
     otel_enabled: bool = False

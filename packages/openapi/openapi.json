@@ -34,6 +34,29 @@
         "title": "AddMemberRequest",
         "type": "object"
       },
+      "AgentRunToolCalls": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_run_id": {
+            "format": "uuid",
+            "title": "Agent Run Id",
+            "type": "string"
+          },
+          "tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ToolCallOut"
+            },
+            "title": "Tool Calls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agent_run_id",
+          "tool_calls"
+        ],
+        "title": "AgentRunToolCalls",
+        "type": "object"
+      },
       "AllocationOut": {
         "additionalProperties": false,
         "properties": {
@@ -64,6 +87,17 @@
         ],
         "title": "AllocationOut",
         "type": "object"
+      },
+      "ApplicabilityAssessment": {
+        "description": "The agent's read on whether the treaty responds to this loss \u2014 it explains\nand challenges the deterministic figure, it never recomputes it.",
+        "enum": [
+          "supported",
+          "partially_supported",
+          "unclear",
+          "contradicted"
+        ],
+        "title": "ApplicabilityAssessment",
+        "type": "string"
       },
       "Body_uploadDocument": {
         "properties": {
@@ -596,6 +630,19 @@
         "title": "DocumentStatus",
         "type": "string"
       },
+      "FindingKind": {
+        "enum": [
+          "relevant_clause",
+          "supporting_evidence",
+          "missing_information",
+          "ambiguity",
+          "inconsistency",
+          "notice_obligation",
+          "next_step"
+        ],
+        "title": "FindingKind",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -723,6 +770,98 @@
         ],
         "title": "ImportRowOut",
         "type": "object"
+      },
+      "InvestigationCitationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "page_number": {
+            "title": "Page Number",
+            "type": "integer"
+          },
+          "quoted_text": {
+            "title": "Quoted Text",
+            "type": "string"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          }
+        },
+        "required": [
+          "document_id",
+          "page_number",
+          "section",
+          "quoted_text"
+        ],
+        "title": "InvestigationCitationOut",
+        "type": "object"
+      },
+      "InvestigationFindingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvestigationCitationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FindingKind"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ordinal",
+          "kind",
+          "text",
+          "confidence",
+          "citation"
+        ],
+        "title": "InvestigationFindingOut",
+        "type": "object"
+      },
+      "InvestigationStatus": {
+        "enum": [
+          "running",
+          "completed",
+          "failed"
+        ],
+        "title": "InvestigationStatus",
+        "type": "string"
       },
       "LayerOut": {
         "additionalProperties": false,
@@ -1685,6 +1824,13 @@
               }
             ]
           },
+          "investigations": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryInvestigationOut"
+            },
+            "title": "Investigations",
+            "type": "array"
+          },
           "reviews": {
             "items": {
               "$ref": "#/components/schemas/RecoveryReviewOut"
@@ -1697,7 +1843,8 @@
           "candidate",
           "current_calculation",
           "calculations",
-          "reviews"
+          "reviews",
+          "investigations"
         ],
         "title": "RecoveryCandidateDetail",
         "type": "object"
@@ -1822,6 +1969,110 @@
         ],
         "title": "RecoveryCandidateStatus",
         "type": "string"
+      },
+      "RecoveryInvestigationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Run Id"
+          },
+          "applicability_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplicabilityAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/InvestigationFindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "out_of_scope": {
+            "title": "Out Of Scope",
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InvestigationStatus"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "suspected_prompt_injection": {
+            "title": "Suspected Prompt Injection",
+            "type": "boolean"
+          },
+          "unresolved_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "agent_run_id",
+          "summary",
+          "applicability_assessment",
+          "confidence",
+          "out_of_scope",
+          "suspected_prompt_injection",
+          "unresolved_questions",
+          "superseded",
+          "created_at",
+          "findings"
+        ],
+        "title": "RecoveryInvestigationOut",
+        "type": "object"
       },
       "RecoveryPreviewRequest": {
         "additionalProperties": false,
@@ -2369,6 +2620,42 @@
           "status"
         ],
         "title": "TermOut",
+        "type": "object"
+      },
+      "ToolCallOut": {
+        "additionalProperties": false,
+        "properties": {
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "result_summary": {
+            "additionalProperties": true,
+            "title": "Result Summary",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ordinal",
+          "tool_name",
+          "arguments",
+          "result_summary",
+          "status"
+        ],
+        "title": "ToolCallOut",
         "type": "object"
       },
       "TreatyCreate": {
@@ -3966,6 +4253,102 @@
           }
         },
         "summary": "Get Recovery Candidate",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}/agent-runs/{agent_run_id}/tool-calls": {
+      "get": {
+        "operationId": "getRecoveryAgentToolCalls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunToolCalls"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recovery Agent Tool Calls",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}/investigate": {
+      "post": {
+        "operationId": "investigateRecoveryCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue the Recovery Investigator (bounded, read-only AI \u2014 never computes the recovery)",
         "tags": [
           "recovery-candidates"
         ]

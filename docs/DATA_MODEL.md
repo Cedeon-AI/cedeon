@@ -177,10 +177,19 @@ candidate reverts to `NEEDS_REVIEW`. ·
 largest-remainder penny split already sums to the layer recovery exactly, so a
 stored `rounding_adjustment` column is deferred (derivable as
 `allocated_recovery − layer_recovery × share` when a reconciliation view needs it). ·
-`recovery_investigations` (`agent_run_id`, `status`, `summary`,
-`applicability_assessment`, `confidence`, `output` JSONB) ·
-`recovery_investigation_findings` (`investigation_id`, `kind`, `text`,
-`citation_id` nullable, `ordinal`) ·
+`recovery_investigations` *(Phase 7; migration 0007)* — **immutable** output of one
+Recovery Investigator run: (`recovery_candidate_id` CASCADE, `agent_run_id` SET NULL,
+`status` running/completed/failed, `summary`, `applicability_assessment`
+supported/partially_supported/unclear/contradicted, `confidence`, `out_of_scope`,
+`suspected_prompt_injection`, `unresolved_questions` JSONB, `output` JSONB, `error`,
+`superseded_at` — newest non-superseded row is current; re-investigating writes a new
+row). The agent never computes the recovery. ·
+`recovery_investigation_findings` *(Phase 7)* — **immutable**: (`investigation_id`
+CASCADE, `ordinal`, `kind` relevant_clause / supporting_evidence /
+missing_information / ambiguity / inconsistency / notice_obligation / next_step,
+`text`, `confidence`, `citation_id` nullable SET NULL). A must-cite finding whose
+quote is not on the cited page loses its citation and is downgraded to an ambiguity
+before it is stored (ADR-0011). ·
 `recovery_packets` (`recovery_candidate_id`, `current_version_id`) ·
 `recovery_packet_versions` (`version_no`, `content` JSONB, `calculation_id`,
 `investigation_id` nullable, `rendered_html` nullable, `status`) ·
@@ -201,8 +210,10 @@ JSONB, `value_after` JSONB, `reason`, `created_at`) — append-only ·
 `subject_type`, `subject_id`, `provider`, `model`, `prompt_version`, `status`,
 `input_ref` JSONB, `output` JSONB, `input_tokens`, `output_tokens`, `cost_usd`
 nullable, `latency_ms`, `error`, `started_at`, `finished_at`, `correlation_id`) ·
-`tool_calls` (`agent_run_id`, `ordinal`, `tool_name`, `arguments` JSONB,
-`result_summary` JSONB, `status`, `latency_ms`).
+`tool_calls` *(built Phase 7; migration 0007)* (`agent_run_id` CASCADE, `ordinal`,
+`tool_name`, `arguments` JSONB, `result_summary` JSONB, `status` ok/error,
+`latency_ms`; `UNIQUE(agent_run_id, ordinal)`) — one row per tool invocation inside
+a run, reconstructed from the agent's message history.
 
 **Jobs:** managed by Procrastinate's own tables; domain entity `status` columns are
 the user-visible progress signal.

@@ -8,6 +8,7 @@ from app.db.models.extraction import (
     Citation,
     PromptVersion,
     Review,
+    ToolCall,
     TreatyTermCandidate,
 )
 from app.db.models.identity import Membership, Organization, User, UserSession
@@ -21,6 +22,8 @@ from app.db.models.recoveries import (
     RecoveryAllocation,
     RecoveryCalculation,
     RecoveryCandidate,
+    RecoveryInvestigation,
+    RecoveryInvestigationFinding,
 )
 from app.db.models.reinsurance import (
     Cedent,
@@ -52,9 +55,12 @@ __all__ = [
     "RecoveryAllocation",
     "RecoveryCalculation",
     "RecoveryCandidate",
+    "RecoveryInvestigation",
+    "RecoveryInvestigationFinding",
     "ReinsuranceProgram",
     "Reinsurer",
     "Review",
+    "ToolCall",
     "Treaty",
     "TreatyLayer",
     "TreatyParticipation",

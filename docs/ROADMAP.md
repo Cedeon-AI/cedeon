@@ -16,8 +16,8 @@ deterministic recovery working," choose the latter.
 | 4 | Executable XOL model + deterministic calculation engine | ✅ **Complete** (2026-08-30) |
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ✅ **Complete** (2026-08-30) — **no AI** |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ✅ **Complete** (2026-08-30) — **no AI** |
-| 7 | Recovery Investigator (one bounded read-only agent + evals) | ⏭️ **Next** |
-| 8 | Recovery Packet + human review / approval flow | ⬜ |
+| 7 | Recovery Investigator (one bounded read-only agent + evals) | ✅ **Complete** (2026-08-30) — live-verified |
+| 8 | Recovery Packet + human review / approval flow | ⏭️ **Next** |
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ⬜ |
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ⬜ |
 
@@ -281,9 +281,29 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   `/recovery-candidates` (queue, status filter, create form) and
   `/recovery-candidates/{id}` (calculation + trace + allocations, review actions,
   recalculate, calculation & review history). Nav enabled.
-- **P7:** Recovery Investigator (PydanticAI agent, typed read-only tools, bounded,
-  `agent_runs` / `tool_calls`), structured `RecoveryInvestigation` + normalised
-  findings with citations. Investigator eval suite.
+- **P7:** ✅ **Complete (2026-08-30). First AI agent — bounded, read-only.** Migration
+  `0007`: `tool_calls` (per-invocation telemetry on an `agent_run`),
+  `recovery_investigations` (immutable per run; newest non-superseded is current) and
+  `recovery_investigation_findings` (normalised, optional `citation_id`).
+  `app/ai/investigator/`: a PydanticAI agent with `output_type=RecoveryInvestigation`
+  and **six typed read-only tools** — `get_recovery_calculation`,
+  `get_validated_terms`, `get_participants`, `get_loss_event`,
+  `list_underlying_losses`, `search_treaty` (Postgres FTS `ts_rank` over the
+  clause-aware chunks — lexical for now, ADR-0019). No write tools. Bounded by
+  `UsageLimits` (request / tool-call / token caps) + a wall-clock timeout, all
+  configurable. The deterministic recovery figure is handed in as a fact to explain
+  — a `recomputed_a_different_number` flag surfaces disagreement, it never emits a
+  rival number. `InvestigationService` runs it (or a fake in tests), records the
+  `agent_run` + `tool_calls`, and **grounds every finding**: a must-cite finding
+  whose quote is not actually on the cited page loses its citation and is downgraded
+  to an ambiguity (ADR-0011). `POST /recovery-candidates/{id}/investigate` enqueues
+  the `investigate_recovery_candidate` job; the candidate detail carries the
+  investigations. **12 new tests** (179 + 2 live): schema/grounding units, an API
+  slice (persist → ground → supersede → audit → tool-call log), and a **live eval**
+  (`pytest -m live`, `claude-opus-5`) asserting every citation resolves to real page
+  text, the agent used its tools, and it did not change the `8,700,000.00` figure.
+  Web: an "AI investigation" panel on the candidate detail — applicability badge,
+  cited findings badged *AI interpretation*, injection flag, poll-while-running.
 - **P8:** `recovery_packet_versions` with statement classification
   (FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION); `reviews` flow
   (confirm/edit/reject/request-info) with before/after + reason. HTML packet.

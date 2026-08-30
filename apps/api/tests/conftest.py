@@ -95,9 +95,15 @@ def extract_calls() -> list[tuple[object, object]]:
 
 
 @pytest.fixture
-def app(db: None, object_store, parse_calls, extract_calls):
+def investigate_calls() -> list[tuple[object, object, object]]:
+    return []
+
+
+@pytest.fixture
+def app(db: None, object_store, parse_calls, extract_calls, investigate_calls):
     from app.api.dependencies.context import (
         get_extract_enqueuer,
+        get_investigate_enqueuer,
         get_object_store,
         get_parse_enqueuer,
     )
@@ -112,8 +118,14 @@ def app(db: None, object_store, parse_calls, extract_calls):
     async def _record_extract(organization_id: object, version_id: object) -> None:
         extract_calls.append((organization_id, version_id))
 
+    async def _record_investigate(
+        organization_id: object, candidate_id: object, actor_id: object = None
+    ) -> None:
+        investigate_calls.append((organization_id, candidate_id, actor_id))
+
     application.dependency_overrides[get_parse_enqueuer] = lambda: _record_parse
     application.dependency_overrides[get_extract_enqueuer] = lambda: _record_extract
+    application.dependency_overrides[get_investigate_enqueuer] = lambda: _record_investigate
     return application
 
 

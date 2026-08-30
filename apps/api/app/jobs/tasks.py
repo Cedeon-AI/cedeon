@@ -60,3 +60,30 @@ async def enqueue_extract_treaty(organization_id: UUID, treaty_version_id: UUID)
     await extract_treaty.defer_async(
         organization_id=str(organization_id), treaty_version_id=str(treaty_version_id)
     )
+
+
+@procrastinate_app.task(name="investigate_recovery_candidate", queue="ai", pass_context=False)
+async def investigate_recovery_candidate(
+    *, organization_id: str, candidate_id: str, actor_id: str | None = None
+) -> dict[str, Any]:
+    settings = get_settings()
+    async with job_session() as session:
+        from app.services.investigation import InvestigationService
+
+        service = InvestigationService(session, settings)
+        investigation = await service.investigate(
+            UUID(organization_id),
+            UUID(candidate_id),
+            actor_id=UUID(actor_id) if actor_id else None,
+        )
+    return {"investigation_id": str(investigation.id), "status": investigation.status.value}
+
+
+async def enqueue_investigate_recovery(
+    organization_id: UUID, candidate_id: UUID, actor_id: UUID | None = None
+) -> None:
+    await investigate_recovery_candidate.defer_async(
+        organization_id=str(organization_id),
+        candidate_id=str(candidate_id),
+        actor_id=str(actor_id) if actor_id else None,
+    )

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,6 +78,16 @@ async def get_extract_enqueuer() -> ExtractEnqueuer:
     from app.jobs.tasks import enqueue_extract_treaty
 
     return enqueue_extract_treaty
+
+
+# (organization_id, candidate_id, actor_id | None) -> None
+InvestigateEnqueuer = Callable[[UUID, UUID, UUID | None], Awaitable[None]]
+
+
+async def get_investigate_enqueuer() -> InvestigateEnqueuer:
+    from app.jobs.tasks import enqueue_investigate_recovery
+
+    return enqueue_investigate_recovery
 
 
 def get_treaty_service(

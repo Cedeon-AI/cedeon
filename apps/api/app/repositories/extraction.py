@@ -12,6 +12,7 @@ from app.db.models.extraction import (
     AgentRun,
     Citation,
     Review,
+    ToolCall,
     TreatyTermCandidate,
 )
 
@@ -30,6 +31,25 @@ class AgentRunRepository:
             )
         )
         return result.scalar_one_or_none()
+
+
+class ToolCallRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, call: ToolCall) -> None:
+        self._session.add(call)
+
+    async def list_for_run(self, organization_id: UUID, agent_run_id: UUID) -> list[ToolCall]:
+        result = await self._session.execute(
+            select(ToolCall)
+            .where(
+                ToolCall.organization_id == organization_id,
+                ToolCall.agent_run_id == agent_run_id,
+            )
+            .order_by(ToolCall.ordinal)
+        )
+        return list(result.scalars().all())
 
 
 class CitationRepository:

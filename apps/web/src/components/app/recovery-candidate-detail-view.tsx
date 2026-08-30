@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
+import { RecoveryInvestigationPanel } from "@/components/app/recovery-investigation-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,9 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
     queryFn: async () =>
       (await getRecoveryCandidate({ path: { candidate_id: candidateId }, throwOnError: true }))
         .data,
+    // Poll while an investigation is running on the worker.
+    refetchInterval: (query) =>
+      (query.state.data?.investigations ?? []).some((i) => i.status === "running") ? 2500 : false,
   });
 
   const invalidate = () => {
@@ -59,7 +63,13 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
-  const { candidate, current_calculation: calc, calculations, reviews } = detail.data;
+  const {
+    candidate,
+    current_calculation: calc,
+    calculations,
+    reviews,
+    investigations,
+  } = detail.data;
   const status = candidateStatus(candidate.status);
   const open = candidate.status === "needs_review" || candidate.status === "in_review";
 
@@ -97,15 +107,18 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {calc ? (
-          <CalculationCard calc={calc} />
-        ) : (
-          <Card>
-            <CardContent className="py-8 text-sm text-muted-foreground">
-              No calculation on this candidate.
-            </CardContent>
-          </Card>
-        )}
+        <div className="space-y-4">
+          {calc ? (
+            <CalculationCard calc={calc} />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-sm text-muted-foreground">
+                No calculation on this candidate.
+              </CardContent>
+            </Card>
+          )}
+          <RecoveryInvestigationPanel candidateId={candidateId} investigations={investigations} />
+        </div>
 
         <div className="space-y-4">
           <Card>

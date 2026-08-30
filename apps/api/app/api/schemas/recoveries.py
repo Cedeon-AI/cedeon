@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.api.schemas import ApiModel
+from app.domain.ai import ApplicabilityAssessment, FindingKind, InvestigationStatus
 from app.domain.recoveries import RecoveryCandidateStatus
 from app.domain.reviews import ReviewDecision
 
@@ -103,8 +104,52 @@ class RecoveryReviewOut(ApiModel):
     created_at: dt.datetime
 
 
+class InvestigationCitationOut(ApiModel):
+    document_id: UUID
+    page_number: int
+    section: str | None
+    quoted_text: str
+
+
+class InvestigationFindingOut(ApiModel):
+    ordinal: int
+    kind: FindingKind
+    text: str
+    confidence: float | None
+    citation: InvestigationCitationOut | None
+
+
+class RecoveryInvestigationOut(ApiModel):
+    id: UUID
+    status: InvestigationStatus
+    agent_run_id: UUID | None
+    summary: str | None
+    applicability_assessment: ApplicabilityAssessment | None
+    confidence: float | None
+    out_of_scope: bool
+    suspected_prompt_injection: bool
+    unresolved_questions: list[str]
+    superseded: bool
+    created_at: dt.datetime
+    findings: list[InvestigationFindingOut]
+
+
 class RecoveryCandidateDetail(ApiModel):
     candidate: RecoveryCandidateOut
     current_calculation: RecoveryCalculationOut | None
     calculations: list[RecoveryCalculationOut]
     reviews: list[RecoveryReviewOut]
+    investigations: list[RecoveryInvestigationOut]
+
+
+class ToolCallOut(ApiModel):
+    ordinal: int
+    tool_name: str
+    arguments: dict
+    result_summary: dict
+    status: str
+
+
+class AgentRunToolCalls(ApiModel):
+    agent_run_id: UUID
+    tool_calls: list[ToolCallOut]

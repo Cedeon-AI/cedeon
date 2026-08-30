@@ -286,7 +286,8 @@ GET    /recovery-candidates?status=needs_review                                 
 GET    /recovery-candidates/{id}          calc + allocations + calculation/review history          [Phase 6]
 POST   /recovery-candidates/{id}/recalculate      re-run engine; new immutable calc iff inputs changed  [Phase 6]
 POST   /recovery-candidates/{id}/review           confirm|reject|request_info                      [Phase 6]
-POST   /recovery-candidates/{id}/investigate     enqueue Recovery Investigator                     [Phase 7]
+POST   /recovery-candidates/{id}/investigate     enqueue Recovery Investigator (bounded, read-only)  [Phase 7]
+GET    /recovery-candidates/{id}/agent-runs/{run}/tool-calls   investigator tool-call log            [Phase 7]
 GET    /recovery-candidates/{id}/packet ; POST .../packet (regenerate)
 POST   /recovery-packets/{id}/versions/{v}/review
 POST   /recovery-candidates/{id}/notices           draft only

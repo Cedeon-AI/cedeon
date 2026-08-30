@@ -24,7 +24,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
-from app.domain.ai import AgentRunStatus, AgentType, ExtractedTermStatus
+from app.domain.ai import AgentRunStatus, AgentType, ExtractedTermStatus, ToolCallStatus
 from app.domain.reviews import ReviewDecision, ReviewSubjectType
 
 _agent_type = SAEnum(
@@ -49,6 +49,9 @@ _review_subject = SAEnum(
 )
 _review_decision = SAEnum(
     ReviewDecision, native_enum=False, length=24, create_constraint=False, name="review_decision"
+)
+_tool_call_status = SAEnum(
+    ToolCallStatus, native_enum=False, length=8, create_constraint=False, name="tool_call_status"
 )
 
 
@@ -90,6 +93,28 @@ class AgentRun(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     started_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     correlation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class ToolCall(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """One tool invocation inside an agent run. Immutable telemetry."""
+
+    __tablename__ = "tool_calls"
+    __table_args__ = (
+        UniqueConstraint("agent_run_id", "ordinal", name="uq_tool_calls_run_ordinal"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    tool_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    arguments: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    result_summary: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[ToolCallStatus] = mapped_column(_tool_call_status, nullable=False)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class Citation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

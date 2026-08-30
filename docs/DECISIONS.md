@@ -23,6 +23,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0016 | Defer hybrid retrieval / embeddings to Phase 7 | Accepted |
 | 0017 | Loss import is a deterministic mapping pipeline; no AI | Accepted |
 | 0018 | Recovery candidate ↔ calculation split; content hash gates recompute | Accepted |
+| 0019 | Investigator retrieval is lexical (Postgres FTS); vector arm deferred | Accepted |
 
 ---
 
@@ -353,3 +354,25 @@ version* — a re-validated treaty is a new version and would need a new candida
 which is correct. `recalculate` is explicit (a button), not automatic on loss
 commit; a background "mark candidates stale" pass can be added later without schema
 change since the hash is already stored.
+
+## ADR-0019 — Investigator retrieval is lexical (Postgres FTS); the vector arm is deferred
+
+**Context.** ADR-0016 deferred hybrid retrieval / embeddings to Phase 7, where the
+Recovery Investigator needs to find treaty wording. Building the vector arm now means
+choosing an embeddings vendor (Anthropic has none — Voyage, OpenAI, or a self-hosted
+model), adding a `halfvec` column + HNSW index + an `embed_chunks` job, and carrying
+that cost and vendor relationship. The MVP treaty is a few pages of clause-aware
+chunks; early real treaties are dozens of pages.
+
+**Decision.** `search_treaty` ranks the already-stored `document_chunks` by Postgres
+full-text search (`ts_rank(to_tsvector('english', text), plainto_tsquery(query))`),
+falling back to the opening chunks when a query has no lexical hits. No `vector`
+extension, no `embedding` column, no embed job, no embeddings vendor. The tool
+signature — `search_treaty(query, k) -> list[Passage]` — is the seam: a vector arm
+(and RRF fusion) can be added behind it without touching the agent or its callers.
+
+**Consequences.** One fewer vendor decision and no new infra for Phase 7. Lexical
+search misses pure paraphrase ("catastrophe" vs "cat event") — acceptable on
+clause-headed chunks at this scale, and the grounding gate (ADR-0011) catches a
+finding that cites the wrong passage regardless. Revisit when a real treaty is large
+enough that FTS recall visibly costs the investigator a citation.

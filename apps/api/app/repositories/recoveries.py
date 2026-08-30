@@ -8,7 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models.recoveries import RecoveryAllocation, RecoveryCalculation, RecoveryCandidate
+from app.db.models.recoveries import (
+    RecoveryAllocation,
+    RecoveryCalculation,
+    RecoveryCandidate,
+    RecoveryInvestigation,
+    RecoveryInvestigationFinding,
+)
 from app.domain.recoveries import RecoveryCandidateStatus
 
 _WITH_CALCULATIONS = (
@@ -73,4 +79,42 @@ class RecoveryCandidateRepository:
         if status is not None:
             stmt = stmt.where(RecoveryCandidate.status == status)
         result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+
+class RecoveryInvestigationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, obj: object) -> None:
+        self._session.add(obj)
+
+    async def list_for_candidate(
+        self, organization_id: UUID, candidate_id: UUID
+    ) -> list[RecoveryInvestigation]:
+        result = await self._session.execute(
+            select(RecoveryInvestigation)
+            .where(
+                RecoveryInvestigation.organization_id == organization_id,
+                RecoveryInvestigation.recovery_candidate_id == candidate_id,
+            )
+            .options(
+                selectinload(RecoveryInvestigation.findings).selectinload(
+                    RecoveryInvestigationFinding.citation
+                )
+            )
+            .order_by(RecoveryInvestigation.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def active_for_candidate(
+        self, organization_id: UUID, candidate_id: UUID
+    ) -> list[RecoveryInvestigation]:
+        result = await self._session.execute(
+            select(RecoveryInvestigation).where(
+                RecoveryInvestigation.organization_id == organization_id,
+                RecoveryInvestigation.recovery_candidate_id == candidate_id,
+                RecoveryInvestigation.superseded_at.is_(None),
+            )
+        )
         return list(result.scalars().all())

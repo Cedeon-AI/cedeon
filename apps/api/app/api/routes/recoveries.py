@@ -6,23 +6,40 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
-from app.api.dependencies.context import AuthedContext, DbSession
+from app.api.dependencies.context import (
+    AppSettings,
+    AuthedContext,
+    DbSession,
+    InvestigateEnqueuer,
+    get_investigate_enqueuer,
+)
 from app.api.schemas.recoveries import (
+    AgentRunToolCalls,
     CalcStepOut,
     CalculationAllocationOut,
     CreateRecoveryCandidateRequest,
+    InvestigationCitationOut,
+    InvestigationFindingOut,
     RecoveryCalculationOut,
     RecoveryCandidateDetail,
     RecoveryCandidateList,
     RecoveryCandidateOut,
+    RecoveryInvestigationOut,
     RecoveryReviewOut,
     ReviewRecoveryCandidateRequest,
+    ToolCallOut,
 )
-from app.db.models.extraction import Review
-from app.db.models.recoveries import RecoveryCalculation, RecoveryCandidate
+from app.db.models.extraction import Review, ToolCall
+from app.db.models.recoveries import (
+    RecoveryCalculation,
+    RecoveryCandidate,
+    RecoveryInvestigation,
+)
 from app.domain.recoveries import RecoveryCandidateStatus
+from app.services.errors import ConflictError
+from app.services.investigation import InvestigationService
 from app.services.recoveries import RecoveryCandidateService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
@@ -81,6 +98,51 @@ def _review_out(review: Review) -> RecoveryReviewOut:
     )
 
 
+def _investigation_out(inv: RecoveryInvestigation) -> RecoveryInvestigationOut:
+    return RecoveryInvestigationOut(
+        id=inv.id,
+        status=inv.status,
+        agent_run_id=inv.agent_run_id,
+        summary=inv.summary,
+        applicability_assessment=inv.applicability_assessment,
+        confidence=float(inv.confidence) if inv.confidence is not None else None,
+        out_of_scope=inv.out_of_scope,
+        suspected_prompt_injection=inv.suspected_prompt_injection,
+        unresolved_questions=list(inv.unresolved_questions),
+        superseded=inv.superseded_at is not None,
+        created_at=inv.created_at,
+        findings=[
+            InvestigationFindingOut(
+                ordinal=f.ordinal,
+                kind=f.kind,
+                text=f.text,
+                confidence=float(f.confidence) if f.confidence is not None else None,
+                citation=(
+                    InvestigationCitationOut(
+                        document_id=f.citation.document_id,
+                        page_number=f.citation.page_number,
+                        section=f.citation.section,
+                        quoted_text=f.citation.quoted_text,
+                    )
+                    if f.citation is not None
+                    else None
+                ),
+            )
+            for f in inv.findings
+        ],
+    )
+
+
+def _tool_call_out(call: ToolCall) -> ToolCallOut:
+    return ToolCallOut(
+        ordinal=call.ordinal,
+        tool_name=call.tool_name,
+        arguments=dict(call.arguments),
+        result_summary=dict(call.result_summary),
+        status=call.status.value,
+    )
+
+
 @router.post(
     "",
     response_model=RecoveryCandidateOut,
@@ -113,12 +175,15 @@ async def list_recovery_candidates(
     "/{candidate_id}", response_model=RecoveryCandidateDetail, operation_id="getRecoveryCandidate"
 )
 async def get_recovery_candidate(
-    candidate_id: UUID, context: AuthedContext, session: DbSession
+    candidate_id: UUID, context: AuthedContext, session: DbSession, settings: AppSettings
 ) -> RecoveryCandidateDetail:
     service = RecoveryCandidateService(session)
     candidate = await service.get_candidate(context, candidate_id)
     reviews = await service.candidate_reviews(context, candidate_id)
     current = service.current_calculation(candidate)
+    investigations = await InvestigationService(session, settings).list_for_candidate(
+        context, candidate_id
+    )
     return RecoveryCandidateDetail(
         candidate=_candidate_out(candidate),
         current_calculation=_calculation_out(current) if current else None,
@@ -127,6 +192,7 @@ async def get_recovery_candidate(
             for c in sorted(candidate.calculations, key=lambda x: x.created_at, reverse=True)
         ],
         reviews=[_review_out(r) for r in reviews],
+        investigations=[_investigation_out(i) for i in investigations],
     )
 
 
@@ -159,3 +225,45 @@ async def review_recovery_candidate(
         context, candidate_id, decision=payload.decision, reason=payload.reason
     )
     return _candidate_out(candidate)
+
+
+@router.post(
+    "/{candidate_id}/investigate",
+    response_model=RecoveryCandidateOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Queue the Recovery Investigator (bounded, read-only AI — never computes the recovery)",
+    operation_id="investigateRecoveryCandidate",
+)
+async def investigate_recovery_candidate(
+    candidate_id: UUID,
+    context: AuthedContext,
+    session: DbSession,
+    settings: AppSettings,
+    enqueue: Annotated[InvestigateEnqueuer, Depends(get_investigate_enqueuer)],
+) -> RecoveryCandidateOut:
+    if not settings.ai_enabled:
+        raise ConflictError("AI is disabled in this environment")
+    # Surfaces 404 / 409 before the job is queued.
+    candidate = await RecoveryCandidateService(session).get_candidate(context, candidate_id)
+    if candidate.current_calculation_id is None:
+        raise ConflictError("the candidate has no calculation to investigate")
+    await enqueue(context.organization.id, candidate.id, context.user.id)
+    return _candidate_out(candidate)
+
+
+@router.get(
+    "/{candidate_id}/agent-runs/{agent_run_id}/tool-calls",
+    response_model=AgentRunToolCalls,
+    operation_id="getRecoveryAgentToolCalls",
+)
+async def get_recovery_agent_tool_calls(
+    candidate_id: UUID,
+    agent_run_id: UUID,
+    context: AuthedContext,
+    session: DbSession,
+    settings: AppSettings,
+) -> AgentRunToolCalls:
+    calls = await InvestigationService(session, settings).tool_calls(context, agent_run_id)
+    return AgentRunToolCalls(
+        agent_run_id=agent_run_id, tool_calls=[_tool_call_out(c) for c in calls]
+    )

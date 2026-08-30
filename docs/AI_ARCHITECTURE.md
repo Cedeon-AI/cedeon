@@ -123,6 +123,17 @@ Hard constraints:
 - The candidate's deterministic numbers are inputs the agent may *reference and
   question*, never recompute or override.
 
+**Status (2026-08-30) — shipped in Phase 7.** `app/ai/investigator/`. Six typed
+read-only tools: `get_recovery_calculation`, `get_validated_terms`,
+`get_participants`, `get_loss_event`, `list_underlying_losses`, `search_treaty`
+(lexical FTS — ADR-0019). `output_type` is a trimmed `RecoveryInvestigation`
+(`summary`, `applicability_assessment`, a flat `findings` list with `kind` +
+optional citation, `unresolved_questions`, guardrail flags including
+`recomputed_a_different_number` and `out_of_scope`). Bounds via PydanticAI
+`UsageLimits` (request / tool-call / token) + `asyncio.wait_for`. The service
+**grounds** every must-cite finding against real page text before persisting
+(ADR-0011) and records `agent_runs` + `tool_calls`. Live eval green.
+
 ### 2c. Notice drafter — Phase 9
 
 Runs **only after** a human confirms the recovery candidate. Drafts Initial Loss
@@ -142,10 +153,12 @@ MVP scope).
   `ordinal`, `text`.
 - **Embeddings:** `halfvec(N)` column, HNSW index, `embedding_model` recorded per
   chunk. Generated in the worker.
-- **Hybrid retrieval (Phase 3):** Postgres FTS (`tsvector` / `pg_trgm`) + vector
-  similarity, fused with reciprocal-rank fusion, filtered by
-  `treaty_version_id` / `section_path`. Citation quality is the product, so hybrid is
-  worth doing early — but Phase 1 needs no retrieval at all.
+- **Retrieval (Phase 7):** `search_treaty` ranks the clause-aware `document_chunks`
+  by Postgres FTS (`ts_rank` over `to_tsvector('english', text)` / `plainto_tsquery`).
+  The vector arm (embeddings + `halfvec`/HNSW + RRF fusion) is **deferred** — no
+  embeddings vendor is chosen yet and the MVP treaty is small; the tool signature is
+  the seam for adding it later without touching callers (ADR-0019). Phase 1 needs no
+  retrieval at all.
 - Retrieved content is **evidence**, not truth. It informs extraction candidates and
   investigator findings; it never becomes executable state without human validation.
 
