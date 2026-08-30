@@ -1,0 +1,51 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "apps/**"
+      - "infra/**"
+      - ".github/workflows/e2e.yml"
+
+jobs:
+  playwright:
+    name: playwright smoke (full stack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          docker compose -f infra/docker-compose.yml up -d --build
+
+      - name: Wait for the app
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/healthz > /dev/null; then
+              echo "up"; exit 0
+            fi
+            sleep 3
+          done
+          echo "app did not become healthy"; docker compose -f infra/docker-compose.yml logs; exit 1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm gen:client
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+
+      - if: always()
+        run: docker compose -f infra/docker-compose.yml logs --tail 200

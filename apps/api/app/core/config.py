@@ -1,0 +1,81 @@
+"""Application configuration (pydantic-settings). All keys are prefixed ``CEDEON_``."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+Environment = Literal["local", "test", "staging", "production"]
+
+_DEV_SECRET_MARKER = "dev-only-change-me"  # noqa: S105 - marker string, not a credential
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="CEDEON_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    env: Environment = "local"
+    log_level: str = "INFO"
+    log_json: bool = False
+
+    # Database — async URL for the app, sync URL for Alembic + Procrastinate.
+    database_url: str = "postgresql+asyncpg://cedeon:cedeon@localhost:5432/cedeon"
+    database_url_sync: str = ""
+
+    # Auth / sessions
+    session_secret: str = f"{_DEV_SECRET_MARKER}-{'0' * 48}"
+    session_ttl_hours: int = 12
+    session_idle_timeout_hours: int = 2
+    cookie_name: str = "cedeon_session"
+    cookie_secure: bool = False
+    cookie_domain: str | None = None
+
+    # Object storage (unused until Phase 2, wired for completeness)
+    s3_endpoint_url: str | None = None
+    s3_region: str = "us-east-1"
+    s3_bucket: str = "cedeon-local"
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: str | None = None
+    s3_force_path_style: bool = True
+
+    # Telemetry
+    otel_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = ""
+    service_name: str = "cedeon-api"
+
+    # CORS — empty by design (single public origin, see ADR-0004).
+    cors_allow_origins: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _derive_and_validate(self) -> Settings:
+        if not self.database_url_sync:
+            self.database_url_sync = self.database_url.replace("+asyncpg", "")
+
+        if self.env in ("staging", "production"):
+            if _DEV_SECRET_MARKER in self.session_secret:
+                raise ValueError(
+                    "CEDEON_SESSION_SECRET must be set to a real secret outside local/test"
+                )
+            if len(self.session_secret) < 32:
+                raise ValueError("CEDEON_SESSION_SECRET must be at least 32 characters")
+            if "localhost" in self.database_url:
+                raise ValueError(
+                    "CEDEON_DATABASE_URL still points at localhost in a deployed environment"
+                )
+        return self
+
+    @property
+    def is_production(self) -> bool:
+        return self.env == "production"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
