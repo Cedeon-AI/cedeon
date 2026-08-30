@@ -3,6 +3,15 @@
 When choosing between "build more framework" and "get treaty → validated terms →
 deterministic recovery working," choose the latter.
 
+**Positioning vs. scope.** The long-term thesis (PRODUCT.md §1) is that Cedeon is an
+independent reinsurance financial-intelligence layer surfacing many financially
+material exception types. This roadmap is **unchanged** by that: the MVP is exactly
+the pipeline below — treaty → parsed document → AI-extracted terms with provenance →
+human validation → executable XOL treaty → loss ingestion → deterministic
+`RecoveryCalculation` → `RecoveryCandidate` → Recovery Investigator → Recovery
+Packet → human review → notice draft. No generalised financial-exception model,
+no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
+
 ---
 
 ## Status board

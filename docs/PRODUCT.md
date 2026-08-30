@@ -6,8 +6,15 @@
 
 ## 1. Vision (context, not backlog)
 
-Cedeon is an AI-native reinsurance intelligence and workflow platform. Over time the
-reinsurance lifecycle it can serve is:
+**Cedeon is an independent reinsurance financial-intelligence layer that sits above
+and beside existing claims, reinsurance-administration, accounting, broker, and
+document systems.** It does not replace any of them. It reads their contracts and
+their financial data, reconciles them against the legally operative treaty wording,
+and surfaces financially material reinsurance exceptions — with evidence, a
+deterministic calculation where money is involved, and a human decision.
+
+**Recovery identification is the initial wedge.** Over time the reinsurance
+lifecycle Cedeon can serve is:
 
 ```
 PLACEMENT → CONTRACT → CLAIMS → RECOVERY → SETTLEMENT → RENEWAL → (PLACEMENT)
@@ -15,6 +22,32 @@ PLACEMENT → CONTRACT → CLAIMS → RECOVERY → SETTLEMENT → RENEWAL → (P
 
 We are **not** building the whole lifecycle now. The vision exists to keep the MVP's
 data model and boundaries honest, not to expand scope.
+
+### 1a. Other financially material exceptions (future possibilities — do NOT build)
+
+The same architecture — validated executable contract + financial data +
+deterministic checks + citation-backed AI interpretation + human review — could one
+day surface other reinsurance exceptions:
+
+- potential missed or understated recoveries
+- notice / reporting exceptions
+- treaty configuration discrepancies
+- reinsurer participation mismatches
+- reinstatement discrepancies
+- expected-vs-booked recoverable differences
+- booked-vs-billed-vs-collected reconciliation differences
+- overdue / aging recoverables
+
+**These are directional possibilities only. None is in scope.** Specifically, for
+now:
+
+- Do **not** introduce a generalised `FinancialException` / `FinancialFinding` model.
+- Do **not** turn `RecoveryCandidate` into a generic abstraction — it stays a
+  concrete recovery finding.
+- A shared domain abstraction is reconsidered only once **two or three** additional
+  exception types have been validated through customer discovery and their real
+  shapes are known. Premature generalisation here would be exactly the speculative
+  abstraction the engineering rules forbid.
 
 ## 2. Initial product — Cedeon Recovery Intelligence
 
@@ -31,8 +64,10 @@ data model and boundaries honest, not to expand scope.
 
 Cedeon sits **above and beside** existing systems (claims, reinsurance admin,
 accounting, spreadsheets, documents). It does not replace them. It is an
-intelligence / control layer that produces **recovery findings + evidence + human
-decisions + workflow**.
+independent financial-intelligence / control layer that produces **recovery
+findings + evidence + human decisions + workflow**. Recovery is the first finding
+type; the long-term thesis (see §1, §1a) is a broader financial-exception layer,
+but that is future positioning only and changes nothing about what is built now.
 
 ## 3. Who it is for (MVP)
 
@@ -160,6 +195,10 @@ Rough sequence: (1) Treaty + Recovery Intelligence → (2) Recovery Operations �
 (3) Event / Notice Intelligence → (4) Renewal Intelligence → (5) Placement Copilot →
 (6) Private Market Intelligence → (7) *maybe* connectivity / marketplace. Cedeon does
 not have to become a marketplace; a software / intelligence business may be superior.
+
+Orthogonal to those product lines, §1a lists other **financial-exception types**
+within Recover / Recovery Operations that the same architecture could surface later.
+Both lists are directional; neither expands current scope.
 
 ## 10. First meaningful success criterion
 

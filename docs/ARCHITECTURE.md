@@ -367,4 +367,16 @@ a separate vector database · Temporal (deferred to Phase 10) · Celery · multi
 frameworks · a model gateway · autonomous financial decisions · autonomous notice
 sending · speculative caching · multi-currency / FX · multi-region.
 
+**Also not now: a generalised financial-exception abstraction.** The long-term
+product thesis (PRODUCT.md §1, §1a) is that Cedeon becomes an independent
+reinsurance financial-intelligence layer surfacing many exception types (missed
+recoveries, notice exceptions, participation mismatches, booked-vs-billed-vs-collected
+reconciliation, aging recoverables, …). That is **positioning, not scope**. Do not
+add a `FinancialException` / `FinancialFinding` base model; do not make
+`RecoveryCandidate` a generic abstraction. `RecoveryCandidate` is the one concrete
+finding type. A shared abstraction is revisited only after two or three further
+exception types are validated through customer discovery and their shapes are known —
+extracting one from a single example would be the speculative abstraction §3 and the
+engineering rules forbid.
+
 If implementation starts drifting toward any of these: **stop.**
