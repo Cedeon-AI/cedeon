@@ -89,15 +89,36 @@ treaty_term_candidates(
 owner/admin/member/viewer) · `sessions` (server-side, `token_hash`, `expires_at`,
 `revoked_at`).
 
-**Reinsurance structure**
-`cedents` · `reinsurance_programs` (`treaty_year`) · `reinsurers` · `brokers` ·
-`treaties` (`treaty_type`, `status`, `current_version_id`) · `treaty_versions`
-(`version_no`, `source_document_id`, `status`, `effective_date`, `expiration_date`,
-`currency`, `validated_by`, `validated_at`) · `treaty_layers` (`layer_no`,
-`attachment`, `limit`, `currency`, `reinstatements` nullable) · `treaty_participations`
-(`reinsurer_id`, `broker_id` nullable, `placed_share`, `signed_share`) ·
-`treaty_terms` (`key`, `value` JSONB, `currency` nullable, `status`,
-`derived_from_candidate_id`, `review_id`; `UNIQUE(treaty_version_id, key)`).
+**Reinsurance structure** *(built in Phase 3; migration 0003)*
+`cedents` · `reinsurance_programs` (`treaty_year`) · `reinsurers` · *(`brokers`
+deferred — `treaty_participations.broker_name` for now)* · `treaties` (`treaty_type`,
+`current_version_id` — circular FK added post-create) · `treaty_versions`
+(`version_no`, `source_document_id`, `status` DRAFT→PARSING→EXTRACTING→
+NEEDS_VALIDATION→VALIDATED→ACTIVE→SUPERSEDED, `effective_date`, `expiration_date`,
+`currency`, `validated_by`, `validated_at`; `UNIQUE(treaty_id, version_no)`;
+immutable once `status.is_frozen`) · `treaty_layers` (`layer_no`, `attachment`,
+`limit` `NUMERIC(20,2)`, `currency`, `reinstatements` nullable) ·
+`treaty_participations` (`reinsurer_id`, `broker_name` nullable, `placed_share`,
+`signed_share` `NUMERIC(9,6)`; `UNIQUE(treaty_version_id, reinsurer_id)`) ·
+`treaty_terms` (`key`, `value` JSONB, `currency` nullable, `status`
+CONFIRMED/AMBIGUOUS/REJECTED, `derived_from_candidate_id`, `review_id`;
+`UNIQUE(treaty_version_id, key)`).
+
+**AI extraction & validation** *(built in Phase 3; migration 0004)*
+`prompt_versions` (`name`, `version`, `template`; `UNIQUE(name, version)`) ·
+`agent_runs` (immutable telemetry: `agent_type`, `subject_type`/`subject_id`,
+`provider`, `model`, `prompt_version`, `status`, `input_ref` JSONB, `output` JSONB,
+`input_tokens`, `output_tokens`, `cost_usd`, `latency_ms`, `error`,
+`started_at`/`finished_at`, `correlation_id`) ·
+`citations` (`document_id`, `page_number`, `section`, `quoted_text`, `char_start/end`,
+`chunk_id` nullable) ·
+`treaty_term_candidates` (immutable AI output: `treaty_version_id`, `agent_run_id`,
+`key`, `status` extracted/not_found/ambiguous/conflicting, `raw_value`,
+`normalized_value` JSONB, `currency`, `confidence` `NUMERIC(4,3)`, `citation_id`
+nullable, `reasoning`, `resolution` set by review) ·
+`reviews` (**append-only**: `subject_type`/`subject_id`, `reviewer_id`, `decision`
+confirm/edit/reject/mark_ambiguous/request_info, `value_before`/`value_after` JSONB,
+`reason`).
 
 **Documents & retrieval** *(built in Phase 2; migration 0002)*
 `documents` (immutable: `kind`, `original_filename`, `content_type`, `byte_size`,

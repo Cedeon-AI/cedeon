@@ -12,8 +12,8 @@ deterministic recovery working," choose the latter.
 | 0 | Architecture review + docs | ✅ **Complete** — verdict *Partially agree* (Temporal deferred) |
 | 1 | Foundation (monorepo, API, web, DB, auth, CI) — **no AI** | ✅ **Complete** (2026-08-30) |
 | 2 | Document pipeline (upload → storage → parse → pages/chunks → viewer) | ✅ **Complete** (2026-08-30) |
-| 3 | Treaty extraction + human validation workspace | ⏭️ **Next** |
-| 4 | Executable XOL model + deterministic calculation engine | ⬜ |
+| 3 | Treaty extraction + human validation workspace | ✅ **Complete** (2026-08-30) — live model call code-complete, pending workspace-scoped key to verify |
+| 4 | Executable XOL model + deterministic calculation engine | ⏭️ **Next** |
 | 5 | Loss import (CSV → mapping → validation → underlying losses) | ⬜ |
 | 6 | Recovery Candidate (validated treaty + loss event → calc → candidate + queue UI) | ⬜ |
 | 7 | Recovery Investigator (one bounded read-only agent + evals) | ⬜ |
@@ -196,10 +196,25 @@ without a DB `CHECK` (app is sole writer; `native_enum` CHECKs don't round-trip
   chunks). 26 new tests (chunker, PyMuPDF, filesystem store, document API + tenant
   isolation + audit). **Follow-up:** implement + verify `DoclingParser` and add its
   ML deps to a dedicated worker image (it cannot run in CI).
-- **P3:** Extraction as a structured-output call (PydanticAI `output_type`). Hybrid
-  retrieval (FTS + `halfvec`/HNSW + RRF). `treaty_term_candidates` + provenance.
-  Two-panel validation workspace. `treaty_versions` freeze on `VALIDATED`. First
-  Pydantic Evals dataset (incl. injection fixture).
+- **P3:** ✅ **Complete (2026-08-30).** Reinsurance structure (migration 0003:
+  `cedents` · `reinsurers` · `reinsurance_programs` · `treaties` · `treaty_versions`
+  with the DRAFT→…→VALIDATED lifecycle · `treaty_layers` · `treaty_participations` ·
+  `treaty_terms`). Migration 0004: `agent_runs` · `prompt_versions` · `citations` ·
+  `treaty_term_candidates` · append-only `reviews`. Extraction is a single PydanticAI
+  `output_type` call (`app/ai/extraction`, `anthropic:claude-opus-5` default, provider
+  registry in `app/ai/models`), run by the `extract_treaty` Procrastinate job;
+  material money terms without a citation are auto-downgraded to `ambiguous`
+  (ADR-0011). `ValidationService`: review each candidate (confirm/edit/reject/
+  ambiguous → `reviews` + audit), then `validate_version` freezes the executable
+  `$limit xs $attachment` layer + participations. Web: Programs, Treaty Library,
+  Treaty Detail, and the two-panel **validation workspace** (document ∣ candidates
+  with confidence + exact citation, jump-to-page). 14 new tests drive the full
+  golden path with the model call faked; `tests/ai/test_extraction_live.py`
+  (`-m live`) hits the real API and is verified once a workspace-scoped key is set.
+  **Scope note:** hybrid retrieval (FTS + `halfvec`/HNSW + RRF) and embeddings are
+  **deferred to Phase 7** — treaties are small enough to pass all chunks to
+  extraction, and targeted retrieval is what the Recovery Investigator needs. See
+  ADR-0016.
 - **P4:** `domain/recoveries/calculations/` — pure `calculate_xol_recovery` +
   `allocate_recovery`, `ENGINE_VERSION`, golden table + Hypothesis properties.
   `treaty_layers` / `treaty_participations` from validated terms.

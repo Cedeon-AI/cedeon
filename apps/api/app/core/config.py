@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
@@ -16,7 +16,8 @@ _DEV_SECRET_MARKER = "dev-only-change-me"  # noqa: S105 - marker string, not a c
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CEDEON_",
-        env_file=".env",
+        # Local dev: repo-root .env whether run from the repo root or apps/api.
+        env_file=(".env", "../.env", "../../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -50,6 +51,28 @@ class Settings(BaseSettings):
     # Document pipeline
     document_parser: Literal["pymupdf", "docling"] = "pymupdf"
     document_max_upload_mb: int = 50
+
+    # AI providers — accept the bare vendor env names too (ANTHROPIC_API_KEY etc.).
+    anthropic_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "CEDEON_ANTHROPIC_API_KEY"),
+    )
+    # Required when the Anthropic key is identity-linked / workspace-scoped.
+    anthropic_workspace_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ANTHROPIC_WORKSPACE_ID", "CEDEON_ANTHROPIC_WORKSPACE_ID"),
+    )
+    openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "CEDEON_OPENAI_API_KEY"),
+    )
+    google_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GOOGLE_API_KEY", "CEDEON_GOOGLE_API_KEY"),
+    )
+    # Per-task model config (provider:model). Do not hard-code model names elsewhere.
+    treaty_extraction_model: str = "anthropic:claude-opus-5"
+    ai_enabled: bool = True
 
     # Telemetry
     otel_enabled: bool = False

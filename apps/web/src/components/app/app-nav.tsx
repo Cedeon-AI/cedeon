@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 const NAV: { label: string; href: string; soon?: boolean }[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Documents", href: "/documents" },
-  { label: "Programs", href: "/programs", soon: true },
-  { label: "Treaty library", href: "/treaties", soon: true },
+  { label: "Programs", href: "/programs" },
+  { label: "Treaty library", href: "/treaties" },
   { label: "Loss imports", href: "/loss-imports", soon: true },
   { label: "Recovery candidates", href: "/recovery-candidates", soon: true },
 ];

@@ -52,6 +52,59 @@
         "title": "Body_uploadDocument",
         "type": "object"
       },
+      "CedentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CedentCreate",
+        "type": "object"
+      },
+      "CedentList": {
+        "additionalProperties": false,
+        "properties": {
+          "cedents": {
+            "items": {
+              "$ref": "#/components/schemas/CedentOut"
+            },
+            "title": "Cedents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cedents"
+        ],
+        "title": "CedentList",
+        "type": "object"
+      },
+      "CedentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "CedentOut",
+        "type": "object"
+      },
       "ChunkList": {
         "additionalProperties": false,
         "properties": {
@@ -123,6 +176,43 @@
           "char_end"
         ],
         "title": "ChunkOut",
+        "type": "object"
+      },
+      "CitationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "page_number": {
+            "title": "Page Number",
+            "type": "integer"
+          },
+          "quoted_text": {
+            "title": "Quoted Text",
+            "type": "string"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          }
+        },
+        "required": [
+          "document_id",
+          "page_number",
+          "section",
+          "quoted_text"
+        ],
+        "title": "CitationOut",
         "type": "object"
       },
       "DocumentDetail": {
@@ -222,6 +312,25 @@
         "title": "DocumentOut",
         "type": "object"
       },
+      "DocumentPageOut": {
+        "additionalProperties": false,
+        "properties": {
+          "page_number": {
+            "title": "Page Number",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_number",
+          "text"
+        ],
+        "title": "DocumentPageOut",
+        "type": "object"
+      },
       "DocumentStatus": {
         "description": "Document-level state machine.",
         "enum": [
@@ -244,6 +353,61 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LayerOut": {
+        "additionalProperties": false,
+        "properties": {
+          "attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Attachment",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "layer_no": {
+            "title": "Layer No",
+            "type": "integer"
+          },
+          "limit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Limit",
+            "type": "string"
+          },
+          "reinstatements": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reinstatements"
+          }
+        },
+        "required": [
+          "layer_no",
+          "attachment",
+          "limit",
+          "currency",
+          "reinstatements",
+          "description"
+        ],
+        "title": "LayerOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -524,6 +688,168 @@
         "title": "ParseStatus",
         "type": "string"
       },
+      "ParticipationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "broker_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker Name"
+          },
+          "placed_share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Placed Share",
+            "type": "string"
+          },
+          "reinsurer_id": {
+            "format": "uuid",
+            "title": "Reinsurer Id",
+            "type": "string"
+          },
+          "reinsurer_name": {
+            "title": "Reinsurer Name",
+            "type": "string"
+          },
+          "signed_share": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed Share"
+          }
+        },
+        "required": [
+          "reinsurer_id",
+          "reinsurer_name",
+          "placed_share",
+          "signed_share",
+          "broker_name"
+        ],
+        "title": "ParticipationOut",
+        "type": "object"
+      },
+      "ProgramCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "cedent_id": {
+            "format": "uuid",
+            "title": "Cedent Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "treaty_year": {
+            "maximum": 2100.0,
+            "minimum": 1900.0,
+            "title": "Treaty Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cedent_id",
+          "name",
+          "treaty_year"
+        ],
+        "title": "ProgramCreate",
+        "type": "object"
+      },
+      "ProgramList": {
+        "additionalProperties": false,
+        "properties": {
+          "programs": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramOut"
+            },
+            "title": "Programs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "programs"
+        ],
+        "title": "ProgramList",
+        "type": "object"
+      },
+      "ProgramOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cedent_id": {
+            "format": "uuid",
+            "title": "Cedent Id",
+            "type": "string"
+          },
+          "cedent_name": {
+            "title": "Cedent Name",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "treaty_count": {
+            "title": "Treaty Count",
+            "type": "integer"
+          },
+          "treaty_year": {
+            "title": "Treaty Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "treaty_year",
+          "description",
+          "cedent_id",
+          "cedent_name",
+          "treaty_count"
+        ],
+        "title": "ProgramOut",
+        "type": "object"
+      },
       "RegisterRequest": {
         "additionalProperties": false,
         "properties": {
@@ -560,6 +886,119 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "ReinsurerCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ReinsurerCreate",
+        "type": "object"
+      },
+      "ReinsurerList": {
+        "additionalProperties": false,
+        "properties": {
+          "reinsurers": {
+            "items": {
+              "$ref": "#/components/schemas/ReinsurerOut"
+            },
+            "title": "Reinsurers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reinsurers"
+        ],
+        "title": "ReinsurerList",
+        "type": "object"
+      },
+      "ReinsurerOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ReinsurerOut",
+        "type": "object"
+      },
+      "ReviewDecision": {
+        "enum": [
+          "confirm",
+          "edit",
+          "reject",
+          "mark_ambiguous",
+          "request_info"
+        ],
+        "title": "ReviewDecision",
+        "type": "string"
+      },
+      "ReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "owner",
@@ -583,6 +1022,502 @@
           "expires_at"
         ],
         "title": "SessionInfo",
+        "type": "object"
+      },
+      "TermCandidateOut": {
+        "additionalProperties": false,
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CitationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "normalized_value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Value"
+          },
+          "raw_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Value"
+          },
+          "reasoning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "status",
+          "raw_value",
+          "normalized_value",
+          "currency",
+          "confidence",
+          "reasoning",
+          "resolution",
+          "citation"
+        ],
+        "title": "TermCandidateOut",
+        "type": "object"
+      },
+      "TermCandidatesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TermCandidateOut"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentPageOut"
+            },
+            "title": "Pages",
+            "type": "array"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TreatyVersionStatus"
+          },
+          "treaty_version_id": {
+            "format": "uuid",
+            "title": "Treaty Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "treaty_version_id",
+          "status",
+          "currency",
+          "source_document_id",
+          "candidates",
+          "pages"
+        ],
+        "title": "TermCandidatesResponse",
+        "type": "object"
+      },
+      "TermOut": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "Value",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "status"
+        ],
+        "title": "TermOut",
+        "type": "object"
+      },
+      "TreatyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "program_id": {
+            "format": "uuid",
+            "title": "Program Id",
+            "type": "string"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          }
+        },
+        "required": [
+          "program_id",
+          "name"
+        ],
+        "title": "TreatyCreate",
+        "type": "object"
+      },
+      "TreatyDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "current_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TreatyVersionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "treaty": {
+            "$ref": "#/components/schemas/TreatyOut"
+          }
+        },
+        "required": [
+          "treaty",
+          "current_version"
+        ],
+        "title": "TreatyDetail",
+        "type": "object"
+      },
+      "TreatyList": {
+        "additionalProperties": false,
+        "properties": {
+          "treaties": {
+            "items": {
+              "$ref": "#/components/schemas/TreatyOut"
+            },
+            "title": "Treaties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "treaties"
+        ],
+        "title": "TreatyList",
+        "type": "object"
+      },
+      "TreatyOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cedent_name": {
+            "title": "Cedent Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TreatyVersionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "program_id": {
+            "format": "uuid",
+            "title": "Program Id",
+            "type": "string"
+          },
+          "program_name": {
+            "title": "Program Name",
+            "type": "string"
+          },
+          "treaty_type": {
+            "$ref": "#/components/schemas/TreatyType"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "treaty_type",
+          "program_id",
+          "program_name",
+          "cedent_name",
+          "created_at",
+          "current_version"
+        ],
+        "title": "TreatyOut",
+        "type": "object"
+      },
+      "TreatyType": {
+        "enum": [
+          "per_occurrence_xol"
+        ],
+        "title": "TreatyType",
+        "type": "string"
+      },
+      "TreatyVersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/LayerOut"
+            },
+            "title": "Layers",
+            "type": "array"
+          },
+          "participations": {
+            "items": {
+              "$ref": "#/components/schemas/ParticipationOut"
+            },
+            "title": "Participations",
+            "type": "array"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TreatyVersionStatus"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TermOut"
+            },
+            "title": "Terms",
+            "type": "array"
+          },
+          "validated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validated At"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "status",
+          "effective_date",
+          "expiration_date",
+          "currency",
+          "source_document_id",
+          "validated_at",
+          "layers",
+          "participations",
+          "terms"
+        ],
+        "title": "TreatyVersionOut",
+        "type": "object"
+      },
+      "TreatyVersionStatus": {
+        "description": "Lifecycle of one treaty version (the immutable executable unit).\n\nDRAFT \u2500\u2500\u25b6 PARSING \u2500\u2500\u25b6 EXTRACTING \u2500\u2500\u25b6 NEEDS_VALIDATION \u2500\u2500\u25b6 VALIDATED \u2500\u2500\u25b6 ACTIVE\n                                             \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                      (post-validation change \u2192 new version; old \u2192 SUPERSEDED)",
+        "enum": [
+          "draft",
+          "parsing",
+          "extracting",
+          "needs_validation",
+          "validated",
+          "active",
+          "superseded"
+        ],
+        "title": "TreatyVersionStatus",
+        "type": "string"
+      },
+      "TreatyVersionSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TreatyVersionStatus"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "status",
+          "source_document_id"
+        ],
+        "title": "TreatyVersionSummary",
         "type": "object"
       },
       "UserProfile": {
@@ -774,6 +1709,66 @@
         "summary": "Create an organization and its first (owner) user",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/cedents": {
+      "get": {
+        "operationId": "listCedents",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CedentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Cedents",
+        "tags": [
+          "reinsurance"
+        ]
+      },
+      "post": {
+        "operationId": "createCedent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CedentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CedentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Cedent",
+        "tags": [
+          "reinsurance"
         ]
       }
     },
@@ -1108,6 +2103,66 @@
         ]
       }
     },
+    "/programs": {
+      "get": {
+        "operationId": "listPrograms",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Programs",
+        "tags": [
+          "reinsurance"
+        ]
+      },
+      "post": {
+        "operationId": "createProgram",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Program",
+        "tags": [
+          "reinsurance"
+        ]
+      }
+    },
     "/readyz": {
       "get": {
         "operationId": "readyz",
@@ -1130,6 +2185,391 @@
         "summary": "Readiness probe (checks the database)",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/reinsurers": {
+      "get": {
+        "operationId": "listReinsurers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReinsurerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Reinsurers",
+        "tags": [
+          "reinsurance"
+        ]
+      },
+      "post": {
+        "operationId": "createReinsurer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReinsurerCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReinsurerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Reinsurer",
+        "tags": [
+          "reinsurance"
+        ]
+      }
+    },
+    "/treaties": {
+      "get": {
+        "operationId": "listTreaties",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Treaties",
+        "tags": [
+          "treaties"
+        ]
+      },
+      "post": {
+        "operationId": "createTreaty",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TreatyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Treaty",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}": {
+      "get": {
+        "operationId": "getTreaty",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Treaty",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/extract": {
+      "post": {
+        "operationId": "rerunTreatyExtraction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rerun Extraction",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/term-candidates": {
+      "get": {
+        "operationId": "listTermCandidates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermCandidatesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Term Candidates",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/term-candidates/{candidate_id}/review": {
+      "post": {
+        "operationId": "reviewTermCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Term Candidate",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/validate": {
+      "post": {
+        "operationId": "validateTreatyVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Treaty Version",
+        "tags": [
+          "treaties"
         ]
       }
     }

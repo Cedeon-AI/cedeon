@@ -90,17 +90,30 @@ def parse_calls() -> list[tuple[object, object]]:
 
 
 @pytest.fixture
-def app(db: None, object_store, parse_calls):
-    from app.api.dependencies.context import get_object_store, get_parse_enqueuer
+def extract_calls() -> list[tuple[object, object]]:
+    return []
+
+
+@pytest.fixture
+def app(db: None, object_store, parse_calls, extract_calls):
+    from app.api.dependencies.context import (
+        get_extract_enqueuer,
+        get_object_store,
+        get_parse_enqueuer,
+    )
     from app.main import create_app
 
     application = create_app()
     application.dependency_overrides[get_object_store] = lambda: object_store
 
-    async def _record(organization_id: object, document_id: object) -> None:
+    async def _record_parse(organization_id: object, document_id: object) -> None:
         parse_calls.append((organization_id, document_id))
 
-    application.dependency_overrides[get_parse_enqueuer] = lambda: _record
+    async def _record_extract(organization_id: object, version_id: object) -> None:
+        extract_calls.append((organization_id, version_id))
+
+    application.dependency_overrides[get_parse_enqueuer] = lambda: _record_parse
+    application.dependency_overrides[get_extract_enqueuer] = lambda: _record_extract
     return application
 
 

@@ -43,3 +43,20 @@ async def enqueue_parse_document(organization_id: UUID, document_id: UUID) -> No
     await parse_document.defer_async(
         organization_id=str(organization_id), document_id=str(document_id)
     )
+
+
+@procrastinate_app.task(name="extract_treaty", queue="ai", pass_context=False)
+async def extract_treaty(*, organization_id: str, treaty_version_id: str) -> dict[str, Any]:
+    settings = get_settings()
+    async with job_session() as session:
+        from app.services.extraction import TreatyExtractionService
+
+        service = TreatyExtractionService(session, settings)
+        run = await service.run(UUID(organization_id), UUID(treaty_version_id))
+    return {"agent_run_id": str(run.id), "status": run.status.value}
+
+
+async def enqueue_extract_treaty(organization_id: UUID, treaty_version_id: UUID) -> None:
+    await extract_treaty.defer_async(
+        organization_id=str(organization_id), treaty_version_id=str(treaty_version_id)
+    )

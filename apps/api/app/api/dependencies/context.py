@@ -15,6 +15,7 @@ from app.domain.organizations import Role
 from app.services.auth import AuthenticatedContext, AuthService
 from app.services.documents import DocumentService, ParseEnqueuer
 from app.services.errors import AuthenticationError, PermissionDeniedError
+from app.services.reinsurance import ExtractEnqueuer, TreatyService
 from app.storage import ObjectStore, build_object_store
 
 
@@ -69,6 +70,22 @@ async def get_parse_enqueuer() -> ParseEnqueuer:
     from app.jobs.tasks import enqueue_parse_document
 
     return enqueue_parse_document
+
+
+async def get_extract_enqueuer() -> ExtractEnqueuer:
+    from app.jobs.tasks import enqueue_extract_treaty
+
+    return enqueue_extract_treaty
+
+
+def get_treaty_service(
+    session: DbSession,
+    enqueue_extract: Annotated[ExtractEnqueuer, Depends(get_extract_enqueuer)],
+) -> TreatyService:
+    return TreatyService(session, enqueue_extract=enqueue_extract)
+
+
+TreatyServiceDep = Annotated[TreatyService, Depends(get_treaty_service)]
 
 
 def get_document_service(

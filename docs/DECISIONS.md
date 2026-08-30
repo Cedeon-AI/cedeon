@@ -20,6 +20,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0013 | REST + generated TypeScript client; no GraphQL | Accepted |
 | 0014 | No Kubernetes / Kafka / microservices for MVP | Accepted |
 | 0015 | Parse and chunk in one job; embeddings split out in Phase 3 | Accepted |
+| 0016 | Defer hybrid retrieval / embeddings to Phase 7 | Accepted |
 
 ---
 
@@ -117,6 +118,10 @@ no retrieval; hybrid lands in Phase 3.
 **Consequences.** One datastore, transactional consistency between chunks and domain
 rows, one backup story. Revisit only at a scale (millions of chunks, strict latency
 SLOs) we are far from.
+
+**Status (2026-08-30).** The datastore choice stands. Timing changed: retrieval /
+embeddings move from Phase 3 to **Phase 7** (Recovery Investigator) — see ADR-0016.
+Phase 3 extraction passes all chunks for a treaty, no vector search.
 
 ## ADR-0007 — Defer Temporal; MVP uses Procrastinate + state machines
 
@@ -264,3 +269,22 @@ and re-runnable independent of parsing) — `parse_document` will enqueue it. Th
 **Consequences.** Fewer moving parts now; the expensive/independent step is isolated
 when it actually exists. A future structure-only re-chunk (e.g. tuning chunk sizes
 without re-OCR) would need block persistence — deferred until needed.
+
+## ADR-0016 — Defer hybrid retrieval / embeddings to Phase 7
+
+**Context.** The Phase 3 plan included hybrid retrieval (Postgres FTS + `pgvector`
+`halfvec`/HNSW + RRF) to select treaty chunks for extraction. Real treaties in the
+MVP are a handful of pages / dozens of chunks — small enough to pass in full to a
+1M-context model. The place targeted retrieval genuinely earns its keep is the
+Recovery Investigator (Phase 7) doing focused Q&A over a treaty.
+
+**Decision.** Phase 3 extraction receives **all** chunks for the source document,
+ordered. No `vector` extension, no `embedding` column, no embedding job yet. Add
+`pgvector` (extension + `embedding halfvec(N)` sized to the chosen model + an
+`embed_chunks` job + hybrid `retrieve_treaty_passages`) in **Phase 7**, where the
+investigator needs it. This also keeps the embedding-provider question (Anthropic
+has no embeddings API) out of Phase 3.
+
+**Consequences.** Simpler Phase 3, one fewer vendor decision now. If a customer
+brings a 200-page treaty before Phase 7, retrieval moves up — the chunk table and
+`ParsedDocument` structure already support it.
