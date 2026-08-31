@@ -160,16 +160,16 @@ export function DashboardView() {
             body="Upload the wording; Cedeon extracts the terms for you to validate."
           />
           <QuickLink
+            href="/recovery-candidates/new"
+            icon={<Sigma />}
+            title="Start a recovery"
+            body="Event → claims → responding treaty → a deterministic recovery figure."
+          />
+          <QuickLink
             href="/loss-imports"
             icon={<Upload />}
             title="Import claims"
-            body="Map a claims CSV into a loss event."
-          />
-          <QuickLink
-            href="/recovery-candidates"
-            icon={<Sigma />}
-            title="Run a recovery"
-            body="Pair a validated treaty with a loss event and calculate."
+            body="Map a claims CSV into a loss event on its own."
           />
         </div>
       </section>
