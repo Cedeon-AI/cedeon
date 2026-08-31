@@ -114,6 +114,10 @@ class LossEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     date_of_loss_from: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     date_of_loss_to: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The analyst's stated occurrence basis (UX_STUDY finding 8). Informational for
+    # now — the deterministic engine does not yet apply an hours clause.
+    peril: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    hours_clause_hours: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     losses: Mapped[list[UnderlyingLoss]] = relationship(back_populates="loss_event")
 

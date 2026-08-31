@@ -392,6 +392,8 @@ class LossEventService:
         name: str,
         catastrophe_code: str | None = None,
         description: str | None = None,
+        peril: str | None = None,
+        hours_clause_hours: int | None = None,
     ) -> LossEvent:
         name = name.strip()
         if not name:
@@ -401,6 +403,8 @@ class LossEventService:
             name=name,
             catastrophe_code=catastrophe_code or None,
             description=description or None,
+            peril=(peril or "").strip() or None,
+            hours_clause_hours=hours_clause_hours,
         )
         self._events.add(event)
         await self._session.flush()

@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/field";
 import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
 import {
+  getLossEvent,
   getRecoveryCandidate,
   recalculateRecoveryCandidate,
   reviewRecoveryCandidate,
@@ -191,6 +192,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
                   v={formatMoney(candidate.gross_event_incurred, candidate.currency)}
                 />
                 <Row k="Currency" v={candidate.currency} />
+                <OccurrenceBasisRow eventId={candidate.loss_event_id} />
                 <p className="pt-1 text-muted-foreground">
                   The claims and treaty layer that feed the calculation.{" "}
                   <Link
@@ -362,6 +364,22 @@ function Row({ k, v }: { k: string; v: string }) {
       <span className="text-muted-foreground">{k}</span>
       <span className="font-medium tabular-nums">{v}</span>
     </div>
+  );
+}
+
+function OccurrenceBasisRow({ eventId }: { eventId: string }) {
+  const event = useQuery({
+    queryKey: ["loss-events", eventId],
+    queryFn: async () =>
+      (await getLossEvent({ path: { event_id: eventId }, throwOnError: true })).data.event,
+  });
+  const e = event.data;
+  if (!e || (!e.peril && !e.hours_clause_hours)) return null;
+  return (
+    <Row
+      k="Occurrence basis"
+      v={`${e.peril ?? "—"}${e.hours_clause_hours ? ` · ${e.hours_clause_hours}h clause` : ""}`}
+    />
   );
 }
 

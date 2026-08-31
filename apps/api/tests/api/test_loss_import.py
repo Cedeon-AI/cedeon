@@ -222,6 +222,29 @@ class TestLossEvents:
         body = resp.json()
         assert body["name"] == "Winter Storm Elliot"
         assert body["totals"] == []
+        assert body["peril"] is None
+        assert body["hours_clause_hours"] is None
+
+    async def test_event_records_the_occurrence_basis(self, client: AsyncClient) -> None:
+        await register(client, email="basis@carrier.example")
+        resp = await client.post(
+            "/loss-events",
+            json={
+                "name": "Hurricane Béatrice",
+                "peril": "Named windstorm",
+                "hours_clause_hours": 168,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        event_id = resp.json()["id"]
+
+        detail = (await client.get(f"/loss-events/{event_id}")).json()["event"]
+        assert detail["peril"] == "Named windstorm"
+        assert detail["hours_clause_hours"] == 168
+
+        # a nonsense hours clause is rejected by the schema
+        bad = await client.post("/loss-events", json={"name": "x", "hours_clause_hours": 99999})
+        assert bad.status_code == 422
 
     async def test_commit_into_an_existing_event(self, client: AsyncClient) -> None:
         await register(client, email="existing@carrier.example")

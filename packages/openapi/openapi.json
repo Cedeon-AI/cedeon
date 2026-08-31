@@ -1436,11 +1436,37 @@
             ],
             "title": "Description"
           },
+          "hours_clause_hours": {
+            "anyOf": [
+              {
+                "maximum": 2000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours Clause Hours"
+          },
           "name": {
             "maxLength": 300,
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "peril": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. Named windstorm",
+            "title": "Peril"
           }
         },
         "required": [
@@ -1587,6 +1613,17 @@
             ],
             "title": "Event Identifier"
           },
+          "hours_clause_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours Clause Hours"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1595,6 +1632,17 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "peril": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peril"
           },
           "totals": {
             "items": {
@@ -1613,6 +1661,8 @@
           "date_of_loss_from",
           "date_of_loss_to",
           "description",
+          "peril",
+          "hours_clause_hours",
           "created_at",
           "totals"
         ],

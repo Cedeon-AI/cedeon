@@ -117,7 +117,12 @@ function EventStep({ onReady }: { onReady: (id: string) => void }) {
   });
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [existingId, setExistingId] = useState("");
-  const [form, setForm] = useState({ name: "", catastrophe_code: "" });
+  const [form, setForm] = useState({
+    name: "",
+    catastrophe_code: "",
+    peril: "",
+    hours_clause_hours: "",
+  });
   const [error, setError] = useState<string | null>(null);
 
   const hasEvents = (events.data ?? []).length > 0;
@@ -129,6 +134,8 @@ function EventStep({ onReady }: { onReady: (id: string) => void }) {
         body: {
           name: form.name.trim(),
           catastrophe_code: form.catastrophe_code.trim() || null,
+          peril: form.peril.trim() || null,
+          hours_clause_hours: form.hours_clause_hours ? Number(form.hours_clause_hours) : null,
         },
         throwOnError: true,
       });
@@ -147,10 +154,10 @@ function EventStep({ onReady }: { onReady: (id: string) => void }) {
         <div className="flex gap-3 rounded-lg border border-fact/20 bg-fact/5 p-3 text-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-fact" />
           <p className="text-muted-foreground">
-            Before you start, be clear on the <strong>occurrence basis</strong>: which hours clause
-            applies (typically 168 hours for a named windstorm, 72 for other perils) and the
-            event&rsquo;s date range. That determines which claims aggregate into this one
-            occurrence.
+            The <strong>occurrence basis</strong> is your decision: which hours clause applies
+            (typically 168h for a named windstorm, 72h otherwise) and the date range. It determines
+            which claims aggregate into one occurrence. Recorded here for the file — the engine does
+            not yet apply it.
           </p>
         </div>
 
@@ -192,6 +199,24 @@ function EventStep({ onReady }: { onReady: (id: string) => void }) {
                 value={form.catastrophe_code}
                 onChange={(e) => setForm({ ...form, catastrophe_code: e.target.value })}
                 placeholder="PCS 2027-XX"
+              />
+            </Field>
+            <Field label="Peril (optional)" htmlFor="w-evt-peril">
+              <Input
+                id="w-evt-peril"
+                value={form.peril}
+                onChange={(e) => setForm({ ...form, peril: e.target.value })}
+                placeholder="Named windstorm"
+              />
+            </Field>
+            <Field label="Hours clause (optional)" htmlFor="w-evt-hours">
+              <Input
+                id="w-evt-hours"
+                type="number"
+                inputMode="numeric"
+                value={form.hours_clause_hours}
+                onChange={(e) => setForm({ ...form, hours_clause_hours: e.target.value })}
+                placeholder="168"
               />
             </Field>
           </div>

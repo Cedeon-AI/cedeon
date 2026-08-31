@@ -113,6 +113,8 @@ def _event_out(
         date_of_loss_from=event.date_of_loss_from,
         date_of_loss_to=event.date_of_loss_to,
         description=event.description,
+        peril=event.peril,
+        hours_clause_hours=event.hours_clause_hours,
         created_at=event.created_at,
         totals=[
             LossEventCurrencyTotal(
@@ -297,6 +299,8 @@ async def create_loss_event(
         name=payload.name,
         catastrophe_code=payload.catastrophe_code,
         description=payload.description,
+        peril=payload.peril,
+        hours_clause_hours=payload.hours_clause_hours,
     )
     return _event_out(event)
 

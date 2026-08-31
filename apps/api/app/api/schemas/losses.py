@@ -103,6 +103,8 @@ class LossEventOut(ApiModel):
     date_of_loss_from: dt.date | None
     date_of_loss_to: dt.date | None
     description: str | None
+    peril: str | None
+    hours_clause_hours: int | None
     created_at: dt.datetime
     totals: list[LossEventCurrencyTotal]
 
@@ -115,6 +117,8 @@ class LossEventCreate(ApiModel):
     name: str = Field(min_length=1, max_length=300)
     catastrophe_code: str | None = Field(default=None, max_length=50)
     description: str | None = Field(default=None, max_length=2000)
+    peril: str | None = Field(default=None, max_length=80, description="e.g. Named windstorm")
+    hours_clause_hours: int | None = Field(default=None, ge=1, le=2000)
 
 
 class UnderlyingLossOut(ApiModel):

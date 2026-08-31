@@ -13,7 +13,12 @@ import { formatMoney } from "@/lib/utils";
 
 export function LossEventsView() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ name: "", catastrophe_code: "" });
+  const [form, setForm] = useState({
+    name: "",
+    catastrophe_code: "",
+    peril: "",
+    hours_clause_hours: "",
+  });
 
   const events = useQuery({
     queryKey: ["loss-events"],
@@ -26,13 +31,15 @@ export function LossEventsView() {
         body: {
           name: form.name.trim(),
           catastrophe_code: form.catastrophe_code.trim() || null,
+          peril: form.peril.trim() || null,
+          hours_clause_hours: form.hours_clause_hours ? Number(form.hours_clause_hours) : null,
         },
         throwOnError: true,
       });
       return data;
     },
     onSuccess: () => {
-      setForm({ name: "", catastrophe_code: "" });
+      setForm({ name: "", catastrophe_code: "", peril: "", hours_clause_hours: "" });
       queryClient.invalidateQueries({ queryKey: ["loss-events"] });
     },
   });
@@ -70,6 +77,24 @@ export function LossEventsView() {
                 value={form.catastrophe_code}
                 onChange={(e) => setForm({ ...form, catastrophe_code: e.target.value })}
                 placeholder="PCS 2027-XX"
+              />
+            </Field>
+            <Field label="Peril (optional)" htmlFor="evtperil">
+              <Input
+                id="evtperil"
+                value={form.peril}
+                onChange={(e) => setForm({ ...form, peril: e.target.value })}
+                placeholder="Named windstorm"
+              />
+            </Field>
+            <Field label="Hours clause (optional)" htmlFor="evthours">
+              <Input
+                id="evthours"
+                type="number"
+                inputMode="numeric"
+                value={form.hours_clause_hours}
+                onChange={(e) => setForm({ ...form, hours_clause_hours: e.target.value })}
+                placeholder="168"
               />
             </Field>
             <div className="md:col-span-3">
