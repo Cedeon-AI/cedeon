@@ -83,7 +83,7 @@ def recommend_chase(
     if status is RecoverableStatus.PENDING:
         return ChaseHint(
             NextAction.NOTIFY,
-            "Materialised but not notified — send the reinsurer notice.",
+            "Materialised — send the reinsurer notice.",
             urgent=stale,
         )
     if status is RecoverableStatus.NOTIFIED:

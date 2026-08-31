@@ -136,6 +136,6 @@ test("treaty → validate → recovery → workspace, with the $8.7M golden figu
     page
       .getByRole("row")
       .filter({ hasText: /4,350,000/ })
-      .getByText("Notified"),
+      .getByText("Notified", { exact: true }),
   ).toBeVisible({ timeout: 10_000 });
 });
