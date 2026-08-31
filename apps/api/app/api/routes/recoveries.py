@@ -99,6 +99,8 @@ def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
         currency_mismatch=candidate.currency_mismatch,
         current_calculation_id=candidate.current_calculation_id,
         knowledge_date=candidate.knowledge_date,
+        drifted_at=candidate.drifted_at,
+        pre_drift_recovery=candidate.pre_drift_recovery,
         created_at=candidate.created_at,
         reviewed_at=candidate.reviewed_at,
     )

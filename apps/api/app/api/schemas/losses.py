@@ -86,6 +86,7 @@ class CommitResultOut(ApiModel):
     skipped: int
     events_created: int
     loss_event_ids: list[UUID]
+    recoveries_drifted: int = 0
 
 
 class LossEventCurrencyTotal(ApiModel):

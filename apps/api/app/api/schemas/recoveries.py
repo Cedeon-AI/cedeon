@@ -98,6 +98,8 @@ class RecoveryCandidateOut(ApiModel):
     currency_mismatch: bool
     current_calculation_id: UUID | None
     knowledge_date: dt.date | None
+    drifted_at: dt.datetime | None
+    pre_drift_recovery: Decimal | None
     created_at: dt.datetime
     reviewed_at: dt.datetime | None
 

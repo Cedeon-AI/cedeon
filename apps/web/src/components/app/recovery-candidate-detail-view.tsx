@@ -239,6 +239,18 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
           {section === "calculation" ? (
             <>
+              {candidate.drifted_at ? (
+                <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+                  <span className="font-medium">The number moved.</span> Claims developed and Cedeon
+                  recalculated
+                  {candidate.pre_drift_recovery
+                    ? ` — ${formatMoney(candidate.pre_drift_recovery, candidate.currency)} → ${
+                        calc ? formatMoney(calc.layer_recovery, calc.currency) : "?"
+                      }`
+                    : ""}
+                  . Re-review and confirm the new figure.
+                </p>
+              ) : null}
               {calc ? (
                 <CalculationCard calc={calc} />
               ) : (

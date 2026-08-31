@@ -37,6 +37,7 @@ from app.repositories.losses import (
 )
 from app.services.auth import AuthenticatedContext
 from app.services.errors import ConflictError, NotFoundError, ValidationError
+from app.services.recoveries import RecoveryCandidateService
 from app.storage.base import ObjectNotFoundError, ObjectStore
 
 _MAX_ROWS = 100_000
@@ -48,6 +49,7 @@ class CommitResult:
     skipped: int
     events_created: int
     loss_event_ids: list[UUID]
+    recoveries_drifted: int = 0
 
 
 class LossImportService:
@@ -294,6 +296,12 @@ class LossImportService:
         loss_import.committed_at = dt.datetime.now(dt.UTC)
 
         event_ids = [e.id for e in touched]
+
+        # A claims import can move a recovery figure. Recompute every recovery on
+        # the touched events; a figure that moves without a human is drift.
+        drifted = await RecoveryCandidateService(self._session).recalculate_for_events(
+            context, set(event_ids)
+        )
         self._audit.record(
             AuditRecord(
                 organization_id=org_id,
@@ -320,6 +328,7 @@ class LossImportService:
             skipped=skipped,
             events_created=events_created,
             loss_event_ids=event_ids,
+            recoveries_drifted=len(drifted),
         )
 
     # --- reading --------------------------------------------------

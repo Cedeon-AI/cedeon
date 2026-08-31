@@ -132,6 +132,10 @@ class RecoveryCandidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # The analyst's stated "date the cedent knew a loss was likely to involve this
     # treaty" — the reference date for a knowledge-triggered notice deadline.
     knowledge_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    # Set when a claims import moves the recovery figure without a human in the
+    # loop (auto-recalc on loss commit). Cleared on the next human review.
+    drifted_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pre_drift_recovery: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
     current_calculation_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("recovery_calculations.id", ondelete="SET NULL", use_alter=True), nullable=True
     )

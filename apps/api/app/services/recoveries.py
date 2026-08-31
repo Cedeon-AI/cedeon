@@ -190,6 +190,111 @@ class RecoveryCandidateService:
         org_id = context.organization.id
         candidate = await self.get_candidate(context, candidate_id)
 
+        prior_amount = getattr(self.current_calculation(candidate), "layer_recovery", None)
+        calc, changed = await self._recompute_core(org_id, candidate)
+        if not changed or calc is None:
+            return candidate
+
+        reverted = candidate.status is RecoveryCandidateStatus.CONFIRMED
+        if reverted:
+            candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
+            candidate.reviewed_at = None
+            candidate.reviewed_by = None
+        # a human asked for this recompute — it is not silent drift
+        candidate.drifted_at = None
+        candidate.pre_drift_recovery = None
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=org_id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="recovery_candidate.recalculated",
+                entity_type="recovery_candidate",
+                entity_id=candidate.id,
+                summary=(
+                    f"{context.user.email} recalculated — "
+                    f"{Decimal(prior_amount) if prior_amount is not None else 0} → "
+                    f"{calc.layer_recovery} {calc.currency}"
+                    + (" (reverted to needs review)" if reverted else "")
+                ),
+                payload={
+                    "layer_recovery": str(calc.layer_recovery),
+                    "reverted_to_needs_review": reverted,
+                },
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        return await self.get_candidate(context, candidate.id)
+
+    async def recalculate_for_events(
+        self, context: AuthenticatedContext, event_ids: set[UUID]
+    ) -> list[dict[str, str]]:
+        """Auto-recompute every non-rejected recovery on the given loss events.
+        A figure that moves without a human in the loop is *drift* — flagged on the
+        candidate and surfaced on the worklist until the next review. No commit —
+        the caller (the loss-import commit) owns the transaction."""
+        if not event_ids:
+            return []
+        org_id = context.organization.id
+        drifted: list[dict[str, str]] = []
+        for candidate in await self._candidates.list(org_id):
+            if (
+                candidate.loss_event_id not in event_ids
+                or candidate.status is RecoveryCandidateStatus.REJECTED
+            ):
+                continue
+            prior = self.current_calculation(candidate)
+            prior_amount = Decimal(prior.layer_recovery) if prior is not None else None
+            calc, changed = await self._recompute_core(org_id, candidate)
+            if not changed or calc is None:
+                continue
+
+            candidate.drifted_at = dt.datetime.now(dt.UTC)
+            candidate.pre_drift_recovery = prior_amount
+            if candidate.status in (
+                RecoveryCandidateStatus.CONFIRMED,
+                RecoveryCandidateStatus.NOTICE_DRAFTED,
+            ):
+                candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
+                candidate.reviewed_at = None
+                candidate.reviewed_by = None
+            self._audit.record(
+                AuditRecord(
+                    organization_id=org_id,
+                    actor_type=ActorType.SYSTEM,
+                    actor_id=None,
+                    action="recovery_candidate.drifted",
+                    entity_type="recovery_candidate",
+                    entity_id=candidate.id,
+                    summary=(
+                        f"claims developed — recovery moved "
+                        f"{prior_amount if prior_amount is not None else 0} → "
+                        f"{calc.layer_recovery} {calc.currency}"
+                    ),
+                    payload={
+                        "from": str(prior_amount) if prior_amount is not None else None,
+                        "to": str(calc.layer_recovery),
+                    },
+                    correlation_id=get_correlation_id(),
+                )
+            )
+            drifted.append(
+                {
+                    "candidate_id": str(candidate.id),
+                    "from": str(prior_amount) if prior_amount is not None else "0",
+                    "to": str(calc.layer_recovery),
+                }
+            )
+        return drifted
+
+    async def _recompute_core(
+        self, org_id: UUID, candidate: RecoveryCandidate
+    ) -> tuple[RecoveryCalculation | None, bool]:
+        """Re-run the engine for one candidate. Writes a new immutable calculation
+        (and moves ``current_calculation_id``) only when ``input_hash`` changed.
+        Returns ``(calc, changed)``."""
         version = await self._versions.get(org_id, candidate.treaty_version_id)
         if version is None:
             raise NotFoundError("the candidate's treaty version no longer exists")
@@ -203,39 +308,13 @@ class RecoveryCandidateService:
         new_hash = self._input_hash(candidate, layer, version, gross_loss)
         current = self.current_calculation(candidate)
         if current is not None and current.input_hash == new_hash:
-            return candidate  # inputs unchanged — nothing to recompute
+            return current, False
 
         calc = await self._run_and_store(candidate, version, layer, gross_loss)
         candidate.current_calculation_id = calc.id
         candidate.gross_event_incurred = gross_loss.amount
         candidate.currency_mismatch = mismatch
-        reverted = candidate.status is RecoveryCandidateStatus.CONFIRMED
-        if reverted:
-            candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
-            candidate.reviewed_at = None
-            candidate.reviewed_by = None
-
-        self._audit.record(
-            AuditRecord(
-                organization_id=org_id,
-                actor_type=ActorType.USER,
-                actor_id=context.user.id,
-                action="recovery_candidate.recalculated",
-                entity_type="recovery_candidate",
-                entity_id=candidate.id,
-                summary=(
-                    f"{context.user.email} recalculated — {calc.layer_recovery} {calc.currency}"
-                    + (" (reverted to needs review)" if reverted else "")
-                ),
-                payload={
-                    "layer_recovery": str(calc.layer_recovery),
-                    "reverted_to_needs_review": reverted,
-                },
-                correlation_id=get_correlation_id(),
-            )
-        )
-        await self._session.commit()
-        return await self.get_candidate(context, candidate.id)
+        return calc, True
 
     # --- review ---------------------------------------------
 
@@ -270,6 +349,9 @@ class RecoveryCandidateService:
             candidate.status = RecoveryCandidateStatus.NEEDS_REVIEW
         candidate.reviewed_at = dt.datetime.now(dt.UTC)
         candidate.reviewed_by = context.user.id
+        # a human has looked at the current number — drift is acknowledged
+        candidate.drifted_at = None
+        candidate.pre_drift_recovery = None
 
         self._reviews.add(
             Review(

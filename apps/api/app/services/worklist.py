@@ -121,11 +121,34 @@ class WorklistService:
     ) -> list[WorklistItem]:
         out: list[WorklistItem] = []
         for c in candidates:
-            if c.status not in _OPEN_REVIEW:
-                continue
             calc = next((x for x in c.calculations if x.id == c.current_calculation_id), None)
             event = event_names.get(c.loss_event_id, "loss event")
             treaty = treaty_names.get(c.treaty_id, "treaty")
+
+            if c.drifted_at is not None and calc is not None:
+                prior = c.pre_drift_recovery
+                if prior is not None:
+                    delta = Decimal(calc.layer_recovery) - Decimal(prior)
+                    sign = "+" if delta >= 0 else "-"
+                    move = f" — {prior} to {calc.layer_recovery} ({sign}{abs(delta)})"
+                else:
+                    move = ""
+                out.append(
+                    WorklistItem(
+                        kind=WorklistKind.RECOVERY_DRIFT,
+                        key=f"recovery_drift:{c.id}",
+                        title=f"{event} · {treaty}",
+                        detail=f"Claims developed and the recovery moved{move}. Re-review.",
+                        href=f"/recovery-candidates/{c.id}?section=calculation",
+                        amount=Decimal(calc.layer_recovery),
+                        currency=c.currency,
+                        age_days=(today - c.drifted_at.date()).days,
+                    )
+                )
+                continue
+
+            if c.status not in _OPEN_REVIEW:
+                continue
             out.append(
                 WorklistItem(
                     kind=WorklistKind.RECOVERY_REVIEW,

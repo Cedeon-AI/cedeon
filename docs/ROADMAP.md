@@ -124,7 +124,15 @@ of gravity from "start a recovery" to "here is what needs you today."
   a `notice_due` item on the worklist that clears when a notice is approved. Web: a
   notice-provision editor on treaty detail, a "Notice obligation" card + rail countdown
   on the recovery workspace. 16 new tests.
-- **Now — ③ auto-recalc on loss commit + drift alerts.** Next.
+- **Now — ③ auto-recalc on loss commit + drift alerts — ✅ done (migration 0013).**
+  Committing a claims import now recomputes every non-rejected recovery on the touched
+  events (`RecoveryCandidateService.recalculate_for_events`, reuses the existing
+  `input_hash` guard so it is idempotent). A figure that moves without a human is
+  *drift*: `recovery_candidates.drifted_at` + `pre_drift_recovery` are stamped, a
+  confirmed candidate reverts to needs-review, a `system` audit row is written, and a
+  `recovery_drift` worklist item shows the before → after until the next human review
+  clears it. Web: a "number moved" banner on the workspace Calculation section.
+  `commitLossImport` returns `recoveries_drifted`. 4 new tests.
 - **Now — ④ golden demo seed + walkthrough refresh.**
 - **Next — ⑤ system-suggested recovery candidates · ⑥ multi-layer programmes ·
   ⑦ aged-recoverable intelligence · ⑧ real extraction/investigator eval datasets.**

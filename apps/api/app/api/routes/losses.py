@@ -253,6 +253,7 @@ async def commit_loss_import(
         skipped=result.skipped,
         events_created=result.events_created,
         loss_event_ids=result.loss_event_ids,
+        recoveries_drifted=result.recoveries_drifted,
     )
 
 

@@ -889,6 +889,11 @@
             "title": "Loss Event Ids",
             "type": "array"
           },
+          "recoveries_drifted": {
+            "default": 0,
+            "title": "Recoveries Drifted",
+            "type": "integer"
+          },
           "skipped": {
             "title": "Skipped",
             "type": "integer"
@@ -3304,6 +3309,18 @@
             ],
             "title": "Current Calculation Id"
           },
+          "drifted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drifted At"
+          },
           "gross_event_incurred": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Gross Event Incurred",
@@ -3330,6 +3347,18 @@
             "format": "uuid",
             "title": "Loss Event Id",
             "type": "string"
+          },
+          "pre_drift_recovery": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Drift Recovery"
           },
           "reviewed_at": {
             "anyOf": [
@@ -3374,6 +3403,8 @@
           "currency_mismatch",
           "current_calculation_id",
           "knowledge_date",
+          "drifted_at",
+          "pre_drift_recovery",
           "created_at",
           "reviewed_at"
         ],
