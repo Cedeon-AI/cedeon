@@ -17,7 +17,13 @@ import {
 } from "@/lib/api";
 import { packetVersionStatus, statementClass } from "@/lib/packet";
 
-export function RecoveryPacketView({ candidateId }: { candidateId: string }) {
+export function RecoveryPacketView({
+  candidateId,
+  embedded,
+}: {
+  candidateId: string;
+  embedded?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -74,40 +80,56 @@ export function RecoveryPacketView({ candidateId }: { candidateId: string }) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
+  const badge = version ? (
+    <Badge tone={packetVersionStatus(version.status).tone}>
+      v{version.version_no} · {packetVersionStatus(version.status).label}
+    </Badge>
+  ) : null;
+
+  const actions = (
+    <>
+      <Button
+        size={embedded ? "sm" : "md"}
+        onClick={() => generate.mutate()}
+        disabled={generate.isPending}
+      >
+        {generate.isPending ? "Assembling…" : version ? "Regenerate" : "Generate packet"}
+      </Button>
+      {version && packetId ? (
+        <Button asChild variant="secondary" size={embedded ? "sm" : "md"}>
+          <a
+            href={`/api/recovery-packets/${packetId}/versions/${version.id}/html`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Printable HTML <ExternalLink />
+          </a>
+        </Button>
+      ) : null}
+    </>
+  );
+
   return (
     <div className="space-y-6">
-      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
-      <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-3">
-            Recovery packet
-            {version ? (
-              <Badge tone={packetVersionStatus(version.status).tone}>
-                v{version.version_no} · {packetVersionStatus(version.status).label}
-              </Badge>
-            ) : null}
-          </span>
-        }
-        description="An audit-friendly artifact. Every statement is one of four classes; AI statements carry their citation. Nothing here is computed — it assembles the deterministic calculation, the investigator's findings, and your decisions."
-        actions={
-          <>
-            <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
-              {generate.isPending ? "Assembling…" : version ? "Regenerate" : "Generate packet"}
-            </Button>
-            {version && packetId ? (
-              <Button asChild variant="secondary">
-                <a
-                  href={`/api/recovery-packets/${packetId}/versions/${version.id}/html`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Printable HTML <ExternalLink />
-                </a>
-              </Button>
-            ) : null}
-          </>
-        }
-      />
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
+            Recovery packet {badge}
+          </h2>
+          <div className="flex gap-2">{actions}</div>
+        </div>
+      ) : (
+        <>
+          <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
+          <PageHeader
+            title={
+              <span className="flex flex-wrap items-center gap-3">Recovery packet {badge}</span>
+            }
+            description="An audit-friendly artifact. Every statement is one of four classes; AI statements carry their citation. Nothing here is computed — it assembles the deterministic calculation, the investigator's findings, and your decisions."
+            actions={actions}
+          />
+        </>
+      )}
 
       {!version ? (
         <EmptyState

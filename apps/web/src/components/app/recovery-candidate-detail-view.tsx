@@ -1,14 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
+import { Check, FileSearch, FileText, Landmark, Mail, Sigma, Wallet } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { RecoveryInvestigationPanel } from "@/components/app/recovery-investigation-panel";
+import { RecoveryNoticesView } from "@/components/app/recovery-notices-view";
+import { RecoveryPacketView } from "@/components/app/recovery-packet-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/field";
-import { BackLink, PageHeader } from "@/components/ui/page-header";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
 import {
   getRecoveryCandidate,
@@ -17,18 +22,33 @@ import {
 } from "@/lib/api";
 import { candidateStatus } from "@/lib/recoveries";
 import { formatShare } from "@/lib/treaties";
-import { formatMoney } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
+
+type Section = "loss-basis" | "calculation" | "investigation" | "packet" | "notice" | "collection";
+
+const RAIL: { key: Section; label: string; icon: LucideIcon }[] = [
+  { key: "loss-basis", label: "Loss basis", icon: Landmark },
+  { key: "calculation", label: "Calculation", icon: Sigma },
+  { key: "investigation", label: "Investigation", icon: FileSearch },
+  { key: "packet", label: "Packet", icon: FileText },
+  { key: "notice", label: "Notice", icon: Mail },
+  { key: "collection", label: "Collection", icon: Wallet },
+];
+
+const KEYS = new Set<Section>(RAIL.map((r) => r.key));
 
 export function RecoveryCandidateDetailView({ candidateId }: { candidateId: string }) {
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
+  const searchParams = useSearchParams();
+  const raw = searchParams.get("section") as Section | null;
+  const section: Section = raw && KEYS.has(raw) ? raw : "calculation";
 
   const detail = useQuery({
     queryKey: ["recovery-candidates", candidateId],
     queryFn: async () =>
       (await getRecoveryCandidate({ path: { candidate_id: candidateId }, throwOnError: true }))
         .data,
-    // Poll while an investigation is running on the worker.
     refetchInterval: (query) =>
       (query.state.data?.investigations ?? []).some((i) => i.status === "running") ? 2500 : false,
   });
@@ -74,6 +94,16 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
   } = detail.data;
   const status = candidateStatus(candidate.status);
   const open = candidate.status === "needs_review" || candidate.status === "in_review";
+  const canNotice = candidate.status === "confirmed" || candidate.status === "notice_drafted";
+  const hasInvestigation = investigations.some((i) => !i.superseded && i.status === "completed");
+
+  const railState: Partial<Record<Section, "done" | "locked">> = {
+    "loss-basis": "done",
+    calculation: calc ? "done" : undefined,
+    investigation: hasInvestigation ? "done" : undefined,
+    notice: canNotice ? undefined : "locked",
+    collection: "locked",
+  };
 
   return (
     <div className="space-y-6">
@@ -88,7 +118,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
         }
         description={
           <>
-            Gross event incurred {formatMoney(candidate.gross_event_incurred, candidate.currency)} ·{" "}
+            {formatMoney(candidate.gross_event_incurred, candidate.currency)} event ·{" "}
             <Link
               href={`/loss-events/${candidate.loss_event_id}`}
               className="text-primary hover:underline"
@@ -104,20 +134,6 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
             </Link>
           </>
         }
-        actions={
-          <>
-            {calc ? (
-              <Button asChild variant="secondary" size="sm">
-                <Link href={`/recovery-candidates/${candidateId}/packet`}>Recovery packet</Link>
-              </Button>
-            ) : null}
-            {candidate.status === "confirmed" || candidate.status === "notice_drafted" ? (
-              <Button asChild variant="secondary" size="sm">
-                <Link href={`/recovery-candidates/${candidateId}/notices`}>Notices</Link>
-              </Button>
-            ) : null}
-          </>
-        }
       />
 
       {candidate.currency_mismatch ? (
@@ -127,126 +143,227 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
         </p>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          {calc ? (
-            <CalculationCard calc={calc} />
-          ) : (
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* rail */}
+        <nav className="shrink-0 lg:w-48">
+          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:pb-0">
+            {RAIL.map((item) => {
+              const state = railState[item.key];
+              const active = section === item.key;
+              const Icon = item.icon;
+              const locked = state === "locked";
+              return (
+                <li key={item.key} className="shrink-0">
+                  <Link
+                    href={`?section=${item.key}`}
+                    scroll={false}
+                    aria-disabled={locked}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
+                      active && "bg-primary/10 font-medium text-primary",
+                      !active &&
+                        !locked &&
+                        "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      locked && "pointer-events-none text-muted-foreground/40",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {state === "done" ? <Check className="size-3.5 text-human" /> : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* content */}
+        <div className="min-w-0 flex-1 space-y-4">
+          {section === "loss-basis" ? (
             <Card>
-              <CardContent className="py-8 text-sm text-muted-foreground">
-                No calculation on this recovery yet.
+              <CardHeader>
+                <CardTitle>Loss basis</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Row
+                  k="Gross event incurred"
+                  v={formatMoney(candidate.gross_event_incurred, candidate.currency)}
+                />
+                <Row k="Currency" v={candidate.currency} />
+                <p className="pt-1 text-muted-foreground">
+                  The claims and treaty layer that feed the calculation.{" "}
+                  <Link
+                    href={`/loss-events/${candidate.loss_event_id}`}
+                    className="text-primary hover:underline"
+                  >
+                    Open the loss event
+                  </Link>{" "}
+                  ·{" "}
+                  <Link
+                    href={`/treaties/${candidate.treaty_id}`}
+                    className="text-primary hover:underline"
+                  >
+                    open the treaty
+                  </Link>
+                  .
+                </p>
               </CardContent>
             </Card>
-          )}
-          <RecoveryInvestigationPanel candidateId={candidateId} investigations={investigations} />
-        </div>
+          ) : null}
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Review</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                The calculation is deterministic. Confirm it once you have checked it against the
-                treaty terms and the claim schedule.
-              </p>
-              {open ? (
-                <>
-                  <Textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Optional note (recorded with the decision)"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => review.mutate("confirm")}
-                      disabled={review.isPending}
-                    >
-                      Confirm
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => review.mutate("request_info")}
-                      disabled={review.isPending}
-                    >
-                      Request info
-                    </Button>
+          {section === "calculation" ? (
+            <>
+              {calc ? (
+                <CalculationCard calc={calc} />
+              ) : (
+                <EmptyState
+                  icon={<Sigma />}
+                  title="No calculation on this recovery yet"
+                  description="Recalculate to run the engine."
+                />
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Review</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    The calculation is deterministic. Confirm it once you have checked it against
+                    the treaty terms and the claim schedule.
+                  </p>
+                  {open ? (
+                    <>
+                      <Textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Optional note (recorded with the decision)"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => review.mutate("confirm")}
+                          disabled={review.isPending}
+                        >
+                          Confirm
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => review.mutate("request_info")}
+                          disabled={review.isPending}
+                        >
+                          Request info
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => review.mutate("reject")}
+                          disabled={review.isPending}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm">
+                      {status.label}
+                      {candidate.reviewed_at
+                        ? ` · ${new Date(candidate.reviewed_at).toLocaleString()}`
+                        : ""}
+                    </p>
+                  )}
+                  <div className="pt-1">
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => review.mutate("reject")}
-                      disabled={review.isPending}
+                      onClick={() => recalculate.mutate()}
+                      disabled={recalculate.isPending}
                     >
-                      Reject
+                      {recalculate.isPending ? "Recalculating…" : "Recalculate"}
                     </Button>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm">
-                  {status.label}
-                  {candidate.reviewed_at
-                    ? ` · ${new Date(candidate.reviewed_at).toLocaleString()}`
-                    : ""}
-                </p>
-              )}
-              <div className="pt-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => recalculate.mutate()}
-                  disabled={recalculate.isPending}
-                >
-                  {recalculate.isPending ? "Recalculating…" : "Recalculate"}
-                </Button>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  re-runs the engine; a new calculation is stored only if inputs changed
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {reviews.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Review history</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {reviews.map((r) => (
-                  <div key={r.created_at} className="border-b border-border/60 pb-2 last:border-0">
-                    <span className="font-medium capitalize">{r.decision.replace("_", " ")}</span>{" "}
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(r.created_at).toLocaleString()}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      re-runs the engine; a new calculation is stored only if inputs changed
                     </span>
-                    {r.reason ? <p className="text-xs text-muted-foreground">{r.reason}</p> : null}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {reviews.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Review history</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    {reviews.map((r) => (
+                      <div
+                        key={r.created_at}
+                        className="border-b border-border/60 pb-2 last:border-0"
+                      >
+                        <span className="font-medium capitalize">
+                          {r.decision.replace("_", " ")}
+                        </span>{" "}
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(r.created_at).toLocaleString()}
+                        </span>
+                        {r.reason ? (
+                          <p className="text-xs text-muted-foreground">{r.reason}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {calculations.length > 1 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Calculation history ({calculations.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 text-sm">
+                    {calculations.map((c) => (
+                      <div key={c.id} className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          {new Date(c.created_at).toLocaleString()}
+                          {c.id === candidate.current_calculation_id ? " · current" : ""}
+                        </span>
+                        <span className="font-medium">
+                          {formatMoney(c.layer_recovery, c.currency)}
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+            </>
           ) : null}
 
-          {calculations.length > 1 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Calculation history ({calculations.length})</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm">
-                {calculations.map((c) => (
-                  <div key={c.id} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">
-                      {new Date(c.created_at).toLocaleString()}
-                      {c.id === candidate.current_calculation_id ? " · current" : ""}
-                    </span>
-                    <span className="font-medium">{formatMoney(c.layer_recovery, c.currency)}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          {section === "investigation" ? (
+            <RecoveryInvestigationPanel candidateId={candidateId} investigations={investigations} />
+          ) : null}
+
+          {section === "packet" ? <RecoveryPacketView candidateId={candidateId} embedded /> : null}
+
+          {section === "notice" ? <RecoveryNoticesView candidateId={candidateId} embedded /> : null}
+
+          {section === "collection" ? (
+            <EmptyState
+              icon={<Wallet />}
+              title="Collection tracking arrives later"
+              description="Notified → agreed → billed → collected → aged, with overdue balances chased. A later phase."
+            />
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-medium tabular-nums">{v}</span>
     </div>
   );
 }
@@ -262,7 +379,7 @@ function CalculationCard({ calc }: { calc: RecoveryCalculationOut }) {
           <p className="text-xs font-medium uppercase tracking-wide text-calculation">
             Layer recovery
           </p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight">
+          <p className="mt-1 font-mono text-2xl font-semibold tracking-tight">
             {formatMoney(calc.layer_recovery, calc.currency)}
           </p>
           <p className="text-xs text-muted-foreground">

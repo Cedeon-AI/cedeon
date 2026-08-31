@@ -1,8 +1,6 @@
-import { RecoveryNoticesView } from "@/components/app/recovery-notices-view";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Notices" };
-
-export default async function RecoveryNoticesPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NoticesRedirect({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <RecoveryNoticesView candidateId={id} />;
+  redirect(`/recovery-candidates/${id}?section=notice`);
 }

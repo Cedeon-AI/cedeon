@@ -20,7 +20,13 @@ import { NOTICE_KINDS, noticeKindLabel, noticeStatus } from "@/lib/notice";
 
 const EMPTY_RECIPIENT = { name: "", organisation: "", role: "", email: "" };
 
-export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
+export function RecoveryNoticesView({
+  candidateId,
+  embedded,
+}: {
+  candidateId: string;
+  embedded?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [kind, setKind] = useState<NoticeKind>("initial_loss_advice");
   const [recipient, setRecipient] = useState(EMPTY_RECIPIENT);
@@ -74,16 +80,28 @@ export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
 
   return (
     <div className="space-y-6">
-      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
-      <PageHeader
-        title="Notices"
-        description={
-          <>
-            Drafted from a whitelist of approved facts only, after the recovery is confirmed. Every
-            draft is for human review — <strong>Cedeon never sends anything.</strong>
-          </>
-        }
-      />
+      {embedded ? (
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Notice</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Drafted from approved facts only, after the recovery is confirmed.{" "}
+            <strong>Cedeon never sends anything.</strong>
+          </p>
+        </div>
+      ) : (
+        <>
+          <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
+          <PageHeader
+            title="Notices"
+            description={
+              <>
+                Drafted from a whitelist of approved facts only, after the recovery is confirmed.
+                Every draft is for human review — <strong>Cedeon never sends anything.</strong>
+              </>
+            }
+          />
+        </>
+      )}
 
       {!confirmed ? (
         <EmptyState
