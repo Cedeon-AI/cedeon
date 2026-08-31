@@ -74,6 +74,7 @@ from app.domain.recoveries import (
     days_overdue,
     outstanding,
 )
+from app.domain.recoveries.chasing import entered_status_on, recommend_chase
 from app.services.collection import CollectionService
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
@@ -634,6 +635,18 @@ async def review_recovery_notice(
 
 
 def _recoverable_out(r: Recoverable, *, as_of: dt.date) -> RecoverableOut:
+    overdue = days_overdue(r.due_date, as_of)
+    entered = entered_status_on(
+        r.status,
+        created_at=r.created_at,
+        notified_at=r.notified_at,
+        agreed_at=r.agreed_at,
+        billed_at=r.billed_at,
+        settled_at=r.settled_at,
+        updated_at=r.updated_at,
+    )
+    days_in_status = max((as_of - entered.date()).days, 0)
+    hint = recommend_chase(status=r.status, days_in_status=days_in_status, days_overdue=overdue)
     return RecoverableOut(
         id=r.id,
         recovery_candidate_id=r.recovery_candidate_id,
@@ -652,13 +665,17 @@ def _recoverable_out(r: Recoverable, *, as_of: dt.date) -> RecoverableOut:
             collected_amount=r.collected_amount,
         ),
         due_date=r.due_date,
-        days_overdue=days_overdue(r.due_date, as_of),
+        days_overdue=overdue,
         aging_bucket=aging_bucket(r.due_date, as_of).value,
         notified_at=r.notified_at,
         agreed_at=r.agreed_at,
         billed_at=r.billed_at,
         settled_at=r.settled_at,
         note=r.note,
+        days_in_status=days_in_status,
+        next_action=hint.action.value,
+        next_action_text=hint.text,
+        next_action_urgent=hint.urgent,
         created_at=r.created_at,
         updated_at=r.updated_at,
     )

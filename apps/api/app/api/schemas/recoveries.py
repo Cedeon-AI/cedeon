@@ -349,6 +349,10 @@ class RecoverableOut(ApiModel):
     billed_at: dt.datetime | None
     settled_at: dt.datetime | None
     note: str | None
+    days_in_status: int
+    next_action: str
+    next_action_text: str
+    next_action_urgent: bool
     created_at: dt.datetime
     updated_at: dt.datetime
 

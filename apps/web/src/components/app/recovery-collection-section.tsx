@@ -120,7 +120,7 @@ export function RecoveryCollectionSection({
 
           <Card>
             <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-160 text-sm">
+              <table className="w-full min-w-208 text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr className="border-b border-border">
                     <th className="px-4 py-2.5 font-medium">Reinsurer</th>
@@ -129,6 +129,7 @@ export function RecoveryCollectionSection({
                     <th className="px-2 py-2.5 text-right font-medium">Collected</th>
                     <th className="px-2 py-2.5 text-right font-medium">Outstanding</th>
                     <th className="px-2 py-2.5 font-medium">Due</th>
+                    <th className="px-2 py-2.5 font-medium">Next</th>
                     <th className="px-4 py-2.5" />
                   </tr>
                 </thead>
@@ -213,6 +214,13 @@ function RecoverableRow({
             <span className="text-muted-foreground/50">—</span>
           )}
         </td>
+        <td className="px-2 py-2.5 text-xs">
+          {r.next_action !== "done" ? (
+            <span className={r.next_action_urgent ? "text-danger" : "text-muted-foreground"}>
+              {r.next_action_text}
+            </span>
+          ) : null}
+        </td>
         <td className="px-4 py-2.5 text-right">
           <div className="flex justify-end gap-1.5">
             {advance ? (
@@ -233,7 +241,7 @@ function RecoverableRow({
       </tr>
       {open ? (
         <tr className="border-b border-border/60 bg-muted/30">
-          <td colSpan={7} className="px-4 py-4">
+          <td colSpan={8} className="px-4 py-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Agreed amount" htmlFor={`ag-${r.id}`}>
                 <Input

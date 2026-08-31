@@ -127,7 +127,7 @@ export function RecoverablesView() {
               description="Confirm a recovery and start collection tracking to see recoverables."
             />
           ) : (
-            <table className="w-full min-w-160 text-sm">
+            <table className="w-full min-w-192 text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="px-4 py-2.5 font-medium">Reinsurer</th>
@@ -135,6 +135,7 @@ export function RecoverablesView() {
                   <th className="px-2 py-2.5 text-right font-medium">Expected</th>
                   <th className="px-2 py-2.5 text-right font-medium">Outstanding</th>
                   <th className="px-2 py-2.5 font-medium">Due</th>
+                  <th className="px-2 py-2.5 font-medium">Next</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -164,6 +165,13 @@ export function RecoverablesView() {
                         ) : (
                           <span className="text-muted-foreground/50">—</span>
                         )}
+                      </td>
+                      <td className="px-2 py-2.5 text-xs">
+                        <span
+                          className={r.next_action_urgent ? "text-danger" : "text-muted-foreground"}
+                        >
+                          {r.next_action_text}
+                        </span>
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <Link

@@ -148,8 +148,15 @@ of gravity from "start a recovery" to "here is what needs you today."
   worklist item + a "Treaties that may respond" card on loss-event detail. Cedeon
   *proposes*; the analyst promotes it through the normal create flow, which suppresses
   the suggestion. No AI. 17 new tests.
-- **Next — ⑥ multi-layer programmes · ⑦ aged-recoverable intelligence ·
-  ⑧ real extraction/investigator eval datasets.**
+- **Next — ⑦ aged-recoverable intelligence — ✅ done.** `app/domain/recoveries/chasing.py`
+  (pure) — from a leg's status, days in that status (`entered_status_on` picks the right
+  stamp), and how overdue it is, a deterministic `NextAction` + human text + urgent flag:
+  *send the notice · chase an acknowledgement · issue the bill · chase payment · resolve
+  the dispute*. Every `RecoverableOut` now carries `days_in_status` + `next_action*`; the
+  recoverables portfolio and the workspace Collection section show a "Next" column, and
+  the `recoverable_overdue` worklist item's detail is the recommendation. No AI. 10 new
+  tests.
+- **Next — ⑥ multi-layer programmes · ⑧ real extraction/investigator eval datasets.**
 - **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
   ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence.**
 

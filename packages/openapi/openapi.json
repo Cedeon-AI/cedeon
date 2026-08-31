@@ -2814,6 +2814,10 @@
             "title": "Currency",
             "type": "string"
           },
+          "days_in_status": {
+            "title": "Days In Status",
+            "type": "integer"
+          },
           "days_overdue": {
             "title": "Days Overdue",
             "type": "integer"
@@ -2839,6 +2843,18 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "next_action": {
+            "title": "Next Action",
+            "type": "string"
+          },
+          "next_action_text": {
+            "title": "Next Action Text",
+            "type": "string"
+          },
+          "next_action_urgent": {
+            "title": "Next Action Urgent",
+            "type": "boolean"
           },
           "note": {
             "anyOf": [
@@ -2923,6 +2939,10 @@
           "billed_at",
           "settled_at",
           "note",
+          "days_in_status",
+          "next_action",
+          "next_action_text",
+          "next_action_urgent",
           "created_at",
           "updated_at"
         ],

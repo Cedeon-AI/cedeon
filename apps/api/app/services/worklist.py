@@ -25,6 +25,7 @@ from app.domain.recoveries import (
     days_overdue,
     outstanding,
 )
+from app.domain.recoveries.chasing import entered_status_on, recommend_chase
 from app.domain.treaties import TreatyVersionStatus
 from app.domain.worklist import WorklistItem, WorklistKind, rank
 from app.repositories.losses import LossEventRepository
@@ -278,12 +279,26 @@ class WorklistService:
             owed = _owed(r)
             if overdue <= 0 or owed <= _ZERO:
                 continue
+            entered = entered_status_on(
+                status,
+                created_at=r.created_at,
+                notified_at=r.notified_at,
+                agreed_at=r.agreed_at,
+                billed_at=r.billed_at,
+                settled_at=r.settled_at,
+                updated_at=r.updated_at,
+            )
+            hint = recommend_chase(
+                status=status,
+                days_in_status=max((today - entered.date()).days, 0),
+                days_overdue=overdue,
+            )
             out.append(
                 WorklistItem(
                     kind=WorklistKind.RECOVERABLE_OVERDUE,
                     key=f"recoverable_overdue:{r.id}",
                     title=f"{r.reinsurer.name} · {status.value}",
-                    detail=f"Outstanding balance, {overdue} days past the due date.",
+                    detail=hint.text,
                     href=(f"/recovery-candidates/{r.recovery_candidate_id}?section=collection"),
                     amount=owed,
                     currency=r.currency,
