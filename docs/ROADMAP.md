@@ -113,7 +113,17 @@ of gravity from "start a recovery" to "here is what needs you today."
   rebuilt around it: one ranked "Needs you" list (icon by kind, countdown / age, amount,
   deep link) + four at-a-glance figures (open recoverable, overdue, largest open recovery,
   count). 15 new tests (249 total).
-- **Now — ② structured notice terms + computed deadlines.** Next.
+- **Now — ② structured notice terms + computed deadlines — ✅ done (migration 0012).**
+  `app/domain/recoveries/obligations.py` (pure) — `NoticeTermSpec {days, trigger, basis}`,
+  `notice_deadline()` with calendar / business-day math. `ObligationService` reads the
+  validated `notice_provision` term, picks the reference date its trigger points at
+  (loss date / `recovery_candidates.knowledge_date` / first claim advice) and computes
+  the deadline — the AI never sets a date. `PUT /treaties/{id}/versions/{vid}/notice-term`
+  (operational metadata, editable post-validation, audited), `POST
+  /recovery-candidates/{id}/knowledge-date`, `notice_obligation` on the candidate detail,
+  a `notice_due` item on the worklist that clears when a notice is approved. Web: a
+  notice-provision editor on treaty detail, a "Notice obligation" card + rail countdown
+  on the recovery workspace. 16 new tests.
 - **Now — ③ auto-recalc on loss commit + drift alerts.** Next.
 - **Now — ④ golden demo seed + walkthrough refresh.**
 - **Next — ⑤ system-suggested recovery candidates · ⑥ multi-layer programmes ·

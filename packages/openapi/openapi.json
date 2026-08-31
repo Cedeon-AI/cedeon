@@ -924,6 +924,14 @@
         "title": "CreateRecoveryCandidateRequest",
         "type": "object"
       },
+      "DeadlineBasis": {
+        "enum": [
+          "calendar",
+          "business"
+        ],
+        "title": "DeadlineBasis",
+        "type": "string"
+      },
       "DocumentDetail": {
         "additionalProperties": false,
         "properties": {
@@ -1894,6 +1902,148 @@
         "title": "NoticeKind",
         "type": "string"
       },
+      "NoticeObligationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "days_until": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Until"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "has_structured_term": {
+            "title": "Has Structured Term",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "period_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Days"
+          },
+          "provision_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provision Text"
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Date"
+          },
+          "reference_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Label"
+          },
+          "satisfied": {
+            "title": "Satisfied",
+            "type": "boolean"
+          },
+          "satisfied_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satisfied On"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "required": [
+          "provision_text",
+          "has_structured_term",
+          "period_days",
+          "trigger",
+          "basis",
+          "reference_date",
+          "reference_label",
+          "deadline",
+          "days_until",
+          "satisfied",
+          "satisfied_on",
+          "note"
+        ],
+        "title": "NoticeObligationOut",
+        "type": "object"
+      },
       "NoticeRecipientModel": {
         "additionalProperties": false,
         "properties": {
@@ -1996,6 +2146,16 @@
           "superseded"
         ],
         "title": "NoticeStatus",
+        "type": "string"
+      },
+      "NoticeTrigger": {
+        "description": "What starts the notice clock. Which date the service passes as the\nreference depends on this.",
+        "enum": [
+          "loss_occurrence",
+          "knowledge_of_loss",
+          "claim_advice"
+        ],
+        "title": "NoticeTrigger",
         "type": "string"
       },
       "OrganizationSummary": {
@@ -3070,6 +3230,16 @@
             "title": "Investigations",
             "type": "array"
           },
+          "notice_obligation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeObligationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reviews": {
             "items": {
               "$ref": "#/components/schemas/RecoveryReviewOut"
@@ -3083,7 +3253,8 @@
           "current_calculation",
           "calculations",
           "reviews",
-          "investigations"
+          "investigations",
+          "notice_obligation"
         ],
         "title": "RecoveryCandidateDetail",
         "type": "object"
@@ -3143,6 +3314,18 @@
             "title": "Id",
             "type": "string"
           },
+          "knowledge_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Date"
+          },
           "loss_event_id": {
             "format": "uuid",
             "title": "Loss Event Id",
@@ -3190,6 +3373,7 @@
           "gross_event_incurred",
           "currency_mismatch",
           "current_calculation_id",
+          "knowledge_date",
           "created_at",
           "reviewed_at"
         ],
@@ -3999,6 +4183,70 @@
           "expires_at"
         ],
         "title": "SessionInfo",
+        "type": "object"
+      },
+      "SetKnowledgeDateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "knowledge_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "date the cedent knew a loss was likely to involve this treaty",
+            "title": "Knowledge Date"
+          }
+        },
+        "title": "SetKnowledgeDateRequest",
+        "type": "object"
+      },
+      "SetNoticeTermRequest": {
+        "additionalProperties": false,
+        "description": "The notice provision as free text, plus \u2014 where the analyst can state it \u2014\nthe structured deadline that drives reminders.",
+        "properties": {
+          "basis": {
+            "$ref": "#/components/schemas/DeadlineBasis",
+            "default": "calendar"
+          },
+          "period_days": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Days"
+          },
+          "provision_text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Provision Text",
+            "type": "string"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeTrigger"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "provision_text"
+        ],
+        "title": "SetNoticeTermRequest",
         "type": "object"
       },
       "SpendByDayOut": {
@@ -6660,6 +6908,59 @@
         ]
       }
     },
+    "/recovery-candidates/{candidate_id}/knowledge-date": {
+      "post": {
+        "operationId": "setRecoveryKnowledgeDate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetKnowledgeDateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the date the cedent knew a loss was likely to involve this treaty",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
     "/recovery-candidates/{candidate_id}/notices": {
       "get": {
         "operationId": "listRecoveryNotices",
@@ -7484,6 +7785,62 @@
           }
         },
         "summary": "Deterministic 'what would this treaty recover' \u2014 read-only, not persisted",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/notice-term": {
+      "put": {
+        "operationId": "setTreatyNoticeTerm",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetNoticeTermRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the notice provision \u2014 free text plus, where stated, a structured deadline",
         "tags": [
           "treaties"
         ]

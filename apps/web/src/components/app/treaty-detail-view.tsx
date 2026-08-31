@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { NoticeProvisionEditor } from "@/components/app/notice-provision-editor";
 import { RecoveryPreview } from "@/components/app/recovery-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,14 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
             </p>
           </CardContent>
         </Card>
+      ) : null}
+
+      {version && version.status !== "draft" && version.status !== "parsing" ? (
+        <NoticeProvisionEditor
+          treatyId={treatyId}
+          versionId={version.id}
+          term={version.terms.find((t) => t.key === "notice_provision")}
+        />
       ) : null}
 
       <Card>

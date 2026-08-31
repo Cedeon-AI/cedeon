@@ -129,6 +129,9 @@ class RecoveryCandidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     gross_event_incurred: Mapped[Any] = mapped_column(MONEY, nullable=False)
     currency_mismatch: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # The analyst's stated "date the cedent knew a loss was likely to involve this
+    # treaty" — the reference date for a knowledge-triggered notice deadline.
+    knowledge_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     current_calculation_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("recovery_calculations.id", ondelete="SET NULL", use_alter=True), nullable=True
     )

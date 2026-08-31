@@ -97,12 +97,34 @@ class RecoveryCandidateOut(ApiModel):
     gross_event_incurred: Decimal
     currency_mismatch: bool
     current_calculation_id: UUID | None
+    knowledge_date: dt.date | None
     created_at: dt.datetime
     reviewed_at: dt.datetime | None
 
 
 class RecoveryCandidateList(ApiModel):
     candidates: list[RecoveryCandidateOut]
+
+
+class SetKnowledgeDateRequest(ApiModel):
+    knowledge_date: dt.date | None = Field(
+        default=None, description="date the cedent knew a loss was likely to involve this treaty"
+    )
+
+
+class NoticeObligationOut(ApiModel):
+    provision_text: str | None
+    has_structured_term: bool
+    period_days: int | None
+    trigger: str | None
+    basis: str | None
+    reference_date: dt.date | None
+    reference_label: str | None
+    deadline: dt.date | None
+    days_until: int | None
+    satisfied: bool
+    satisfied_on: dt.date | None
+    note: str | None
 
 
 class RecoveryReviewOut(ApiModel):
@@ -147,6 +169,7 @@ class RecoveryCandidateDetail(ApiModel):
     calculations: list[RecoveryCalculationOut]
     reviews: list[RecoveryReviewOut]
     investigations: list[RecoveryInvestigationOut]
+    notice_obligation: NoticeObligationOut | None
 
 
 class ToolCallOut(ApiModel):

@@ -31,6 +31,10 @@ from app.repositories.losses import LossEventRepository
 from app.repositories.recoveries import RecoverableRepository, RecoveryCandidateRepository
 from app.repositories.reinsurance import TreatyRepository
 from app.services.auth import AuthenticatedContext
+from app.services.obligations import ObligationService
+
+# A notice deadline this far out (or already past) is worth surfacing.
+_NOTICE_HORIZON_DAYS = 45
 
 _OPEN_REVIEW = (RecoveryCandidateStatus.NEEDS_REVIEW, RecoveryCandidateStatus.IN_REVIEW)
 _ZERO = Decimal("0")
@@ -67,6 +71,7 @@ class WorklistService:
         self._candidates = RecoveryCandidateRepository(session)
         self._recoverables = RecoverableRepository(session)
         self._events = LossEventRepository(session)
+        self._obligations = ObligationService(session)
 
     async def build(self, context: AuthenticatedContext) -> Worklist:
         org_id = context.organization.id
@@ -80,6 +85,7 @@ class WorklistService:
         items: list[WorklistItem] = []
         items += await self._term_validation_items(org_id, today)
         items += self._recovery_review_items(candidates, event_names, treaty_names, today)
+        items += await self._notice_due_items(context, candidates, event_names, treaty_names)
         items += await self._packet_approval_items(org_id, candidates, event_names, today)
         items += self._recoverable_overdue_items(recoverables, today)
 
@@ -134,6 +140,44 @@ class WorklistService:
                     amount=Decimal(calc.layer_recovery) if calc is not None else None,
                     currency=c.currency,
                     age_days=(today - c.updated_at.date()).days,
+                )
+            )
+        return out
+
+    async def _notice_due_items(
+        self,
+        context: AuthenticatedContext,
+        candidates: list[RecoveryCandidate],
+        event_names: dict[UUID, str],
+        treaty_names: dict[UUID, str],
+    ) -> list[WorklistItem]:
+        out: list[WorklistItem] = []
+        for c in candidates:
+            if c.status is RecoveryCandidateStatus.REJECTED:
+                continue
+            ob = await self._obligations.for_candidate(context, c)
+            if ob is None or ob.satisfied or ob.deadline is None or ob.days_until is None:
+                continue
+            if ob.days_until > _NOTICE_HORIZON_DAYS:
+                continue
+            event = event_names.get(c.loss_event_id, "loss event")
+            treaty = treaty_names.get(c.treaty_id, "treaty")
+            not_confirmed = c.status not in (
+                RecoveryCandidateStatus.CONFIRMED,
+                RecoveryCandidateStatus.NOTICE_DRAFTED,
+            )
+            detail = f"Notice due {ob.deadline.isoformat()}"
+            if not_confirmed:
+                detail += " — confirm the recovery and file it."
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.NOTICE_DUE,
+                    key=f"notice_due:{c.id}",
+                    title=f"{event} · {treaty}",
+                    detail=detail,
+                    href=f"/recovery-candidates/{c.id}?section=notice",
+                    currency=c.currency,
+                    due_in_days=ob.days_until,
                 )
             )
         return out

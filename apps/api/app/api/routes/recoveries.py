@@ -28,6 +28,7 @@ from app.api.schemas.recoveries import (
     GeneratePacketResponse,
     InvestigationCitationOut,
     InvestigationFindingOut,
+    NoticeObligationOut,
     NoticeReviewRequest,
     PacketCitationOut,
     PacketContentOut,
@@ -51,6 +52,7 @@ from app.api.schemas.recoveries import (
     RecoveryPacketVersionSummary,
     RecoveryReviewOut,
     ReviewRecoveryCandidateRequest,
+    SetKnowledgeDateRequest,
     ToolCallOut,
 )
 from app.db.models.extraction import Review, ToolCall
@@ -74,6 +76,7 @@ from app.services.collection import CollectionService
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
 from app.services.notice import NoticeReview, NoticeService
+from app.services.obligations import NoticeObligation, ObligationService
 from app.services.packet import PacketReview, RecoveryPacketService
 from app.services.recoveries import RecoveryCandidateService
 
@@ -95,8 +98,28 @@ def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
         gross_event_incurred=candidate.gross_event_incurred,
         currency_mismatch=candidate.currency_mismatch,
         current_calculation_id=candidate.current_calculation_id,
+        knowledge_date=candidate.knowledge_date,
         created_at=candidate.created_at,
         reviewed_at=candidate.reviewed_at,
+    )
+
+
+def _obligation_out(ob: NoticeObligation | None) -> NoticeObligationOut | None:
+    if ob is None:
+        return None
+    return NoticeObligationOut(
+        provision_text=ob.provision_text,
+        has_structured_term=ob.spec is not None,
+        period_days=ob.spec.days if ob.spec is not None else None,
+        trigger=ob.spec.trigger.value if ob.spec is not None else None,
+        basis=ob.spec.basis.value if ob.spec is not None else None,
+        reference_date=ob.reference_date,
+        reference_label=ob.reference_label,
+        deadline=ob.deadline,
+        days_until=ob.days_until,
+        satisfied=ob.satisfied,
+        satisfied_on=ob.satisfied_on,
+        note=ob.note,
     )
 
 
@@ -222,6 +245,7 @@ async def get_recovery_candidate(
     investigations = await InvestigationService(session, settings).list_for_candidate(
         context, candidate_id
     )
+    obligation = await ObligationService(session).for_candidate(context, candidate)
     return RecoveryCandidateDetail(
         candidate=_candidate_out(candidate),
         current_calculation=_calculation_out(current) if current else None,
@@ -231,7 +255,26 @@ async def get_recovery_candidate(
         ],
         reviews=[_review_out(r) for r in reviews],
         investigations=[_investigation_out(i) for i in investigations],
+        notice_obligation=_obligation_out(obligation),
     )
+
+
+@router.post(
+    "/{candidate_id}/knowledge-date",
+    response_model=RecoveryCandidateOut,
+    summary="Set the date the cedent knew a loss was likely to involve this treaty",
+    operation_id="setRecoveryKnowledgeDate",
+)
+async def set_recovery_knowledge_date(
+    candidate_id: UUID,
+    payload: SetKnowledgeDateRequest,
+    context: AuthedContext,
+    session: DbSession,
+) -> RecoveryCandidateOut:
+    candidate = await ObligationService(session).set_knowledge_date(
+        context, candidate_id, payload.knowledge_date
+    )
+    return _candidate_out(candidate)
 
 
 @router.post(

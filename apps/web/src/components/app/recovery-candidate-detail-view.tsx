@@ -13,15 +13,17 @@ import { RecoveryPacketView } from "@/components/app/recovery-packet-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/field";
+import { Field, Input, Textarea } from "@/components/ui/field";
 import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
-import type { RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
+import type { NoticeObligationOut, RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
 import {
   getLossEvent,
   getRecoveryCandidate,
   recalculateRecoveryCandidate,
   reviewRecoveryCandidate,
+  setRecoveryKnowledgeDate,
 } from "@/lib/api";
+import { deadlineChip } from "@/lib/obligations";
 import { candidateStatus } from "@/lib/recoveries";
 import { formatShare } from "@/lib/treaties";
 import { cn, formatMoney } from "@/lib/utils";
@@ -93,6 +95,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
     calculations,
     reviews,
     investigations,
+    notice_obligation: obligation,
   } = detail.data;
   const status = candidateStatus(candidate.status);
   const open = candidate.status === "needs_review" || candidate.status === "in_review";
@@ -171,7 +174,27 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
                   >
                     <Icon className="size-4 shrink-0" />
                     <span className="flex-1">{item.label}</span>
-                    {state === "done" ? <Check className="size-3.5 text-human" /> : null}
+                    {item.key === "notice" &&
+                    obligation?.deadline &&
+                    !obligation.satisfied &&
+                    obligation.days_until !== null &&
+                    obligation.days_until !== undefined &&
+                    obligation.days_until <= 30 ? (
+                      <span
+                        className={cn(
+                          "rounded px-1 text-[10px] font-semibold",
+                          obligation.days_until <= 7
+                            ? "bg-danger/15 text-danger"
+                            : "bg-warning/15 text-warning",
+                        )}
+                      >
+                        {obligation.days_until < 0
+                          ? `${Math.abs(obligation.days_until)}d`
+                          : `${obligation.days_until}d`}
+                      </span>
+                    ) : state === "done" ? (
+                      <Check className="size-3.5 text-human" />
+                    ) : null}
                   </Link>
                 </li>
               );
@@ -347,7 +370,18 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
           {section === "packet" ? <RecoveryPacketView candidateId={candidateId} embedded /> : null}
 
-          {section === "notice" ? <RecoveryNoticesView candidateId={candidateId} embedded /> : null}
+          {section === "notice" ? (
+            <>
+              {obligation ? (
+                <NoticeObligationCard
+                  candidateId={candidateId}
+                  obligation={obligation}
+                  onChange={invalidate}
+                />
+              ) : null}
+              <RecoveryNoticesView candidateId={candidateId} embedded />
+            </>
+          ) : null}
 
           {section === "collection" ? (
             <RecoveryCollectionSection candidateId={candidateId} canTrack={canNotice} />
@@ -364,6 +398,103 @@ function Row({ k, v }: { k: string; v: string }) {
       <span className="text-muted-foreground">{k}</span>
       <span className="font-medium tabular-nums">{v}</span>
     </div>
+  );
+}
+
+function NoticeObligationCard({
+  candidateId,
+  obligation,
+  onChange,
+}: {
+  candidateId: string;
+  obligation: NoticeObligationOut;
+  onChange: () => void;
+}) {
+  const [knowledge, setKnowledge] = useState(obligation.reference_date ?? "");
+  const chip = deadlineChip(obligation);
+
+  const save = useMutation({
+    mutationFn: async (value: string) => {
+      await setRecoveryKnowledgeDate({
+        path: { candidate_id: candidateId },
+        body: { knowledge_date: value || null },
+        throwOnError: true,
+      });
+    },
+    onSuccess: onChange,
+  });
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Notice obligation</CardTitle>
+        <Badge tone={chip.tone}>{chip.text}</Badge>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {obligation.provision_text ? (
+          <p className="border-l-2 border-fact/40 bg-fact/5 px-3 py-2 text-muted-foreground">
+            “{obligation.provision_text}”
+          </p>
+        ) : null}
+
+        {obligation.has_structured_term && obligation.deadline ? (
+          <div className="space-y-1">
+            <Row k="Deadline" v={obligation.deadline} />
+            <Row
+              k="Period"
+              v={`${obligation.period_days} ${obligation.basis === "business" ? "business " : ""}days`}
+            />
+            {obligation.reference_label ? (
+              <Row
+                k="Counted from"
+                v={`${obligation.reference_label}${
+                  obligation.reference_date ? ` (${obligation.reference_date})` : ""
+                }`}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">
+            No structured deadline yet. Set the period, trigger and basis on the{" "}
+            <span className="font-medium text-foreground">treaty's notice provision</span> and
+            Cedeon will compute the date here.
+          </p>
+        )}
+
+        {obligation.note ? (
+          <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+            {obligation.note}
+          </p>
+        ) : null}
+
+        {obligation.trigger === "knowledge_of_loss" ? (
+          <div className="flex flex-wrap items-end gap-2 border-t border-border/60 pt-3">
+            <Field label="Date of knowledge" htmlFor="obl-knowledge">
+              <Input
+                id="obl-knowledge"
+                type="date"
+                value={knowledge}
+                onChange={(e) => setKnowledge(e.target.value)}
+                className="w-auto"
+              />
+            </Field>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => save.mutate(knowledge)}
+              disabled={save.isPending}
+            >
+              {save.isPending ? "Saving…" : "Set date"}
+            </Button>
+          </div>
+        ) : null}
+
+        <p className="text-xs text-muted-foreground">
+          The date is computed by deterministic code from the validated clause — the AI never sets a
+          deadline. Cedeon never sends the notice.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.api.schemas import ApiModel
+from app.domain.recoveries import DeadlineBasis, NoticeTrigger
 from app.domain.reviews import ReviewDecision
 from app.domain.treaties import TreatyVersionStatus
 
@@ -56,3 +57,13 @@ class ReviewOut(ApiModel):
     decision: ReviewDecision
     reason: str | None
     created_at: dt.datetime
+
+
+class SetNoticeTermRequest(ApiModel):
+    """The notice provision as free text, plus — where the analyst can state it —
+    the structured deadline that drives reminders."""
+
+    provision_text: str = Field(min_length=1, max_length=2000)
+    period_days: int | None = Field(default=None, ge=1, le=1000)
+    trigger: NoticeTrigger | None = None
+    basis: DeadlineBasis = DeadlineBasis.CALENDAR

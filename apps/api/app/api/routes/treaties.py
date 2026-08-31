@@ -28,11 +28,14 @@ from app.api.schemas.validation import (
     CitationOut,
     DocumentPageOut,
     ReviewRequest,
+    SetNoticeTermRequest,
     TermCandidateOut,
     TermCandidatesResponse,
 )
 from app.db.models.extraction import TreatyTermCandidate
 from app.db.models.reinsurance import Treaty, TreatyVersion
+from app.domain.recoveries import NoticeTermSpec, NoticeTrigger
+from app.services.obligations import ObligationService
 from app.services.recoveries import RecoveryPreviewService
 from app.services.validation import CandidateReview, ValidationService
 
@@ -218,6 +221,31 @@ async def review_term_candidate(
         ),
     )
     return _candidate_out(candidate)
+
+
+@router.put(
+    "/{treaty_id}/versions/{version_id}/notice-term",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Set the notice provision — free text plus, where stated, a structured deadline",
+    operation_id="setTreatyNoticeTerm",
+)
+async def set_treaty_notice_term(
+    treaty_id: UUID,
+    version_id: UUID,
+    payload: SetNoticeTermRequest,
+    context: AuthedContext,
+    session: DbSession,
+) -> None:
+    spec: NoticeTermSpec | None = None
+    if payload.period_days is not None and payload.trigger is not None:
+        spec = NoticeTermSpec(
+            days=payload.period_days,
+            trigger=NoticeTrigger(payload.trigger),
+            basis=payload.basis,
+        )
+    await ObligationService(session).set_notice_term(
+        context, version_id, provision_text=payload.provision_text, spec=spec
+    )
 
 
 @router.post(
