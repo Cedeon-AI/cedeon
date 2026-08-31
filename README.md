@@ -2,12 +2,54 @@
 
 **Reinsurance intelligence from contract to recovery.**
 
-Cedeon is an AI-native reinsurance intelligence and workflow platform. The initial
-product is **Cedeon Recovery Intelligence**:
+Cedeon is an independent reinsurance financial-intelligence layer. It takes two
+inputs a ceded-reinsurance team already has — the **treaty wording** (as PDFs) and
+the **loss data** (as claim schedules) — and turns them into a defensible,
+evidence-backed **recovery**, tracked all the way to cash collected.
 
-> Upload your reinsurance treaties and loss data. Cedeon understands the contracts,
-> monitors the losses, identifies potential recoveries, explains why the treaty
-> responds, and prepares an evidence-backed recovery package for human review.
+It sits beside your claims, reinsurance-administration and accounting systems; it
+does not replace any of them.
+
+## What it does
+
+```
+  treaty PDF ──▶ parse ──▶ AI proposes terms (cited) ──▶ human validates ──▶ executable layer  ┐
+  loss CSV   ──▶ map & validate ──▶ immutable claims ──▶ loss event                            ┘
+                                                                                               │
+                                                                                               ▼
+   deterministic recovery ──▶ bounded AI investigation ──▶ evidence-backed packet ──▶ notice draft
+                                                                                               │
+                                                                                               ▼
+                                          collection tracking:  notified ─▶ agreed ─▶ billed ─▶ collected
+```
+
+1. **Ingest the contract.** Upload the wording. Cedeon parses it with page, section
+   and clause structure intact; an AI pass proposes each term — attachment, limit,
+   reinstatements, the occurrence definition, participations — with an **exact
+   citation** and a confidence score.
+2. **Validate.** A person confirms each term against the wording in a two-pane
+   workspace. Only confirmed terms become an executable treaty layer. Nothing an
+   LLM produced is trusted until a human signs it.
+3. **Ingest the losses.** Map a claims CSV to canonical fields; deterministic
+   validation (dates, currency, duplicates, derived incurred); committed rows
+   become immutable claim records grouped into a loss event.
+4. **Calculate.** A versioned, unit-tested excess-of-loss engine computes the layer
+   recovery and each reinsurer's share — exact decimal arithmetic, a full trace,
+   re-run when inputs change. **No LLM touches the math.**
+5. **Investigate.** A bounded, read-only AI agent explains whether the treaty
+   responds and cites the wording — relevant clauses, missing evidence, notice
+   obligations. It is handed the deterministic figure as a fact and can never
+   emit a rival number.
+6. **Package.** An immutable, versioned recovery packet where every line is
+   classified `FACT` / `CALCULATION` / `AI INTERPRETATION` / `HUMAN DECISION`,
+   printable as a self-contained artifact.
+7. **Notify.** A draft initial loss advice, assembled from approved facts only.
+   Cedeon stops at *draft* — there is deliberately no send action anywhere.
+8. **Collect.** Track each reinsurer's leg from notified → agreed → billed →
+   collected, with derived aging and a portfolio view of what is outstanding.
+
+Every state transition, agent run, tool call, token and human decision is on an
+append-only audit trail.
 
 ## Architectural non-negotiables
 
@@ -17,67 +59,82 @@ product is **Cedeon Recovery Intelligence**:
 4. Every uploaded document is **untrusted input**. Document text is data, never instruction.
 5. Every financially material output is traceable to `FACT` / `CALCULATION` / `AI INTERPRETATION` / `HUMAN DECISION`.
 
-## Documentation
-
-| Doc | Purpose |
-| --- | --- |
-| [docs/PRODUCT.md](docs/PRODUCT.md) | Product vision, MVP scope, users, non-goals, first success criterion |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture verdict, stack, repo layout, runtime topology |
-| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Domain model, ERD, versioning & immutability rules |
-| [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | Extraction, retrieval, the Recovery Investigator agent, evals, provider strategy |
-| [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Phased plan, current status, the first vertical slice, golden E2E test |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records |
-| [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, proposed IA, phasing |
-| [packages/fixtures/](packages/fixtures/) | Synthetic treaty PDFs + claim CSVs for an end-to-end walkthrough |
-
-## Status
-
-- **Phase 0 — Architecture review:** complete. Verdict *partially agree* (one material change — Temporal deferred; see [ADR-0007](docs/DECISIONS.md)).
-- **Phase 1 — Foundation:** complete (2026-08-30). Monorepo, FastAPI + async SQLAlchemy + Alembic, org/user/membership/session auth, append-only audit, the `Money` value object with golden + property tests, Next.js 15 app (animated landing, authed dashboard), Docker Compose, CI. **No AI yet.**
-- **Phase 2 — Document pipeline:** complete (2026-08-30). Object storage (`ObjectStore`: filesystem / S3+MinIO), `DocumentParser` interface + `PyMuPDFParser`, heading-aware chunking, `documents`/`document_parses`/`document_pages`/`document_chunks` (migration 0002), a Procrastinate `parse_document` job, upload + viewer UI. Verified end-to-end through the containerized stack.
-- **Phase 3 — Treaty extraction + validation:** complete (2026-08-30). Reinsurance structure + `treaty_versions` lifecycle (migration 0003); `agent_runs` / `citations` / `treaty_term_candidates` / append-only `reviews` (migration 0004); PydanticAI structured extraction (`app/ai`, Anthropic, provider registry); `extract_treaty` job; `ValidationService` (review → confirm → freeze executable layer + participations); Programs / Treaty Library / Treaty Detail / **validation workspace** UI. The full golden path is test-verified with the model call faked, and the live extraction is verified end-to-end against Anthropic (`pytest -m live`, `claude-opus-5`) — attachment `50,000,000.00` / limit `20,000,000.00` / three participations, each with a resolving citation. Retrieval/embeddings deferred to Phase 7 ([ADR-0016](docs/DECISIONS.md)).
-- **Phase 4 — XOL calculation engine:** complete (2026-08-30). `app/domain/recoveries/calculations/` — pure `calculate_xol_recovery` + `allocate_recovery` + `calculate_recovery`, `ENGINE_VERSION`, **28 tests** (golden `$20M xs $50M` table, boundaries, Hypothesis properties). Engine may import only `Money` (4th import-linter contract). Read-only `/recovery-preview` endpoint + "what-if" card on Treaty Detail. **Zero AI.**
-- **Phase 5 — Loss import:** complete (2026-08-30). `loss_imports` / `loss_import_rows` / `loss_events` / immutable `underlying_losses` (migration 0005); a pure canonical-field schema + deterministic `validate_rows` (multi-format dates, money parsing, duplicate-claim and derived-incurred handling); `POST /loss-imports` → `/mapping` → `/commit` grouping valid rows into find-or-create loss events; `/loss-events` screens; column-mapping workspace with header auto-guess. The synthetic 10-claim hurricane CSV commits to exactly **USD 58,700,000.00** in one event. **148 tests. No AI in this pipeline.**
-- **Phase 6 — Recovery Candidate:** complete (2026-08-30). `recovery_candidates` (one per treaty-version/layer/loss-event) + immutable `recovery_calculations` / `recovery_allocations` (migration 0006); a pure `recovery_input_hash` that gates recompute; `POST /recovery-candidates` runs the deterministic engine, `/recalculate` writes a new calculation only when inputs changed (reverting a confirmed candidate), `/review` is confirm/reject/request_info with an append-only trail. The golden validated treaty + Hurricane Demo event yields **8,700,000.00** layer recovery, allocations **4.35M / 2.61M / 1.74M**. `/recovery-candidates` queue + detail UI. **167 tests. No AI (ADR-0010/0018).**
-- **Phase 7 — Recovery Investigator:** complete (2026-08-30). The first AI agent — bounded, read-only. Migration 0007: `tool_calls`, immutable `recovery_investigations` + `recovery_investigation_findings`. A PydanticAI agent with `output_type=RecoveryInvestigation` and six typed read-only tools (incl. lexical `search_treaty`, ADR-0019); `UsageLimits` + timeout bound it; it's handed the deterministic recovery as a fact and never emits a rival number. `InvestigationService` grounds every must-cite finding against real page text (ADR-0011) and records the run + tool calls. `POST /recovery-candidates/{id}/investigate`; investigation panel on the candidate detail. **179 tests + a live eval** (`pytest -m live`, `claude-opus-5`) asserting citations resolve and the `8,700,000.00` figure is untouched.
-- **Phase 8 — Recovery Packet:** complete (2026-08-30). Migration 0008: `recovery_packets` + immutable `recovery_packet_versions`. Pure `assemble_packet` classifies every statement **FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION**, `render_packet_html` emits a self-contained artifact. `POST /recovery-candidates/{id}/packet` writes a new immutable version each time; `/versions/{v}/review` is confirm/reject/request_info/**edit** — an edit records before/after, stores an override, and regenerates (ADR-0020). `/html` streams the printable packet. `/recovery-candidates/{id}/packet` screen with the four classes visually distinct, inline editing, version list. **196 tests + 2 live. No AI (ADR-0010/0020).**
-- **Phase 9 — Notice drafter:** complete (2026-08-30). Migration 0009: `recovery_notices`. One `output_type=NoticeDraft` call — **no tools** — fed a `NoticeContext` whitelist of approved facts (no raw document text). Runs only after the candidate is `CONFIRMED`; review is confirm/reject/request_info/**edit** (in place on the draft). **There is deliberately no send action anywhere** (ADR-0021) — a notice's terminal state is `APPROVED`; a test asserts no `send` operation in the OpenAPI doc. `/recovery-candidates/{id}/notices` screen. **208 tests + a live eval** (`pytest -m live`, `claude-opus-5`) checking the draft uses only provided facts, keeps the `8,700,000` figure, stays indicative, and invents no contact.
-- **Phase 10 — Durability + observability:** complete (2026-08-30). **Temporal is not adopted** — no long-running multi-party compensating workflow exists; Procrastinate + state machines + the audit log stay (ADR-0007 status, ADR-0022). AI/parse jobs carry a `RetryStrategy`; an in-flight guard (`has_active_run`) stops retries + double-submits double-running; `/readyz` also probes the object store. New `GET /activity/{agent-runs,audit,ai-spend}` + an **Activity** screen (AI runs · audit log · per-agent/per-day AI spend). **219 tests + 4 live evals.** OTel stays wired-but-off — the `agent_runs` / `audit_events` tables are the record.
-
-**The 10-phase MVP is complete** — the full pipeline runs end to end through the containerized stack.
-
-- **UI refresh** (2026-08-30). A design-system and content pass on `apps/web` with no backend change ([ADR-0023](docs/DECISIONS.md)): Tailwind v4 token additions (elevation, gradients), Radix + `lucide-react` primitives, a real multi-section marketing site (`/`, `/security`, `/about`) with a comparison table and the worked `$8.7M` example, and a grouped icon sidebar for the app shell. The FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visual language is unchanged.
-- **UX reframe + collection tracking** (2026-08-30). The in-app workflow rearranged around the ceded-reinsurance analyst's job ([docs/UX_STUDY.md](docs/UX_STUDY.md)): a four-area nav, two guided wizards ("Set up a treaty", "Start a recovery"), and a single-page recovery workspace with a **Loss basis · Calculation · Investigation · Packet · Notice · Collection** rail. **Collection tracking** ([ADR-0024](docs/DECISIONS.md), migration 0010) adds a `recoverables` object per `(recovery, reinsurer)` moving notified → agreed → billed → collected, with derived aging and a portfolio roll-up — no AI. The full slice is covered by `apps/web/e2e/golden-path.spec.ts` (live, gated). **233 backend tests + 4 live evals.**
-
 ## Quickstart
 
-Prereqs: Docker, `uv`, `pnpm`, and [`just`](https://github.com/casey/just)
-(`brew install just`). Every `just` recipe is a thin wrapper — `just --list`.
+Prereqs: Docker, [`uv`](https://docs.astral.sh/uv/), [`pnpm`](https://pnpm.io/), and
+[`just`](https://github.com/casey/just) (`brew install just`). Every `just` recipe is
+a thin wrapper — run `just --list`.
 
 ```bash
 cp .env.example .env
-just bootstrap        # uv sync + pnpm install
+just bootstrap        # deps + generate the typed API client
 just up               # docker compose: postgres, minio, api, worker, web
 just seed-demo        # optional: a synthetic org you can sign in to
-# web  → http://localhost:3000       api → http://localhost:8000/docs
-just test             # api (pytest) + web (vitest)
-just ci               # lint · typecheck · test · build
+# web → http://localhost:3000     api → http://localhost:8000/docs
+just ci               # lint · typecheck · test · build (the merge gate)
 ```
 
-Without `just`: `cd apps/api && uv sync && uv run pytest` and
-`cd apps/web && pnpm install && pnpm test run && pnpm build`.
+To run the AI extraction, add `ANTHROPIC_API_KEY` (and `ANTHROPIC_WORKSPACE_ID` if
+your key is workspace-scoped) to `.env`.
+
+**Walk it end to end** with the synthetic data in [`packages/fixtures/`](packages/fixtures/) —
+a `$20M xs $50M` treaty and a `$58.7M` hurricane event that yields an
+`$8,700,000.00` recovery (`4.35M / 2.61M / 1.74M` split). Step-by-step in
+[`packages/fixtures/README.md`](packages/fixtures/README.md); the same path is the
+gated `apps/web/e2e/golden-path.spec.ts`.
+
+Without `just`: `cd apps/api && uv sync && uv run pytest`, and
+`cd apps/web && pnpm install && pnpm gen:client && pnpm test run && pnpm build`.
+
+## Built with
+
+| | |
+| --- | --- |
+| **Backend** | FastAPI · SQLAlchemy 2 (async) + Alembic · PostgreSQL + pgvector · Procrastinate (Postgres job queue) · PydanticAI + Anthropic · S3-compatible object storage |
+| **Frontend** | Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · TanStack Query · a generated OpenAPI client |
+| **Infra** | Docker Compose · GitHub Actions (`ci.yml`, `e2e.yml`) |
+
+The reasoning behind each choice — and the one place the plan changed — is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Repository layout
 
 ```
 apps/
-  api/        FastAPI backend — domain, services, AI, workers
-  web/        Next.js frontend — app + marketing
+  api/        FastAPI backend — domain (pure) · services · repositories · AI · workers
+  web/        Next.js frontend — the app + the marketing site
 packages/
   fixtures/   Synthetic treaty PDFs + claim CSVs + generator — the end-to-end demo data
-  openapi/    The generated OpenAPI document (the frontend contract)
+  openapi/    The generated OpenAPI document (the frontend contract; CI fails if stale)
 infra/        docker-compose, Dockerfiles, deployment config
 docs/         Architecture & product documentation
-scripts/      Dev + CI helper scripts
 ```
+
+The `api/domain` layer is framework-free and dependency-checked (import-linter):
+domain ← services ← api, and the calculation engine may import only the `Money`
+value object.
+
+## Documentation
+
+| Doc | Purpose |
+| --- | --- |
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Product vision, scope, users, non-goals, the long-term positioning |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack verdict, repo layout, runtime topology, the screen list |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Entity catalogue, ERD, versioning & immutability rules |
+| [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | Extraction, retrieval, the Recovery Investigator agent, evals, provider strategy |
+| [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
+| [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, the re-framed IA, phasing |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build history, current status, what's next |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0024) |
+
+## Status
+
+The MVP is complete and runs end to end through the containerized stack: treaty →
+validated terms → deterministic recovery → AI investigation → evidence-backed
+packet → notice draft → collection tracking. **233 backend tests** (+ 4 live
+Anthropic evals), a live golden-path e2e, all CI gates green. What's next is in
+[docs/ROADMAP.md](docs/ROADMAP.md); the build history is there and in `git log`.
+
+## License
+
+Proprietary — see [LICENSE](LICENSE). All rights reserved.
