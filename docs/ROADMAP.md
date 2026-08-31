@@ -133,7 +133,13 @@ of gravity from "start a recovery" to "here is what needs you today."
   `recovery_drift` worklist item shows the before → after until the next human review
   clears it. Web: a "number moved" banner on the workspace Calculation section.
   `commitLossImport` returns `recoveries_drifted`. 4 new tests.
-- **Now — ④ golden demo seed + walkthrough refresh.**
+- **Now — ④ golden demo seed + walkthrough refresh — ✅ done.** `just seed-demo` now
+  builds the whole golden desk deterministically (no AI): a validated `$20M xs $50M`
+  treaty with a structured notice term, the committed Hurricane Demo event (10 claims,
+  `$58.7M`), a confirmed recovery with its calculation + `4.35 / 2.61 / 1.74M` split,
+  and three recoverables — one notified, one billed-and-overdue, one collected. A first
+  run and every demo now open on a populated Home worklist instead of an empty app.
+  `packages/fixtures/README.md` walkthrough refreshed for the post-A3 navigation.
 - **Next — ⑤ system-suggested recovery candidates · ⑥ multi-layer programmes ·
   ⑦ aged-recoverable intelligence · ⑧ real extraction/investigator eval datasets.**
 - **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
