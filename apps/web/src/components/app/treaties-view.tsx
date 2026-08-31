@@ -1,21 +1,16 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, ScrollText } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/field";
 import { EmptyState, PageHeader } from "@/components/ui/page-header";
-import { createTreaty, listDocuments, listPrograms, listTreaties } from "@/lib/api";
+import { listTreaties } from "@/lib/api";
 import { isBusy, versionStatus } from "@/lib/treaties";
 
 export function TreatiesView() {
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState({ program_id: "", name: "", source_document_id: "" });
-
   const treaties = useQuery({
     queryKey: ["treaties"],
     queryFn: async () => (await listTreaties({ throwOnError: true })).data.treaties,
@@ -24,105 +19,20 @@ export function TreatiesView() {
         ? 2500
         : false,
   });
-  const programs = useQuery({
-    queryKey: ["programs"],
-    queryFn: async () => (await listPrograms({ throwOnError: true })).data.programs,
-  });
-  const documents = useQuery({
-    queryKey: ["documents"],
-    queryFn: async () => (await listDocuments({ throwOnError: true })).data.documents,
-  });
-
-  const parsedTreatyDocs = (documents.data ?? []).filter(
-    (d) => d.kind === "treaty" && d.status === "parsed",
-  );
-
-  const add = useMutation({
-    mutationFn: async () => {
-      const { data } = await createTreaty({
-        body: {
-          program_id: form.program_id,
-          name: form.name,
-          source_document_id: form.source_document_id || null,
-        },
-        throwOnError: true,
-      });
-      return data;
-    },
-    onSuccess: () => {
-      setForm({ program_id: "", name: "", source_document_id: "" });
-      queryClient.invalidateQueries({ queryKey: ["treaties"] });
-    },
-  });
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Treaties"
-        description="Create a treaty from a parsed treaty document. Cedeon extracts the terms; you validate them."
+        description="Your reinsurance program — the contracts Cedeon runs recoveries against."
+        actions={
+          <Button asChild size="sm">
+            <Link href="/treaties/new">
+              <Plus /> Set up a treaty
+            </Link>
+          </Button>
+        }
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>New treaty</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-3 md:grid-cols-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (form.program_id && form.name.trim()) add.mutate();
-            }}
-          >
-            <Field label="Program" htmlFor="tprogram">
-              <Select
-                id="tprogram"
-                value={form.program_id}
-                onChange={(e) => setForm({ ...form, program_id: e.target.value })}
-              >
-                <option value="">Select…</option>
-                {programs.data?.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Treaty name" htmlFor="tname">
-              <Input
-                id="tname"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="2027 Property Cat XOL"
-              />
-            </Field>
-            <Field label="Source document" htmlFor="tdoc">
-              <Select
-                id="tdoc"
-                value={form.source_document_id}
-                onChange={(e) => setForm({ ...form, source_document_id: e.target.value })}
-              >
-                <option value="">None (add later)</option>
-                {parsedTreatyDocs.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.original_filename}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="md:col-span-3">
-              <Button type="submit" disabled={add.isPending}>
-                <Plus /> {add.isPending ? "Creating…" : "Create treaty"}
-              </Button>
-              {parsedTreatyDocs.length === 0 ? (
-                <span className="ml-3 text-xs text-muted-foreground">
-                  Upload &amp; parse a treaty PDF in Documents first.
-                </span>
-              ) : null}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -173,7 +83,12 @@ export function TreatiesView() {
             <EmptyState
               icon={<ScrollText />}
               title="No treaties yet"
-              description="Create one from a parsed treaty document above."
+              description="Set up your first treaty — upload the wording and Cedeon extracts the terms."
+              action={
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/treaties/new">Set up a treaty</Link>
+                </Button>
+              }
             />
           )}
         </CardContent>

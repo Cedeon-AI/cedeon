@@ -154,9 +154,9 @@ export function DashboardView() {
         <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">Get started</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <QuickLink
-            href="/documents"
+            href="/treaties/new"
             icon={<Upload />}
-            title="Add a treaty"
+            title="Set up a treaty"
             body="Upload the wording; Cedeon extracts the terms for you to validate."
           />
           <QuickLink
