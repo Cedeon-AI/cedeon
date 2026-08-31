@@ -30,6 +30,7 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 9 | Notice draft (draft only, human approval, never auto-sent) | ✅ **Complete** (2026-08-30) — live-verified |
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ✅ **Complete** (2026-08-30) — Temporal **not adopted** |
 | — | UI refresh — design system, marketing site, app shell (no backend change) | ✅ **Complete** (2026-08-30) — ADR-0023; trust-class language unchanged |
+| — | Post-MVP UX — reframe (A), recovery workspace (B), collection tracking (C) + portfolio screen, occurrence basis (finding 8) | ✅ **Complete** (2026-08-31) — ADR-0024; migrations 0010–0011 |
 
 **The 10-phase MVP is complete.** Full pipeline: treaty → parsed document → AI-extracted
 terms with provenance → human validation → executable XOL treaty → loss ingestion →
@@ -48,7 +49,7 @@ Reinsurance program · Recoveries · Audit log), two guided wizards, and a singl
 recovery workspace — **no domain-model change**. Order: **A** reframe · **B** recovery
 workspace · **C** collection tracking (new phase) · **D** multi-layer programmes.
 
-- **A · Reframe — done (frontend only), bar A3.**
+- **A · Reframe — ✅ done (frontend only).**
   - *A1 · nav + rename + Home worklist* — ✅ done. Four-area sidebar (Home · Reinsurance
     program · Losses · Recoveries · Oversight); "recovery candidate" → *recovery*,
     "treaty library" → *treaties*, "loss imports" → *import claims*, "underlying losses"
@@ -64,9 +65,12 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
       calculate → the recovery detail page.
     - `components/ui/stepper.tsx`; the bare inline create forms on Treaties and
       Recoveries are retired for "Set up" / "Start" buttons.
-  - *A3 · fold the nav* — deferred. Removing Documents / Import-claims from the top
-    nav needs treaty-detail and loss-event-detail to first grow proper document /
-    claims sub-views, so those destinations aren't orphaned. Not just a nav edit.
+  - *A3 · fold the nav* — ✅ done. "Documents" and "Import claims" are gone from the
+    top nav: treaty detail links its parsed wording from a "Source document" card,
+    the loss-events list and each loss-event detail page carry an "Import claims"
+    action, and "Recoverables" (the Phase-C portfolio screen) joins the Recoveries
+    group. `/documents` and `/loss-imports` remain as full screens, link-reachable
+    and each with a BackLink to its parent.
 
 - **B · Recovery workspace — ✅ done & e2e-verified (frontend only, no new endpoints).**
   `/recovery-candidates/[id]` is one page with a left rail — **Loss basis ·
@@ -87,8 +91,16 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
   (pending → notified → agreed → billed → collected, + disputed / written_off),
   `agreed` / `billed` / `collected` / `due_date` / `note` are human facts on the
   audit trail; aging is derived. `GET|POST /recoverables*` + the workspace's
-  **Collection** section + a Home "Open recoverable" figure. Pure — no AI. 14 new
-  tests (233 backend total).
+  **Collection** section + a Home "Open recoverable" figure. Pure — no AI.
+  - **Portfolio screen — ✅ done (frontend only).** `/recoverables` serves the head
+    of ceded reinsurance: open / collected / overdue stats, an aging bar chart, and
+    the legs table filterable by status or "overdue", worst-overdue first, each row
+    linking into its recovery's Collection section.
+
+- **Finding 8 · occurrence basis — ✅ done (migration 0011).** `loss_events` gains
+  `peril` and `hours_clause_hours` — human facts the recovery wizard already asked
+  for and now records. Informational only; the engine does not yet apply an hours
+  clause. 234 backend tests, 3 deselected.
 
 ---
 
