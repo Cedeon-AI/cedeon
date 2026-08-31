@@ -449,7 +449,11 @@ function ClaimsStep({
 
             <div className="flex flex-wrap gap-2">
               {!report || validate.isPending ? (
-                <Button size="sm" onClick={() => validate.mutate()} disabled={validate.isPending}>
+                <Button
+                  size="sm"
+                  onClick={() => validate.mutate()}
+                  disabled={validate.isPending || Object.keys(mapping).length === 0}
+                >
                   {validate.isPending ? "Validating…" : "Validate rows"}
                 </Button>
               ) : (
