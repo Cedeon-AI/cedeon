@@ -113,4 +113,29 @@ test("treaty → validate → recovery → workspace, with the $8.7M golden figu
   const base = page.url().split("?")[0];
   await page.goto(`${base}/packet`);
   await expect(page).toHaveURL(/section=packet/);
+
+  // --- confirm the recovery, then track collection ------------------
+  await page.goto(`${base}?section=calculation`);
+  await page.getByRole("button", { name: /^Confirm$/ }).click();
+  await expect(page.getByText(/Confirmed/i).first()).toBeVisible({ timeout: 10_000 });
+
+  await page.getByRole("link", { name: "Collection" }).click();
+  await expect(page).toHaveURL(/section=collection/);
+  await page.getByRole("button", { name: /Start collection tracking/i }).click();
+
+  // one leg per reinsurer, the golden split, and an "advance" action
+  await expect(page.getByText("$4,350,000.00").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("$2,610,000.00").first()).toBeVisible();
+  await expect(page.getByText("$1,740,000.00").first()).toBeVisible();
+  await page
+    .getByRole("row")
+    .filter({ hasText: /4,350,000/ })
+    .getByRole("button", { name: /Mark notified/i })
+    .click();
+  await expect(
+    page
+      .getByRole("row")
+      .filter({ hasText: /4,350,000/ })
+      .getByText("Notified"),
+  ).toBeVisible({ timeout: 10_000 });
 });
