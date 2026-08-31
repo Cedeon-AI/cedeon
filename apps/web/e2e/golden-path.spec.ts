@@ -1,5 +1,8 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * The full vertical slice, end to end through the UI:
@@ -16,8 +19,8 @@ test.skip(
   "set CEDEON_LIVE_E2E=1 to run — this test calls the real Anthropic API",
 );
 
-const FIX = path.resolve(__dirname, "../../../packages/fixtures");
-const GOLDEN = "8,700,000.00";
+const FIX = path.resolve(here, "../../../packages/fixtures");
+const GOLDEN = "$8,700,000.00";
 
 test("treaty → validate → recovery → workspace, with the $8.7M golden figure", async ({ page }) => {
   test.setTimeout(240_000);
@@ -82,9 +85,7 @@ test("treaty → validate → recovery → workspace, with the $8.7M golden figu
   await page.getByRole("button", { name: /^Validate rows$/i }).click();
   await expect(page.getByText(/10 ok/i)).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Commit .* claim/i }).click();
-  await expect(page.getByRole("heading", { name: /Responding treaty/i }).first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.locator("#w-rec-treaty")).toBeVisible({ timeout: 15_000 });
 
   await page.locator("#w-rec-treaty").selectOption({ index: 1 });
   await page.getByRole("button", { name: /Continue/i }).click();
@@ -93,11 +94,11 @@ test("treaty → validate → recovery → workspace, with the $8.7M golden figu
   // --- the recovery workspace --------------------------------------
   await expect(page).toHaveURL(/\/recovery-candidates\/[0-9a-f-]{36}/);
   await expect(page.getByRole("heading", { name: "Recovery" })).toBeVisible();
-  await expect(page.getByText(GOLDEN)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(GOLDEN, { exact: true })).toBeVisible({ timeout: 15_000 });
   // the per-reinsurer split
-  await expect(page.getByText("4,350,000.00")).toBeVisible();
-  await expect(page.getByText("2,610,000.00")).toBeVisible();
-  await expect(page.getByText("1,740,000.00")).toBeVisible();
+  await expect(page.getByText("$4,350,000.00", { exact: true })).toBeVisible();
+  await expect(page.getByText("$2,610,000.00", { exact: true })).toBeVisible();
+  await expect(page.getByText("$1,740,000.00", { exact: true })).toBeVisible();
 
   // rail navigation
   await page.getByRole("link", { name: "Investigation" }).click();
