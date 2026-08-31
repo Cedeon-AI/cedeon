@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
 from fastapi import APIRouter, status
@@ -28,6 +29,7 @@ from app.api.schemas.validation import (
     CitationOut,
     DocumentPageOut,
     ReviewRequest,
+    SetLayersRequest,
     SetNoticeTermRequest,
     TermCandidateOut,
     TermCandidatesResponse,
@@ -35,6 +37,7 @@ from app.api.schemas.validation import (
 from app.db.models.extraction import TreatyTermCandidate
 from app.db.models.reinsurance import Treaty, TreatyVersion
 from app.domain.recoveries import NoticeTermSpec, NoticeTrigger
+from app.services.errors import ValidationError
 from app.services.obligations import ObligationService
 from app.services.recoveries import RecoveryPreviewService
 from app.services.validation import CandidateReview, ValidationService
@@ -221,6 +224,35 @@ async def review_term_candidate(
         ),
     )
     return _candidate_out(candidate)
+
+
+@router.put(
+    "/{treaty_id}/versions/{version_id}/layers",
+    response_model=TreatyDetail,
+    summary="Set the full stack of executable XOL layers (before the version is validated)",
+    operation_id="setTreatyLayers",
+)
+async def set_treaty_layers(
+    treaty_id: UUID,
+    version_id: UUID,
+    payload: SetLayersRequest,
+    context: AuthedContext,
+    session: DbSession,
+    treaty_service: TreatyServiceDep,
+) -> TreatyDetail:
+    try:
+        specs = [(Decimal(s.attachment), Decimal(s.limit)) for s in payload.layers]
+    except InvalidOperation as exc:
+        raise ValidationError("layer amounts must be numeric") from exc
+    await ValidationService(session).set_layers(
+        context, version_id, specs, currency=payload.currency
+    )
+    treaty = await treaty_service.get_treaty(context, treaty_id)
+    current = await treaty_service.get_current_version(context, treaty)
+    return TreatyDetail(
+        treaty=_treaty_out(treaty),
+        current_version=_version_out(current) if current else None,
+    )
 
 
 @router.put(

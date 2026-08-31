@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { NoticeProvisionEditor } from "@/components/app/notice-provision-editor";
 import { RecoveryPreview } from "@/components/app/recovery-preview";
+import { TreatyLayersEditor } from "@/components/app/treaty-layers-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,7 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
 
   const version = treaty.data?.current_version;
   const status = version ? versionStatus(version.status) : null;
-  const layer = version?.layers[0];
+  const layers = [...(version?.layers ?? [])].sort((a, b) => a.layer_no - b.layer_no);
 
   return (
     <div className="space-y-6">
@@ -63,18 +64,27 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Layer</CardTitle>
+            <CardTitle>{layers.length > 1 ? `Layers (${layers.length})` : "Layer"}</CardTitle>
           </CardHeader>
           <CardContent>
-            {layer ? (
-              <div className="space-y-1">
-                <p className="text-2xl font-semibold tracking-tight">
-                  {formatMoney(layer.limit, layer.currency)}{" "}
-                  <span className="text-base font-normal text-muted-foreground">excess of</span>{" "}
-                  {formatMoney(layer.attachment, layer.currency)}
-                </p>
-                <p className="text-xs text-muted-foreground">Per occurrence · {layer.currency}</p>
-              </div>
+            {layers.length > 0 ? (
+              <ul className="space-y-2">
+                {layers.map((l) => (
+                  <li key={l.layer_no} className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm">
+                      {layers.length > 1 ? (
+                        <span className="mr-2 font-mono text-xs text-muted-foreground">
+                          L{l.layer_no}
+                        </span>
+                      ) : null}
+                      <span className="font-semibold">{formatMoney(l.limit, l.currency)}</span>{" "}
+                      <span className="text-muted-foreground">xs</span>{" "}
+                      <span className="font-semibold">{formatMoney(l.attachment, l.currency)}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{l.currency}</span>
+                  </li>
+                ))}
+              </ul>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Not yet validated — no executable layer.
@@ -126,6 +136,18 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
             </p>
           </CardContent>
         </Card>
+      ) : null}
+
+      {version &&
+      version.status !== "validated" &&
+      version.status !== "active" &&
+      version.status !== "parsing" ? (
+        <TreatyLayersEditor
+          treatyId={treatyId}
+          versionId={version.id}
+          currency={version.currency}
+          existing={version.layers}
+        />
       ) : null}
 
       {version && version.status !== "draft" && version.status !== "parsing" ? (

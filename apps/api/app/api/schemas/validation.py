@@ -67,3 +67,16 @@ class SetNoticeTermRequest(ApiModel):
     period_days: int | None = Field(default=None, ge=1, le=1000)
     trigger: NoticeTrigger | None = None
     basis: DeadlineBasis = DeadlineBasis.CALENDAR
+
+
+class LayerSpecIn(ApiModel):
+    attachment: str = Field(min_length=1, max_length=40)
+    limit: str = Field(min_length=1, max_length=40)
+
+
+class SetLayersRequest(ApiModel):
+    """The full stack of executable XOL layers for a treaty version. Replaces
+    whatever is there. Editable only before the version is validated."""
+
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    layers: list[LayerSpecIn] = Field(min_length=1, max_length=12)

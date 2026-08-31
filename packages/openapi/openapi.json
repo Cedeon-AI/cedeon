@@ -1388,6 +1388,29 @@
         "title": "LayerOut",
         "type": "object"
       },
+      "LayerSpecIn": {
+        "additionalProperties": false,
+        "properties": {
+          "attachment": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Attachment",
+            "type": "string"
+          },
+          "limit": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Limit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachment",
+          "limit"
+        ],
+        "title": "LayerSpecIn",
+        "type": "object"
+      },
       "LoginRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4256,6 +4279,39 @@
         "title": "SetKnowledgeDateRequest",
         "type": "object"
       },
+      "SetLayersRequest": {
+        "additionalProperties": false,
+        "description": "The full stack of executable XOL layers for a treaty version. Replaces\nwhatever is there. Editable only before the version is validated.",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/LayerSpecIn"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Layers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "layers"
+        ],
+        "title": "SetLayersRequest",
+        "type": "object"
+      },
       "SetNoticeTermRequest": {
         "additionalProperties": false,
         "description": "The notice provision as free text, plus \u2014 where the analyst can state it \u2014\nthe structured deadline that drives reminders.",
@@ -6896,7 +6952,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Create a recovery candidate (validated treaty + loss event \u2192 deterministic calc)",
+        "summary": "Open a recovery for every treaty layer that responds (returns the bottom layer)",
         "tags": [
           "recovery-candidates"
         ]
@@ -7968,6 +8024,69 @@
           }
         },
         "summary": "Deterministic 'what would this treaty recover' \u2014 read-only, not persisted",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/layers": {
+      "put": {
+        "operationId": "setTreatyLayers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLayersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the full stack of executable XOL layers (before the version is validated)",
         "tags": [
           "treaties"
         ]

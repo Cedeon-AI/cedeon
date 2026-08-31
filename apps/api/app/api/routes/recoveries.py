@@ -214,16 +214,19 @@ def _tool_call_out(call: ToolCall) -> ToolCallOut:
     "",
     response_model=RecoveryCandidateOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a recovery candidate (validated treaty + loss event → deterministic calc)",
+    summary="Open a recovery for every treaty layer that responds (returns the bottom layer)",
     operation_id="createRecoveryCandidate",
 )
 async def create_recovery_candidate(
     payload: CreateRecoveryCandidateRequest, context: AuthedContext, session: DbSession
 ) -> RecoveryCandidateOut:
-    candidate = await RecoveryCandidateService(session).create(
+    # A multi-layer treaty opens one candidate per responding layer; the bottom
+    # one is returned here, the rest surface on the recoveries list and the
+    # loss-event page (grouped by event).
+    candidates = await RecoveryCandidateService(session).create(
         context, treaty_id=payload.treaty_id, loss_event_id=payload.loss_event_id
     )
-    return _candidate_out(candidate)
+    return _candidate_out(candidates[0])
 
 
 @router.get("", response_model=RecoveryCandidateList, operation_id="listRecoveryCandidates")

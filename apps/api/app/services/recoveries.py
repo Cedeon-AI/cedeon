@@ -123,64 +123,80 @@ class RecoveryCandidateService:
 
     async def create(
         self, context: AuthenticatedContext, *, treaty_id: UUID, loss_event_id: UUID
-    ) -> RecoveryCandidate:
+    ) -> list[RecoveryCandidate]:
+        """Open a recovery for every layer of the treaty that responds to the
+        event (gross above the layer's attachment). If none respond, open the
+        bottom layer so the analyst can see the near miss. Existing candidates
+        are returned as-is (idempotent per ``(version, layer, event)``)."""
         org_id = context.organization.id
-        version, layer = await self._executable_layer(context, treaty_id)
+        version, layers = await self._executable_layers(context, treaty_id)
+        currency = layers[0].currency
         event_id, gross_loss, mismatch = await self._gross_for_event(
-            org_id, loss_event_id, layer.currency
+            org_id, loss_event_id, currency
         )
 
-        existing = await self._candidates.get_by_inputs(
-            org_id,
-            treaty_version_id=version.id,
-            treaty_layer_id=layer.id,
-            loss_event_id=event_id,
-        )
-        if existing is not None:
-            return existing
+        responding = [x for x in layers if gross_loss.amount > Decimal(x.attachment)]
+        targets = responding or [layers[0]]
 
-        candidate = RecoveryCandidate(
-            organization_id=org_id,
-            treaty_id=treaty_id,
-            treaty_version_id=version.id,
-            treaty_layer_id=layer.id,
-            loss_event_id=event_id,
-            status=RecoveryCandidateStatus.NEEDS_REVIEW,
-            currency=layer.currency,
-            gross_event_incurred=gross_loss.amount,
-            currency_mismatch=mismatch,
-            created_by=context.user.id,
-        )
-        self._candidates.add(candidate)
-        await self._session.flush()
-
-        calc = await self._run_and_store(candidate, version, layer, gross_loss)
-        candidate.current_calculation_id = calc.id
-
-        self._audit.record(
-            AuditRecord(
-                organization_id=org_id,
-                actor_type=ActorType.USER,
-                actor_id=context.user.id,
-                action="recovery_candidate.created",
-                entity_type="recovery_candidate",
-                entity_id=candidate.id,
-                summary=(
-                    f"{context.user.email} created a recovery candidate — "
-                    f"{calc.layer_recovery} {calc.currency} layer recovery"
-                ),
-                payload={
-                    "treaty_version_id": str(version.id),
-                    "loss_event_id": str(event_id),
-                    "layer_recovery": str(calc.layer_recovery),
-                    "engine_version": calc.engine_version,
-                    "currency_mismatch": mismatch,
-                },
-                correlation_id=get_correlation_id(),
+        created_ids: list[UUID] = []
+        for layer in targets:
+            existing = await self._candidates.get_by_inputs(
+                org_id,
+                treaty_version_id=version.id,
+                treaty_layer_id=layer.id,
+                loss_event_id=event_id,
             )
-        )
+            if existing is not None:
+                created_ids.append(existing.id)
+                continue
+
+            candidate = RecoveryCandidate(
+                organization_id=org_id,
+                treaty_id=treaty_id,
+                treaty_version_id=version.id,
+                treaty_layer_id=layer.id,
+                loss_event_id=event_id,
+                status=RecoveryCandidateStatus.NEEDS_REVIEW,
+                currency=layer.currency,
+                gross_event_incurred=gross_loss.amount,
+                currency_mismatch=mismatch,
+                created_by=context.user.id,
+            )
+            self._candidates.add(candidate)
+            await self._session.flush()
+            calc = await self._run_and_store(candidate, version, layer, gross_loss)
+            candidate.current_calculation_id = calc.id
+            created_ids.append(candidate.id)
+
+            self._audit.record(
+                AuditRecord(
+                    organization_id=org_id,
+                    actor_type=ActorType.USER,
+                    actor_id=context.user.id,
+                    action="recovery_candidate.created",
+                    entity_type="recovery_candidate",
+                    entity_id=candidate.id,
+                    summary=(
+                        f"{context.user.email} created a recovery candidate — layer "
+                        f"{layer.layer_no} ({layer.limit} xs {layer.attachment}), "
+                        f"{calc.layer_recovery} {calc.currency} recovery"
+                    ),
+                    payload={
+                        "treaty_version_id": str(version.id),
+                        "treaty_layer_id": str(layer.id),
+                        "layer_no": layer.layer_no,
+                        "loss_event_id": str(event_id),
+                        "layer_recovery": str(calc.layer_recovery),
+                        "engine_version": calc.engine_version,
+                        "currency_mismatch": mismatch,
+                    },
+                    correlation_id=get_correlation_id(),
+                )
+            )
         await self._session.commit()
-        return await self.get_candidate(context, candidate.id)
+        return [
+            c for cid in created_ids if (c := await self._candidates.get(org_id, cid)) is not None
+        ]
 
     # --- recalculate ------------------------------------------
 
@@ -383,9 +399,9 @@ class RecoveryCandidateService:
 
     # --- helpers ------------------------------------------
 
-    async def _executable_layer(
+    async def _executable_layers(
         self, context: AuthenticatedContext, treaty_id: UUID
-    ) -> tuple[TreatyVersion, TreatyLayer]:
+    ) -> tuple[TreatyVersion, list[TreatyLayer]]:
         treaty = await self._treaties.get(context.organization.id, treaty_id)
         if treaty is None or treaty.current_version_id is None:
             raise NotFoundError("treaty not found")
@@ -396,7 +412,7 @@ class RecoveryCandidateService:
             raise ConflictError("the treaty must be validated before a recovery can be computed")
         if not version.layers:
             raise ConflictError("the validated treaty version has no layer")
-        return version, min(version.layers, key=lambda x: x.layer_no)
+        return version, sorted(version.layers, key=lambda x: x.layer_no)
 
     async def _gross_for_event(
         self, organization_id: UUID, loss_event_id: UUID, currency: str

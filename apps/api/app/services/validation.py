@@ -148,6 +148,79 @@ class ValidationService:
         assert refreshed is not None
         return refreshed
 
+    # --- layers ---------------------------------------------------
+
+    async def set_layers(
+        self,
+        context: AuthenticatedContext,
+        treaty_version_id: UUID,
+        specs: list[tuple[Decimal, Decimal]],
+        *,
+        currency: str | None = None,
+    ) -> TreatyVersion:
+        """Replace the whole stack of executable XOL layers on a non-frozen
+        version. Layers are sorted by attachment and numbered from the bottom."""
+        version = await self._require_version(context, treaty_version_id)
+        if version.status.is_frozen:
+            raise ConflictError("this treaty version is already validated — its layers are frozen")
+        resolved = (currency or "").upper()[:3] or self._version_currency(version)
+        if not resolved:
+            raise ValidationError("a currency is required to set the layer stack")
+        currency = resolved
+
+        ordered = sorted(specs, key=lambda s: s[0])
+        for i, (attachment, limit) in enumerate(ordered, start=1):
+            if attachment < 0:
+                raise ValidationError(f"layer {i} attachment must be non-negative")
+            if limit <= 0:
+                raise ValidationError(f"layer {i} limit must be greater than zero")
+
+        for existing in list(version.layers):
+            await self._session.delete(existing)
+        version.layers.clear()
+        for i, (attachment, limit) in enumerate(ordered, start=1):
+            version.layers.append(
+                TreatyLayer(
+                    organization_id=context.organization.id,
+                    treaty_version_id=version.id,
+                    layer_no=i,
+                    attachment=attachment,
+                    limit=limit,
+                    currency=currency,
+                )
+            )
+        version.currency = currency
+        self._audit.record(
+            AuditRecord(
+                organization_id=context.organization.id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="treaty_version.layers_set",
+                entity_type="treaty_version",
+                entity_id=version.id,
+                summary=(
+                    f"{context.user.email} set the {len(ordered)}-layer stack: "
+                    + " / ".join(f"{lim} xs {att}" for att, lim in ordered)
+                ),
+                payload={"layers": [{"attachment": str(a), "limit": str(x)} for a, x in ordered]},
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        result = await self._versions.get(context.organization.id, version.id)
+        assert result is not None
+        return result
+
+    def _version_currency(self, version: TreatyVersion) -> str | None:
+        if version.currency:
+            return version.currency.upper()[:3]
+        term = next((t for t in version.terms if t.key == "currency"), None)
+        if term is not None:
+            raw = str(term.value.get("value") or "").strip()
+            if raw:
+                return raw.upper()[:3]
+        return None
+
     # --- validating ------------------------------------------------
 
     async def validate_version(
@@ -165,27 +238,44 @@ class ValidationService:
             )
 
         confirmed = {t.key: t for t in version.terms if t.status is TermStatus.CONFIRMED}
-        missing = [k for k in ("attachment", "limit") if k not in confirmed]
-        if missing:
-            raise ValidationError(
-                f"confirm {', '.join(missing)} before validating the treaty",
-                detail={"missing": missing},
-            )
-        currency = version.currency
-        if not currency and "currency" in confirmed:
-            currency = str(confirmed["currency"].value.get("value") or "").strip() or None
+        currency = self._version_currency(version)
         if not currency:
             raise ValidationError("confirm the treaty currency before validating")
-        currency = currency.upper()[:3]
 
-        try:
-            attachment = Money(Decimal(str(confirmed["attachment"].value["value"])), currency)
-            limit = Money(Decimal(str(confirmed["limit"].value["value"])), currency)
-        except (KeyError, TypeError, InvalidOperation, MoneyError) as exc:
-            raise ValidationError(f"confirmed attachment/limit is not valid money: {exc}") from exc
-        attachment.require_non_negative("attachment")
-        if not limit.is_positive:
-            raise ValidationError("limit must be greater than zero")
+        # Layers: use the stack the analyst set, else build one from the terms.
+        if not version.layers:
+            missing = [k for k in ("attachment", "limit") if k not in confirmed]
+            if missing:
+                raise ValidationError(
+                    f"confirm {', '.join(missing)} (or set the layer stack) before validating",
+                    detail={"missing": missing},
+                )
+            try:
+                attachment = Money(Decimal(str(confirmed["attachment"].value["value"])), currency)
+                limit = Money(Decimal(str(confirmed["limit"].value["value"])), currency)
+            except (KeyError, TypeError, InvalidOperation, MoneyError) as exc:
+                raise ValidationError(
+                    f"confirmed attachment/limit is not valid money: {exc}"
+                ) from exc
+            attachment.require_non_negative("attachment")
+            if not limit.is_positive:
+                raise ValidationError("limit must be greater than zero")
+            version.layers.append(
+                TreatyLayer(
+                    organization_id=context.organization.id,
+                    treaty_version_id=version.id,
+                    layer_no=1,
+                    attachment=attachment.amount,
+                    limit=limit.amount,
+                    currency=currency,
+                )
+            )
+
+        for layer in version.layers:
+            if layer.currency != currency:
+                raise ValidationError(
+                    f"layer {layer.layer_no} is {layer.currency}, but the treaty is {currency}"
+                )
 
         if not version.participations:
             raise ValidationError("confirm at least one reinsurer participation before validating")
@@ -196,26 +286,12 @@ class ValidationService:
                 detail={"share_sum": str(share_sum)},
             )
 
-        # Materialise the executable layer.
-        for existing in list(version.layers):
-            await self._session.delete(existing)
-        version.layers.clear()
-        version.layers.append(
-            TreatyLayer(
-                organization_id=context.organization.id,
-                treaty_version_id=version.id,
-                layer_no=1,
-                attachment=attachment.amount,
-                limit=limit.amount,
-                currency=currency,
-            )
-        )
-
         version.currency = currency
         version.status = TreatyVersionStatus.VALIDATED
         version.validated_at = dt.datetime.now(dt.UTC)
         version.validated_by = context.user.id
 
+        stack = sorted(version.layers, key=lambda x: x.layer_no)
         self._audit.record(
             AuditRecord(
                 organization_id=context.organization.id,
@@ -226,12 +302,13 @@ class ValidationService:
                 entity_id=version.id,
                 summary=(
                     f"{context.user.email} validated treaty version — "
-                    f"{limit.amount} xs {attachment.amount} {currency}, "
-                    f"{len(version.participations)} participants"
+                    + " / ".join(f"{x.limit} xs {x.attachment}" for x in stack)
+                    + f" {currency}, {len(version.participations)} participants"
                 ),
                 payload={
-                    "attachment": str(attachment.amount),
-                    "limit": str(limit.amount),
+                    "layers": [
+                        {"attachment": str(x.attachment), "limit": str(x.limit)} for x in stack
+                    ],
                     "currency": currency,
                     "participants": len(version.participations),
                 },

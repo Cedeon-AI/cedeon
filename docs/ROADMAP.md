@@ -156,7 +156,16 @@ of gravity from "start a recovery" to "here is what needs you today."
   recoverables portfolio and the workspace Collection section show a "Next" column, and
   the `recoverable_overdue` worklist item's detail is the recommendation. No AI. 10 new
   tests.
-- **Next — ⑥ multi-layer programmes · ⑧ real extraction/investigator eval datasets.**
+- **Next — ⑥ multi-layer programmes — ✅ done (v1, no migration).** A treaty version
+  carries a *stack* of XOL layers. `PUT /treaties/{id}/versions/{vid}/layers` (bottom-to-top,
+  editable until validation) + a layer-stack editor on treaty detail; `validate_version`
+  freezes the stack (or builds one layer from the terms, as before). `POST /recovery-candidates`
+  opens a candidate on **every layer the event pierces** (per-layer deterministic calc), the
+  bottom one returned; suggestions screen every layer. `RecoveryCandidateService.create` now
+  returns `list[RecoveryCandidate]`. Treaty detail shows the tower. 8 new tests, 290 backend.
+  *Deferred:* per-layer participations (shared across the tower for now), a grouped
+  "programme" view of the sibling candidates, multi-layer recovery-preview.
+- **Next — ⑧ real extraction/investigator eval datasets.**
 - **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
   ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence.**
 

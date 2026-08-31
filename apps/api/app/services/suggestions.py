@@ -69,33 +69,32 @@ class SuggestionService:
             version = await self._versions.get(org_id, treaty.current_version_id)
             if version is None or version.status not in _EXECUTABLE or not version.layers:
                 continue
-            layer = min(version.layers, key=lambda x: x.layer_no)
-            window = _layer_window(version, layer)
 
             for event in events:
-                gross = await self._gross(org_id, event, layer.currency, gross_cache)
-                result = evaluate_suggestion(
-                    EventFacts(
-                        currency=event.currency,
-                        date_from=event.date_of_loss_from,
-                        date_to=event.date_of_loss_to,
-                        gross_in_currency=gross,
-                    ),
-                    window,
-                    has_open_candidate=(version.id, layer.id, event.id) in open_pairs,
-                )
-                if isinstance(result, Suggestion):
-                    out.append(
-                        SuggestedRecovery(
-                            treaty_id=treaty.id,
-                            treaty_name=treaty.name,
-                            treaty_version_id=version.id,
-                            treaty_layer_id=layer.id,
-                            loss_event_id=event.id,
-                            loss_event_name=event.name,
-                            suggestion=result,
-                        )
+                for layer in sorted(version.layers, key=lambda x: x.layer_no):
+                    gross = await self._gross(org_id, event, layer.currency, gross_cache)
+                    result = evaluate_suggestion(
+                        EventFacts(
+                            currency=event.currency,
+                            date_from=event.date_of_loss_from,
+                            date_to=event.date_of_loss_to,
+                            gross_in_currency=gross,
+                        ),
+                        _layer_window(version, layer),
+                        has_open_candidate=(version.id, layer.id, event.id) in open_pairs,
                     )
+                    if isinstance(result, Suggestion):
+                        out.append(
+                            SuggestedRecovery(
+                                treaty_id=treaty.id,
+                                treaty_name=treaty.name,
+                                treaty_version_id=version.id,
+                                treaty_layer_id=layer.id,
+                                loss_event_id=event.id,
+                                loss_event_name=event.name,
+                                suggestion=result,
+                            )
+                        )
         return out
 
     async def _gross(

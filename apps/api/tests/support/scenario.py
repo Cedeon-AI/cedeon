@@ -31,6 +31,7 @@ async def validated_golden_treaty(
     *,
     email: str = "ops@carrier.example",
     org: str = "Carrier Ops",
+    layers: list[tuple[str, str]] | None = None,
 ) -> GoldenTreaty:
     from tests.support.auth import register
 
@@ -67,8 +68,16 @@ async def validated_golden_treaty(
 
     base = f"/treaties/{treaty['id']}/versions/{version_id}/term-candidates"
     for candidate in (await client.get(base)).json()["candidates"]:
-        if candidate["key"] in ("attachment", "limit", "participation"):
+        confirm = candidate["key"] == "participation" or (
+            layers is None and candidate["key"] in ("attachment", "limit")
+        )
+        if confirm:
             await client.post(f"{base}/{candidate['id']}/review", json={"decision": "confirm"})
+    if layers is not None:
+        await client.put(
+            f"/treaties/{treaty['id']}/versions/{version_id}/layers",
+            json={"currency": "USD", "layers": [{"attachment": a, "limit": x} for a, x in layers]},
+        )
     await client.post(f"/treaties/{treaty['id']}/versions/{version_id}/validate")
 
     return GoldenTreaty(
@@ -107,7 +116,6 @@ async def confirmed_recovery_candidate(
             json={"treaty_id": golden.treaty_id, "loss_event_id": event_id},
         )
     ).json()
-    await client.post(
-        f"/recovery-candidates/{candidate['id']}/review", json={"decision": "confirm"}
-    )
-    return golden, candidate["id"]
+    candidate_id = candidate["id"]
+    await client.post(f"/recovery-candidates/{candidate_id}/review", json={"decision": "confirm"})
+    return golden, candidate_id
