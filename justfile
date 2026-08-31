@@ -11,11 +11,12 @@ default:
 
 # --- Environment ---
 
-# First-time setup: install all deps and prepare .env
+# First-time setup: install all deps, prepare .env, generate the typed API client
 bootstrap:
     test -f .env || cp .env.example .env
     cd {{api_dir}} && uv sync --all-extras
     cd {{web_dir}} && pnpm install
+    just gen-client
 
 # Bring up the full local stack (postgres, minio, api, worker, web)
 up:
