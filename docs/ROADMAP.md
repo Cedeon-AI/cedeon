@@ -54,9 +54,14 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
     "treaty library" → *treaties*, "loss imports" → *import claims*, "underlying losses"
     → *claims*, "activity" → *audit log*; Home is a "needs your attention" queue (terms
     to validate, recoveries to review) over counts. URLs unchanged.
-  - *A2 · guided wizards* — next. "Set up a treaty" (upload → extract → validate →
-    structure → activate) and "Start a recovery" (event → claims → layer → calculate),
-    wrapping existing endpoints; then fold Documents / Import-claims out of the top nav.
+  - *A2 · guided wizards* — in progress.
+    - "Set up a treaty" (`/treaties/new`) — ✅ done & e2e-verified. Upload wording →
+      parse → program/cedent/name inline → extract → hands off to the existing
+      validation workspace. `components/ui/stepper.tsx` + `new-treaty-wizard.tsx`;
+      no new endpoints. The bare inline "New treaty" form is retired.
+    - "Start a recovery" (`/recovery-candidates/new`) — next: event → claims
+      (upload + guessed mapping + commit) → responding treaty → calculate.
+    - Then fold Documents / Import-claims out of the top nav.
 
 ---
 
