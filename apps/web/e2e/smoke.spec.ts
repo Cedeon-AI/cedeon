@@ -19,7 +19,7 @@ test("a new organization can register and reach the dashboard", async ({ page })
   await page.getByRole("button", { name: /create organization/i }).click();
 
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
 
   await page.getByRole("button", { name: /sign out/i }).click();

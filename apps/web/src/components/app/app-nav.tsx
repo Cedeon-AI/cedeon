@@ -2,11 +2,11 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   FileText,
   FolderTree,
-  LayoutDashboard,
+  Home,
   ScrollText,
+  ShieldCheck,
   Sigma,
   Upload,
   Waves,
@@ -20,31 +20,31 @@ type Group = { title: string; items: Item[] };
 
 const GROUPS: Group[] = [
   {
-    title: "Overview",
-    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    title: "",
+    items: [{ label: "Home", href: "/dashboard", icon: Home }],
   },
   {
-    title: "Contracts",
+    title: "Reinsurance program",
     items: [
-      { label: "Documents", href: "/documents", icon: FileText },
+      { label: "Treaties", href: "/treaties", icon: ScrollText },
       { label: "Programs", href: "/programs", icon: FolderTree },
-      { label: "Treaty library", href: "/treaties", icon: ScrollText },
+      { label: "Documents", href: "/documents", icon: FileText },
     ],
   },
   {
     title: "Losses",
     items: [
-      { label: "Loss imports", href: "/loss-imports", icon: Upload },
       { label: "Loss events", href: "/loss-events", icon: Waves },
+      { label: "Import claims", href: "/loss-imports", icon: Upload },
     ],
   },
   {
-    title: "Recovery",
-    items: [{ label: "Recovery candidates", href: "/recovery-candidates", icon: Sigma }],
+    title: "Recoveries",
+    items: [{ label: "Recoveries", href: "/recovery-candidates", icon: Sigma }],
   },
   {
     title: "Oversight",
-    items: [{ label: "Activity", href: "/activity", icon: Activity }],
+    items: [{ label: "Audit log", href: "/activity", icon: ShieldCheck }],
   },
 ];
 
@@ -54,11 +54,13 @@ export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="space-y-6">
       {GROUPS.map((group) => (
-        <div key={group.title}>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
-            {group.title}
-          </p>
-          <ul className="mt-2 space-y-0.5">
+        <div key={group.title || "root"}>
+          {group.title ? (
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+              {group.title}
+            </p>
+          ) : null}
+          <ul className={cn("space-y-0.5", group.title && "mt-2")}>
             {group.items.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;

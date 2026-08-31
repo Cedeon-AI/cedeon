@@ -1,19 +1,27 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, FileText, ScrollText, Sigma, Upload, Waves } from "lucide-react";
+import { ArrowRight, Check, ScrollText, Sigma, Upload, Waves } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader, Stat } from "@/components/ui/page-header";
+import { EmptyState, PageHeader, Stat } from "@/components/ui/page-header";
 import {
   getCurrentUser,
-  listDocuments,
   listLossEvents,
   listMembers,
   listRecoveryCandidates,
   listTreaties,
 } from "@/lib/api";
+import { candidateStatus } from "@/lib/recoveries";
+
+type Task = {
+  key: string;
+  href: string;
+  label: string;
+  detail: string;
+  tone: "warning" | "info";
+};
 
 export function DashboardView() {
   const me = useQuery({
@@ -24,10 +32,6 @@ export function DashboardView() {
     queryKey: ["memberships"],
     queryFn: async () => (await listMembers({ throwOnError: true })).data,
   });
-  const documents = useQuery({
-    queryKey: ["documents"],
-    queryFn: async () => (await listDocuments({ throwOnError: true })).data.documents,
-  });
   const treaties = useQuery({
     queryKey: ["treaties"],
     queryFn: async () => (await listTreaties({ throwOnError: true })).data.treaties,
@@ -36,102 +40,136 @@ export function DashboardView() {
     queryKey: ["loss-events"],
     queryFn: async () => (await listLossEvents({ throwOnError: true })).data.events,
   });
-  const candidates = useQuery({
+  const recoveries = useQuery({
     queryKey: ["recovery-candidates", ""],
     queryFn: async () => (await listRecoveryCandidates({ throwOnError: true })).data.candidates,
   });
 
   const count = (q: { data?: unknown[] }) => (q.data ? String(q.data.length) : "—");
-  const needsReview = candidates.data?.filter((c) =>
-    ["needs_review", "in_review"].includes(c.status),
-  ).length;
+
+  const needsValidation = (treaties.data ?? []).filter(
+    (t) => t.current_version?.status === "needs_validation",
+  );
+  const needsReview = (recoveries.data ?? []).filter((r) =>
+    ["needs_review", "in_review"].includes(r.status),
+  );
+
+  const tasks: Task[] = [
+    ...needsValidation.map((t) => ({
+      key: `treaty-${t.id}`,
+      href: `/treaties/${t.id}/validate`,
+      label: `Validate proposed terms — ${t.name}`,
+      detail: `${t.cedent_name} · extracted, awaiting your confirmation`,
+      tone: "warning" as const,
+    })),
+    ...needsReview.map((r) => ({
+      key: `recovery-${r.id}`,
+      href: `/recovery-candidates/${r.id}`,
+      label: "Review a recovery calculation",
+      detail: `${candidateStatus(r.status).label} · created ${new Date(r.created_at).toLocaleDateString()}`,
+      tone: "info" as const,
+    })),
+  ];
+
+  const loading = treaties.isLoading || recoveries.isLoading;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Dashboard"
+        title="Home"
         description={
           me.isLoading
             ? "Loading…"
-            : `Signed in as ${me.data?.user.name ?? me.data?.user.email} · ${me.data?.role} · ${me.data?.organization.name}`
+            : `${me.data?.user.name ?? me.data?.user.email} · ${me.data?.role} · ${me.data?.organization.name}`
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Documents"
-          value={count(documents)}
-          icon={<FileText />}
-          tone="fact"
-          hint="Uploaded & parsed"
-        />
-        <Stat
-          label="Treaties"
-          value={count(treaties)}
-          icon={<ScrollText />}
-          tone="fact"
-          hint="In the library"
-        />
-        <Stat
-          label="Loss events"
-          value={count(events)}
-          icon={<Waves />}
-          tone="fact"
-          hint="From committed imports"
-        />
-        <Stat
-          label="Recovery candidates"
-          value={count(candidates)}
-          icon={<Sigma />}
-          tone="calculation"
-          hint={
-            needsReview !== undefined && needsReview > 0
-              ? `${needsReview} awaiting review`
-              : "Deterministic calculations"
-          }
-        />
-      </div>
-
+      {/* ---------------------------------------------------- Needs your attention */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">
-          Move through the pipeline
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold tracking-tight">Needs your attention</h2>
+          {tasks.length > 0 ? (
+            <span className="text-xs text-muted-foreground">{tasks.length} open</span>
+          ) : null}
+        </div>
+        {loading ? (
+          <Card>
+            <CardContent className="p-5 text-sm text-muted-foreground">Loading…</CardContent>
+          </Card>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            icon={<Check />}
+            title="You're all caught up"
+            description="Nothing is waiting on you right now."
+          />
+        ) : (
+          <Card>
+            <ul className="divide-y divide-border/70">
+              {tasks.map((task) => (
+                <li key={task.key}>
+                  <Link
+                    href={task.href}
+                    className="group flex items-center gap-3 px-5 py-3.5 transition first:rounded-t-xl last:rounded-b-xl hover:bg-muted/50"
+                  >
+                    <span
+                      className={
+                        task.tone === "warning"
+                          ? "size-1.5 shrink-0 rounded-full bg-warning"
+                          : "size-1.5 shrink-0 rounded-full bg-calculation"
+                      }
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{task.label}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {task.detail}
+                      </span>
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground/50 transition group-hover:text-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </section>
+
+      {/* ---------------------------------------------------------------- At a glance */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">At a glance</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Treaties" value={count(treaties)} icon={<ScrollText />} tone="fact" />
+          <Stat label="Loss events" value={count(events)} icon={<Waves />} tone="fact" />
+          <Stat label="Recoveries" value={count(recoveries)} icon={<Sigma />} tone="calculation" />
+          <Stat
+            label="Needs review"
+            value={recoveries.data ? String(needsReview.length) : "—"}
+            icon={<Check />}
+            tone="human"
+          />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ Get started */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">Get started</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <QuickLink
             href="/documents"
             icon={<Upload />}
-            title="Upload a treaty"
-            body="Add a PDF or DOCX and let Cedeon parse its structure."
-          />
-          <QuickLink
-            href="/treaties"
-            icon={<ScrollText />}
-            title="Validate terms"
-            body="Confirm AI-proposed terms with citations before they become executable."
+            title="Add a treaty"
+            body="Upload the wording; Cedeon extracts the terms for you to validate."
           />
           <QuickLink
             href="/loss-imports"
             icon={<Upload />}
-            title="Import losses"
-            body="Map a CSV of claims into an underlying loss dataset."
+            title="Import claims"
+            body="Map a claims CSV into a loss event."
           />
           <QuickLink
             href="/recovery-candidates"
             icon={<Sigma />}
             title="Run a recovery"
             body="Pair a validated treaty with a loss event and calculate."
-          />
-          <QuickLink
-            href="/recovery-candidates"
-            icon={<FileText />}
-            title="Review a packet"
-            body="Check the evidence-backed artifact before it is final."
-          />
-          <QuickLink
-            href="/activity"
-            icon={<Waves />}
-            title="Audit activity"
-            body="Every agent run, tool call and human decision on the record."
           />
         </div>
       </section>

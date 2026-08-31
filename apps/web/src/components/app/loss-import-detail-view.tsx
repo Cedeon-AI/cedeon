@@ -119,7 +119,7 @@ export function LossImportDetailView({ importId }: { importId: string }) {
 
   return (
     <div className="space-y-6">
-      <BackLink href="/loss-imports">Loss imports</BackLink>
+      <BackLink href="/loss-imports">Import claims</BackLink>
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -182,11 +182,11 @@ export function LossImportDetailView({ importId }: { importId: string }) {
           {canCommit ? (
             <Card>
               <CardHeader>
-                <CardTitle>Commit to underlying losses</CardTitle>
+                <CardTitle>Commit claims</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  {report?.committable} valid row(s) become immutable underlying losses. Rows with
+                  {report?.committable} valid row(s) become immutable claim records. Rows with
                   errors are skipped and stay on the import for correction.
                 </p>
                 <Field label="New loss event name (optional)" htmlFor="evtname">

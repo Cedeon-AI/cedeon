@@ -43,8 +43,8 @@ export function LossImportsView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Loss imports"
-        description="Upload a claim schedule as CSV. Cedeon keeps the raw file and every row, you map the columns to canonical fields, and validated rows commit to immutable underlying losses. No AI touches this pipeline."
+        title="Import claims"
+        description="Upload a claim schedule as CSV. Cedeon keeps the raw file and every row, you map the columns to canonical fields, and validated rows commit to an immutable claim record. No AI touches this pipeline."
       />
 
       <Card>

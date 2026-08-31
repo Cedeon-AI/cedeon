@@ -28,7 +28,7 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
 
   return (
     <div className="space-y-6">
-      <BackLink href="/treaties">Treaty library</BackLink>
+      <BackLink href="/treaties">Treaties</BackLink>
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">

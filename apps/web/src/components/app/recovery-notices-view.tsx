@@ -74,7 +74,7 @@ export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
 
   return (
     <div className="space-y-6">
-      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery candidate</BackLink>
+      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
       <PageHeader
         title="Notices"
         description={
@@ -89,7 +89,7 @@ export function RecoveryNoticesView({ candidateId }: { candidateId: string }) {
         <EmptyState
           icon={<FileText />}
           title="Recovery not confirmed yet"
-          description="Confirm the recovery candidate before drafting a notice."
+          description="Confirm the recovery before drafting a notice."
         />
       ) : (
         <Card>

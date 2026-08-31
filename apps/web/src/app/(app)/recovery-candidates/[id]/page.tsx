@@ -1,6 +1,6 @@
 import { RecoveryCandidateDetailView } from "@/components/app/recovery-candidate-detail-view";
 
-export const metadata = { title: "Recovery candidate" };
+export const metadata = { title: "Recovery" };
 
 export default async function RecoveryCandidatePage({
   params,

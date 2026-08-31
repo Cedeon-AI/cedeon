@@ -76,7 +76,7 @@ export function RecoveryPacketView({ candidateId }: { candidateId: string }) {
 
   return (
     <div className="space-y-6">
-      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery candidate</BackLink>
+      <BackLink href={`/recovery-candidates/${candidateId}`}>Recovery</BackLink>
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">

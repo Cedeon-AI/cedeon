@@ -67,20 +67,20 @@ export function RecoveryCandidatesView() {
     },
     onError: (err) => {
       const problem = asProblem(err);
-      setError(problem?.detail ?? problem?.title ?? "Could not create the candidate.");
+      setError(problem?.detail ?? problem?.title ?? "Could not create the recovery.");
     },
   });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Recovery candidates"
+        title="Recoveries"
         description="A validated treaty plus a loss event, run through the deterministic engine. The number is code, not an LLM — you review and confirm it."
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>New recovery candidate</CardTitle>
+          <CardTitle>New recovery</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -182,7 +182,7 @@ export function RecoveryCandidatesView() {
           ) : (
             <EmptyState
               icon={<Sigma />}
-              title="No recovery candidates in this view"
+              title="No recoveries in this view"
               description="Pair a validated treaty with a loss event above to create one."
             />
           )}

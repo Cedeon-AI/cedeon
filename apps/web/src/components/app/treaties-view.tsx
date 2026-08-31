@@ -58,7 +58,7 @@ export function TreatiesView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Treaty library"
+        title="Treaties"
         description="Create a treaty from a parsed treaty document. Cedeon extracts the terms; you validate them."
       />
 

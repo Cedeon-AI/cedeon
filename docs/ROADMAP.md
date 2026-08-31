@@ -44,10 +44,19 @@ and deterministic calculations.
 
 **Post-MVP UX direction.** [docs/UX_STUDY.md](UX_STUDY.md) studies the in-app workflow
 from the ceded-reinsurance analyst's chair and proposes a re-framed IA (Home worklist ·
-Reinsurance programme · Recoveries · Audit log), two guided wizards, and a single-page
-recovery workspace — **no domain-model change**. Proposed order: **A** reframe (UI only,
-recommended first) · **B** recovery workspace · **C** collection tracking (new phase) ·
-**D** multi-layer programmes. Not yet scheduled — pending a real-user check of **A**.
+Reinsurance program · Recoveries · Audit log), two guided wizards, and a single-page
+recovery workspace — **no domain-model change**. Order: **A** reframe · **B** recovery
+workspace · **C** collection tracking (new phase) · **D** multi-layer programmes.
+
+- **A · Reframe — in progress (frontend only).**
+  - *A1 · nav + rename + Home worklist* — ✅ done. Four-area sidebar (Home · Reinsurance
+    program · Losses · Recoveries · Oversight); "recovery candidate" → *recovery*,
+    "treaty library" → *treaties*, "loss imports" → *import claims*, "underlying losses"
+    → *claims*, "activity" → *audit log*; Home is a "needs your attention" queue (terms
+    to validate, recoveries to review) over counts. URLs unchanged.
+  - *A2 · guided wizards* — next. "Set up a treaty" (upload → extract → validate →
+    structure → activate) and "Start a recovery" (event → claims → layer → calculate),
+    wrapping existing endpoints; then fold Documents / Import-claims out of the top nav.
 
 ---
 

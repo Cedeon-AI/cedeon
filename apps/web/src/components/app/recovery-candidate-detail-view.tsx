@@ -77,11 +77,11 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
   return (
     <div className="space-y-6">
-      <BackLink href="/recovery-candidates">Recovery candidates</BackLink>
+      <BackLink href="/recovery-candidates">Recoveries</BackLink>
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
-            Recovery candidate
+            Recovery
             <Badge tone={status.tone}>{status.label}</Badge>
             {candidate.currency_mismatch ? <Badge tone="warning">currency mismatch</Badge> : null}
           </span>
@@ -122,8 +122,8 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
       {candidate.currency_mismatch ? (
         <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-          Some underlying losses are in a currency other than {candidate.currency}. Only{" "}
-          {candidate.currency} losses are included in the gross — there is no FX conversion.
+          Some claims are in a currency other than {candidate.currency}. Only {candidate.currency}{" "}
+          claims are included in the gross — there is no FX conversion.
         </p>
       ) : null}
 
@@ -134,7 +134,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
           ) : (
             <Card>
               <CardContent className="py-8 text-sm text-muted-foreground">
-                No calculation on this candidate.
+                No calculation on this recovery yet.
               </CardContent>
             </Card>
           )}

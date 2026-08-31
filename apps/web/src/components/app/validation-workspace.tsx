@@ -143,7 +143,7 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
           </CardContent>
         </Card>
 
-        {/* RIGHT — term candidates */}
+        {/* RIGHT — proposed terms */}
         <div className="space-y-3">
           {scalar.map((candidate) => (
             <CandidateCard
