@@ -53,6 +53,8 @@ from app.api.schemas.recoveries import (
     RecoveryReviewOut,
     ReviewRecoveryCandidateRequest,
     SetKnowledgeDateRequest,
+    SuggestedRecoveryList,
+    SuggestedRecoveryOut,
     ToolCallOut,
 )
 from app.db.models.extraction import Review, ToolCall
@@ -79,6 +81,7 @@ from app.services.notice import NoticeReview, NoticeService
 from app.services.obligations import NoticeObligation, ObligationService
 from app.services.packet import PacketReview, RecoveryPacketService
 from app.services.recoveries import RecoveryCandidateService
+from app.services.suggestions import SuggestionService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
 packets_router = APIRouter(prefix="/recovery-packets", tags=["recovery-packets"])
@@ -232,6 +235,38 @@ async def list_recovery_candidates(
         context, status=status_filter
     )
     return RecoveryCandidateList(candidates=[_candidate_out(c) for c in candidates])
+
+
+@router.get(
+    "/suggestions",
+    response_model=SuggestedRecoveryList,
+    summary="Validated treaties that look like they respond to a loss event, with no recovery yet",
+    operation_id="listRecoverySuggestions",
+)
+async def list_recovery_suggestions(
+    context: AuthedContext,
+    session: DbSession,
+    loss_event_id: Annotated[UUID | None, Query()] = None,
+) -> SuggestedRecoveryList:
+    found = await SuggestionService(session).for_organization(context)
+    return SuggestedRecoveryList(
+        suggestions=[
+            SuggestedRecoveryOut(
+                treaty_id=s.treaty_id,
+                treaty_name=s.treaty_name,
+                loss_event_id=s.loss_event_id,
+                loss_event_name=s.loss_event_name,
+                currency=s.suggestion.currency,
+                gross=s.suggestion.gross,
+                attachment=s.suggestion.attachment,
+                limit=s.suggestion.limit,
+                indicative_recovery=s.suggestion.indicative_recovery,
+                reason=s.suggestion.reason,
+            )
+            for s in found
+            if loss_event_id is None or s.loss_event_id == loss_event_id
+        ]
+    )
 
 
 @router.get(

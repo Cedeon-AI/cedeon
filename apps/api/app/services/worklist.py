@@ -32,6 +32,7 @@ from app.repositories.recoveries import RecoverableRepository, RecoveryCandidate
 from app.repositories.reinsurance import TreatyRepository
 from app.services.auth import AuthenticatedContext
 from app.services.obligations import ObligationService
+from app.services.suggestions import SuggestionService
 
 # A notice deadline this far out (or already past) is worth surfacing.
 _NOTICE_HORIZON_DAYS = 45
@@ -72,6 +73,7 @@ class WorklistService:
         self._recoverables = RecoverableRepository(session)
         self._events = LossEventRepository(session)
         self._obligations = ObligationService(session)
+        self._suggestions = SuggestionService(session)
 
     async def build(self, context: AuthenticatedContext) -> Worklist:
         org_id = context.organization.id
@@ -86,6 +88,7 @@ class WorklistService:
         items += await self._term_validation_items(org_id, today)
         items += self._recovery_review_items(candidates, event_names, treaty_names, today)
         items += await self._notice_due_items(context, candidates, event_names, treaty_names)
+        items += await self._suggested_recovery_items(context)
         items += await self._packet_approval_items(org_id, candidates, event_names, today)
         items += self._recoverable_overdue_items(recoverables, today)
 
@@ -201,6 +204,24 @@ class WorklistService:
                     href=f"/recovery-candidates/{c.id}?section=notice",
                     currency=c.currency,
                     due_in_days=ob.days_until,
+                )
+            )
+        return out
+
+    async def _suggested_recovery_items(self, context: AuthenticatedContext) -> list[WorklistItem]:
+        out: list[WorklistItem] = []
+        for s in await self._suggestions.for_organization(context):
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.SUGGESTED_RECOVERY,
+                    key=f"suggested_recovery:{s.treaty_version_id}:{s.loss_event_id}",
+                    title=f"{s.loss_event_name} · {s.treaty_name}",
+                    detail=(
+                        f"This treaty may respond — {s.suggestion.reason} Open a recovery to check."
+                    ),
+                    href="/recovery-candidates/new",
+                    amount=s.suggestion.indicative_recovery,
+                    currency=s.suggestion.currency,
                 )
             )
         return out

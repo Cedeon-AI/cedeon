@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
+import { Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackLink, PageHeader } from "@/components/ui/page-header";
-import { getLossEvent } from "@/lib/api";
+import { getLossEvent, listRecoverySuggestions } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 
 export function LossEventDetailView({ eventId }: { eventId: string }) {
@@ -16,11 +16,23 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
       (await getLossEvent({ path: { event_id: eventId }, throwOnError: true })).data,
   });
 
+  const suggestions = useQuery({
+    queryKey: ["recovery-suggestions", eventId],
+    queryFn: async () =>
+      (
+        await listRecoverySuggestions({
+          query: { loss_event_id: eventId },
+          throwOnError: true,
+        })
+      ).data.suggestions,
+  });
+
   if (detail.isLoading || !detail.data) {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
   const { event, losses } = detail.data;
+  const suggested = suggestions.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -47,6 +59,45 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
           {event.peril ?? "peril not stated"}
           {event.hours_clause_hours ? ` · ${event.hours_clause_hours}-hour clause` : ""}
         </p>
+      ) : null}
+
+      {suggested.length > 0 ? (
+        <Card className="border-calculation/30 bg-calculation/5">
+          <CardHeader className="flex-row items-center gap-2">
+            <Sparkles className="size-4 text-calculation" />
+            <CardTitle>Treaties that may respond</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {suggested.map((s) => (
+              <div
+                key={s.treaty_id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-3 text-sm"
+              >
+                <span>
+                  <Link
+                    href={`/treaties/${s.treaty_id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {s.treaty_name}
+                  </Link>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{s.reason}</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="font-mono text-xs tabular-nums">
+                    ~{formatMoney(s.indicative_recovery, s.currency)}
+                  </span>
+                  <Button asChild size="sm" variant="secondary">
+                    <Link href="/recovery-candidates/new">Open a recovery</Link>
+                  </Button>
+                </span>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              A deterministic screen — currency, the treaty window, and gross above the attachment.
+              Confirm it by opening the recovery; Cedeon computes the real figure.
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
       <div className="flex flex-wrap gap-3">

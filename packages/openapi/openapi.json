@@ -4402,6 +4402,88 @@
         "title": "SpendTotalsOut",
         "type": "object"
       },
+      "SuggestedRecoveryList": {
+        "additionalProperties": false,
+        "properties": {
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedRecoveryOut"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions"
+        ],
+        "title": "SuggestedRecoveryList",
+        "type": "object"
+      },
+      "SuggestedRecoveryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "attachment": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Attachment",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "gross": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross",
+            "type": "string"
+          },
+          "indicative_recovery": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Indicative Recovery",
+            "type": "string"
+          },
+          "limit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Limit",
+            "type": "string"
+          },
+          "loss_event_id": {
+            "format": "uuid",
+            "title": "Loss Event Id",
+            "type": "string"
+          },
+          "loss_event_name": {
+            "title": "Loss Event Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "treaty_id": {
+            "format": "uuid",
+            "title": "Treaty Id",
+            "type": "string"
+          },
+          "treaty_name": {
+            "title": "Treaty Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "treaty_id",
+          "treaty_name",
+          "loss_event_id",
+          "loss_event_name",
+          "currency",
+          "gross",
+          "attachment",
+          "limit",
+          "indicative_recovery",
+          "reason"
+        ],
+        "title": "SuggestedRecoveryOut",
+        "type": "object"
+      },
       "TermCandidateOut": {
         "additionalProperties": false,
         "properties": {
@@ -6795,6 +6877,56 @@
           }
         },
         "summary": "Create a recovery candidate (validated treaty + loss event \u2192 deterministic calc)",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/suggestions": {
+      "get": {
+        "operationId": "listRecoverySuggestions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "loss_event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loss Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedRecoveryList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validated treaties that look like they respond to a loss event, with no recovery yet",
         "tags": [
           "recovery-candidates"
         ]

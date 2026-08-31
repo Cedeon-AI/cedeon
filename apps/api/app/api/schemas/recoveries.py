@@ -114,6 +114,23 @@ class SetKnowledgeDateRequest(ApiModel):
     )
 
 
+class SuggestedRecoveryOut(ApiModel):
+    treaty_id: UUID
+    treaty_name: str
+    loss_event_id: UUID
+    loss_event_name: str
+    currency: str
+    gross: Decimal
+    attachment: Decimal
+    limit: Decimal
+    indicative_recovery: Decimal
+    reason: str
+
+
+class SuggestedRecoveryList(ApiModel):
+    suggestions: list[SuggestedRecoveryOut]
+
+
 class NoticeObligationOut(ApiModel):
     provision_text: str | None
     has_structured_term: bool

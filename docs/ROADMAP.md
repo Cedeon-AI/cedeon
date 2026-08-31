@@ -140,8 +140,16 @@ of gravity from "start a recovery" to "here is what needs you today."
   and three recoverables — one notified, one billed-and-overdue, one collected. A first
   run and every demo now open on a populated Home worklist instead of an empty app.
   `packages/fixtures/README.md` walkthrough refreshed for the post-A3 navigation.
-- **Next — ⑤ system-suggested recovery candidates · ⑥ multi-layer programmes ·
-  ⑦ aged-recoverable intelligence · ⑧ real extraction/investigator eval datasets.**
+- **Next — ⑤ system-suggested recovery candidates — ✅ done.**
+  `app/domain/recoveries/suggestions.py` (pure) screens each validated treaty layer
+  against each loss event — currency, the treaty window, gross above the attachment —
+  and proposes opening a recovery where none exists. `SuggestionService` +
+  `GET /recovery-candidates/suggestions` (`?loss_event_id=`) + a `suggested_recovery`
+  worklist item + a "Treaties that may respond" card on loss-event detail. Cedeon
+  *proposes*; the analyst promotes it through the normal create flow, which suppresses
+  the suggestion. No AI. 17 new tests.
+- **Next — ⑥ multi-layer programmes · ⑦ aged-recoverable intelligence ·
+  ⑧ real extraction/investigator eval datasets.**
 - **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
   ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence.**
 
