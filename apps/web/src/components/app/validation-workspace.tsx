@@ -170,6 +170,8 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
                   return (
                     <div
                       key={p.id}
+                      data-testid="participation-row"
+                      data-resolution={p.resolution ?? "open"}
                       className="flex items-center justify-between rounded-md border border-border p-2.5 text-sm"
                     >
                       <span>
@@ -183,6 +185,7 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
                         <Button
                           size="sm"
                           variant="secondary"
+                          data-testid="participation-confirm"
                           onClick={() => review.mutate({ candidateId: p.id, decision: "confirm" })}
                         >
                           Confirm
@@ -224,7 +227,11 @@ function CandidateCard({
   const rejected = candidate.resolution === "rejected";
 
   return (
-    <Card className={confirmed ? "border-human/40" : rejected ? "opacity-60" : undefined}>
+    <Card
+      data-testid={`term-${candidate.key}`}
+      data-resolution={candidate.resolution ?? "open"}
+      className={confirmed ? "border-human/40" : rejected ? "opacity-60" : undefined}
+    >
       <CardContent className="space-y-2 py-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold">{termLabel(candidate.key)}</span>
@@ -281,7 +288,11 @@ function CandidateCard({
             </>
           ) : (
             <>
-              <Button size="sm" onClick={() => onReview("confirm")}>
+              <Button
+                size="sm"
+                data-testid={`term-confirm-${candidate.key}`}
+                onClick={() => onReview("confirm")}
+              >
                 Confirm
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
