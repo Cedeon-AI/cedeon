@@ -68,17 +68,18 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
     nav needs treaty-detail and loss-event-detail to first grow proper document /
     claims sub-views, so those destinations aren't orphaned. Not just a nav edit.
 
-- **B · Recovery workspace — ✅ done (frontend only, no new endpoints).**
+- **B · Recovery workspace — ✅ done & e2e-verified (frontend only, no new endpoints).**
   `/recovery-candidates/[id]` is one page with a left rail — **Loss basis ·
   Calculation · Investigation · Packet · Notice · Collection** — each section opens
   in place via `?section=`; done sections show a check, Notice is locked until the
   recovery is confirmed, Collection is locked (Phase C). `recovery-packet-view` /
   `recovery-notices-view` gained an `embedded` prop; `/[id]/packet` and `/[id]/notices`
-  are now redirects to `?section=`. Passes biome · tsc · vitest · build; the
-  register→Home smoke e2e still green. Not yet walked end-to-end in a browser — the
-  full golden-path e2e is blocked on the validation workspace's term cards having no
-  stable test anchors (worth adding `data-testid`s there; that finally makes the
-  "Golden end-to-end test" below writable).
+  are now redirects to `?section=`. Verified by the new **golden-path e2e**
+  (`e2e/golden-path.spec.ts`, gated behind `CEDEON_LIVE_E2E` since it calls the real
+  Anthropic API) — the full slice: register → set up treaty → validate → start
+  recovery → import claims → the deterministic `$8,700,000.00` and its
+  `4.35M / 2.61M / 1.74M` split → the workspace rail. This is the "Golden
+  end-to-end test" below, finally realised.
 
 - **C · Collection tracking** — a new phase: the recoverable as a first-class object
   moving notified → agreed → billed → collected → aged. Needs a small model addition
@@ -102,9 +103,22 @@ create RecoveryCandidate(treaty_version, layer, event)
    ─▶ RecoveryCandidate = NEEDS_REVIEW
 ```
 
-### Golden end-to-end test (CI)
+### Golden end-to-end test
 
-`apps/api/tests/e2e/test_vertical_slice.py`, driven by `packages/fixtures/`:
+**Realised as `apps/web/e2e/golden-path.spec.ts`** (Playwright, driven by
+`packages/fixtures/`) — it walks the whole slice through the real UI: register →
+"Set up a treaty" wizard → **live** Anthropic extraction → validate every term →
+"Start a recovery" wizard → import the claims CSV → the deterministic
+`$8,700,000.00` with its `4,350,000 / 2,610,000 / 1,740,000` split → the recovery
+workspace and its section rail. Gated behind `CEDEON_LIVE_E2E` (real API cost), so
+the default `pnpm test:e2e` and the CI e2e job skip it; run it with
+`CEDEON_LIVE_E2E=1 pnpm test:e2e golden-path`.
+
+The original spec below was for an API-level `tests/e2e/test_vertical_slice.py` with
+a recorded/cheap model — still worth adding for CI coverage without the live cost,
+but the UI-level test is the one that exists and is green.
+
+Original spec — `apps/api/tests/e2e/test_vertical_slice.py`, driven by `packages/fixtures/`:
 
 1. Seed org + user + cedent + program.
 2. Upload the synthetic treaty; run parse job inline; assert pages + clause-aware
