@@ -48,7 +48,7 @@ Reinsurance program · Recoveries · Audit log), two guided wizards, and a singl
 recovery workspace — **no domain-model change**. Order: **A** reframe · **B** recovery
 workspace · **C** collection tracking (new phase) · **D** multi-layer programmes.
 
-- **A · Reframe — in progress (frontend only).**
+- **A · Reframe — done (frontend only), bar A3.**
   - *A1 · nav + rename + Home worklist* — ✅ done. Four-area sidebar (Home · Reinsurance
     program · Losses · Recoveries · Oversight); "recovery candidate" → *recovery*,
     "treaty library" → *treaties*, "loss imports" → *import claims*, "underlying losses"
@@ -67,6 +67,22 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
   - *A3 · fold the nav* — deferred. Removing Documents / Import-claims from the top
     nav needs treaty-detail and loss-event-detail to first grow proper document /
     claims sub-views, so those destinations aren't orphaned. Not just a nav edit.
+
+- **B · Recovery workspace — ✅ done (frontend only, no new endpoints).**
+  `/recovery-candidates/[id]` is one page with a left rail — **Loss basis ·
+  Calculation · Investigation · Packet · Notice · Collection** — each section opens
+  in place via `?section=`; done sections show a check, Notice is locked until the
+  recovery is confirmed, Collection is locked (Phase C). `recovery-packet-view` /
+  `recovery-notices-view` gained an `embedded` prop; `/[id]/packet` and `/[id]/notices`
+  are now redirects to `?section=`. Passes biome · tsc · vitest · build; the
+  register→Home smoke e2e still green. Not yet walked end-to-end in a browser — the
+  full golden-path e2e is blocked on the validation workspace's term cards having no
+  stable test anchors (worth adding `data-testid`s there; that finally makes the
+  "Golden end-to-end test" below writable).
+
+- **C · Collection tracking** — a new phase: the recoverable as a first-class object
+  moving notified → agreed → billed → collected → aged. Needs a small model addition
+  and its own ADR. Not started.
 
 ---
 
