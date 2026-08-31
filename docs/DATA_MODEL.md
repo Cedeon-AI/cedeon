@@ -216,6 +216,17 @@ kind. **There is deliberately no send action** — the drafter is one `output_ty
 call with no tools, from a whitelist of approved values, and a notice's terminal
 state is `APPROVED` (AI_ARCHITECTURE.md §2c, ADR-0021). **Never auto-sent.**
 
+`recoverables` *(Phase C; migration 0010; ADR-0024)* — one per
+`(recovery_candidate_id RESTRICT, reinsurer_id RESTRICT)`, `UNIQUE`. Materialised
+from the confirmed recovery's `recovery_calculation_id` (RESTRICT): `expected_amount`
+`MONEY` is a fact copied from `recovery_allocations.allocated_recovery` and never
+edited; `CHECK expected_amount >= 0`, `CHECK collected_amount >= 0`. `status`
+pending / notified / agreed / billed / collected / disputed / written_off, with
+`notified_at` / `agreed_at` / `billed_at` / `settled_at` stamps. `agreed_amount`,
+`billed_amount`, `collected_amount` (running total), `due_date`, `note` are mutable
+human facts — every change writes an `audit_events` row. **Aging is derived, never
+stored.** No AI (pure `app/domain/recoveries/collection.py`).
+
 **Review & audit**
 `reviews` (`subject_type`, `subject_id`, `reviewer_id`, `decision`, `value_before`
 JSONB, `value_after` JSONB, `reason`, `created_at`) — append-only ·

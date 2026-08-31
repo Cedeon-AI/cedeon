@@ -534,3 +534,44 @@ the trust-class language or the validation workspace. The copy in the new market
 sections restates existing doc positions (PRODUCT §1/§1a, the non-goals) — it does
 **not** expand product scope, and no `FinancialException`/generic-finding abstraction
 is implied.
+
+## ADR-0024 — Collection tracking: a recoverable per reinsurer, human facts on an audit trail
+
+**Context.** Phase B made the recovery workspace whole *except* for the last stage:
+what happens after a notice is drafted. The ceded-reinsurance desk's job does not
+end at "notice approved" — it ends at cash in the bank, often a year later, after
+chasing overdue balances across a dozen reinsurers (docs/UX_STUDY.md finding 7).
+Nothing in Cedeon tracked that.
+
+**Decision.** A first-class `recoverables` table (migration 0010), one row per
+`(recovery_candidate, reinsurer)`, materialised from the confirmed recovery's
+**current immutable calculation**:
+
+- `expected_amount` is a **fact** carried from `recovery_allocations.allocated_recovery`
+  — it is never edited; a `recovery_calculation_id` FK (RESTRICT) makes it traceable.
+- `status` walks `pending → notified → agreed → billed → collected`, with `disputed`
+  and `written_off` as explicit side moves. Status stamps (`notified_at`, `agreed_at`,
+  `billed_at`, `settled_at`) are set on first entry.
+- `agreed_amount` / `billed_amount` / `collected_amount` / `due_date` / `note` are
+  **human-entered facts**, mutable and corrected over time. Every change writes an
+  `audit_events` row (`recovery.recoverable_updated`).
+- **Aging is derived, never stored**: `days_overdue` and an aging bucket
+  (`current` / `1–30` / `31–60` / `61–90` / `90+`) are computed from `due_date` and
+  today. Portfolio roll-ups (`summarize_recoverables`) are a pure function.
+- **Single currency, no FX** — a recoverable in a currency other than the summary's is
+  ignored in the roll-up, mirroring the calculation engine (ADR-0018).
+
+**No AI.** The domain module (`app/domain/recoveries/collection.py`) is pure standard
+library; the service is deterministic; the figures are facts and human decisions. The
+import-linter "domain is pure" contract still holds.
+
+**Endpoints.** `POST /recovery-candidates/{id}/recoverables` (materialise, idempotent),
+`GET /recovery-candidates/{id}/recoverables`, `GET /recoverables` (portfolio, filter by
+status), `GET /recoverables/summary` (org roll-up — feeds the Home "Open recoverable"
+figure), `POST /recoverables/{id}` (the human update). UI: the workspace's **Collection**
+rail section, unlocked once the recovery is confirmed.
+
+**Consequences.** Cedeon now spans the desk's whole job — contract to cash. What it
+still does *not* do: reinstatement-premium accounting, multi-currency settlement,
+broker-statement reconciliation (booked vs billed vs collected across the portfolio) —
+those are their own future work, not folded in here (PRODUCT.md §1a discipline).

@@ -13,6 +13,7 @@ from app.domain.recoveries import (
     NoticeStatus,
     PacketStatementClass,
     PacketVersionStatus,
+    RecoverableStatus,
     RecoveryCandidateStatus,
 )
 from app.domain.reviews import ReviewDecision
@@ -281,3 +282,62 @@ class RecoveryNoticeOut(ApiModel):
 
 class RecoveryNoticeList(ApiModel):
     notices: list[RecoveryNoticeOut]
+
+
+# --- collection tracking (ADR-0024) -------------------------------------------
+
+
+class RecoverableOut(ApiModel):
+    id: UUID
+    recovery_candidate_id: UUID
+    reinsurer_id: UUID
+    reinsurer_name: str
+    currency: str
+    status: RecoverableStatus
+    expected_amount: Decimal
+    agreed_amount: Decimal | None
+    billed_amount: Decimal | None
+    collected_amount: Decimal
+    outstanding: Decimal
+    due_date: dt.date | None
+    days_overdue: int
+    aging_bucket: str
+    notified_at: dt.datetime | None
+    agreed_at: dt.datetime | None
+    billed_at: dt.datetime | None
+    settled_at: dt.datetime | None
+    note: str | None
+    created_at: dt.datetime
+    updated_at: dt.datetime
+
+
+class RecoverableList(ApiModel):
+    recoverables: list[RecoverableOut]
+
+
+class RecoverableUpdateRequest(ApiModel):
+    status: RecoverableStatus | None = None
+    agreed_amount: str | None = None
+    billed_amount: str | None = None
+    collect: str | None = Field(default=None, description="A positive amount just collected")
+    due_date: dt.date | None = None
+    clear_due_date: bool = False
+    note: str | None = None
+
+
+class RecoverableStatusTotalOut(ApiModel):
+    status: RecoverableStatus
+    count: int
+    outstanding: Decimal
+
+
+class RecoverableSummaryOut(ApiModel):
+    currency: str
+    count: int
+    total_expected: Decimal
+    total_collected: Decimal
+    total_outstanding: Decimal
+    overdue_count: int
+    overdue_outstanding: Decimal
+    by_status: list[RecoverableStatusTotalOut]
+    by_aging: dict[str, Decimal]

@@ -14,6 +14,18 @@ from app.domain.recoveries.calculations import (
     calculate_xol_recovery,
 )
 from app.domain.recoveries.candidate import RecoveryCandidateStatus, recovery_input_hash
+from app.domain.recoveries.collection import (
+    AgingBucket,
+    RecoverableRow,
+    RecoverableStatus,
+    RecoverableSummary,
+    StatusTotal,
+    aging_bucket,
+    days_overdue,
+    next_status,
+    outstanding,
+    summarize_recoverables,
+)
 from app.domain.recoveries.notice import (
     NoticeContext,
     NoticeInputs,
@@ -34,6 +46,7 @@ from app.domain.recoveries.packet_html import render_packet_html
 
 __all__ = [
     "ENGINE_VERSION",
+    "AgingBucket",
     "NoticeContext",
     "NoticeInputs",
     "NoticeKind",
@@ -46,14 +59,23 @@ __all__ = [
     "PacketVersionStatus",
     "ParticipantAllocation",
     "Participation",
+    "RecoverableRow",
+    "RecoverableStatus",
+    "RecoverableSummary",
     "RecoveryCalculation",
     "RecoveryCandidateStatus",
+    "StatusTotal",
     "XolRecoveryResult",
+    "aging_bucket",
     "allocate_recovery",
     "assemble_packet",
     "build_notice_context",
     "calculate_recovery",
     "calculate_xol_recovery",
+    "days_overdue",
+    "next_status",
+    "outstanding",
     "recovery_input_hash",
     "render_packet_html",
+    "summarize_recoverables",
 ]

@@ -1,19 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Check, ScrollText, Sigma, Upload, Waves } from "lucide-react";
+import { ArrowRight, Check, ScrollText, Sigma, Upload, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader, Stat } from "@/components/ui/page-header";
 import {
   getCurrentUser,
-  listLossEvents,
+  getRecoverablesSummary,
   listMembers,
   listRecoveryCandidates,
   listTreaties,
 } from "@/lib/api";
 import { candidateStatus } from "@/lib/recoveries";
+import { formatMoneyCompact } from "@/lib/utils";
 
 type Task = {
   key: string;
@@ -36,13 +37,13 @@ export function DashboardView() {
     queryKey: ["treaties"],
     queryFn: async () => (await listTreaties({ throwOnError: true })).data.treaties,
   });
-  const events = useQuery({
-    queryKey: ["loss-events"],
-    queryFn: async () => (await listLossEvents({ throwOnError: true })).data.events,
-  });
   const recoveries = useQuery({
     queryKey: ["recovery-candidates", ""],
     queryFn: async () => (await listRecoveryCandidates({ throwOnError: true })).data.candidates,
+  });
+  const collection = useQuery({
+    queryKey: ["recoverables", "summary"],
+    queryFn: async () => (await getRecoverablesSummary({ throwOnError: true })).data,
   });
 
   const count = (q: { data?: unknown[] }) => (q.data ? String(q.data.length) : "—");
@@ -138,13 +139,27 @@ export function DashboardView() {
         <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">At a glance</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Treaties" value={count(treaties)} icon={<ScrollText />} tone="fact" />
-          <Stat label="Loss events" value={count(events)} icon={<Waves />} tone="fact" />
           <Stat label="Recoveries" value={count(recoveries)} icon={<Sigma />} tone="calculation" />
           <Stat
             label="Needs review"
             value={recoveries.data ? String(needsReview.length) : "—"}
             icon={<Check />}
             tone="human"
+          />
+          <Stat
+            label="Open recoverable"
+            value={
+              collection.data
+                ? formatMoneyCompact(collection.data.total_outstanding, collection.data.currency)
+                : "—"
+            }
+            hint={
+              collection.data && collection.data.overdue_count > 0
+                ? `${collection.data.overdue_count} overdue`
+                : "notified → collected"
+            }
+            icon={<Wallet />}
+            tone="calculation"
           />
         </div>
       </section>

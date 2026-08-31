@@ -6,6 +6,7 @@ import { Check, FileSearch, FileText, Landmark, Mail, Sigma, Wallet } from "luci
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { RecoveryCollectionSection } from "@/components/app/recovery-collection-section";
 import { RecoveryInvestigationPanel } from "@/components/app/recovery-investigation-panel";
 import { RecoveryNoticesView } from "@/components/app/recovery-notices-view";
 import { RecoveryPacketView } from "@/components/app/recovery-packet-view";
@@ -102,7 +103,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
     calculation: calc ? "done" : undefined,
     investigation: hasInvestigation ? "done" : undefined,
     notice: canNotice ? undefined : "locked",
-    collection: "locked",
+    collection: canNotice ? undefined : "locked",
   };
 
   return (
@@ -347,11 +348,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
           {section === "notice" ? <RecoveryNoticesView candidateId={candidateId} embedded /> : null}
 
           {section === "collection" ? (
-            <EmptyState
-              icon={<Wallet />}
-              title="Collection tracking arrives later"
-              description="Notified → agreed → billed → collected → aged, with overdue balances chased. A later phase."
-            />
+            <RecoveryCollectionSection candidateId={candidateId} canTrack={canNotice} />
           ) : null}
         </div>
       </div>

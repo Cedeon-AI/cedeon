@@ -28,6 +28,7 @@ api_router.include_router(losses.events_router)
 api_router.include_router(recoveries.router)
 api_router.include_router(recoveries.packets_router)
 api_router.include_router(recoveries.notices_router)
+api_router.include_router(recoveries.recoverables_router)
 api_router.include_router(activity.router)
 
 __all__ = ["api_router"]

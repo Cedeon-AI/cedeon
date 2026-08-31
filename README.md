@@ -48,6 +48,7 @@ product is **Cedeon Recovery Intelligence**:
 **The 10-phase MVP is complete** — the full pipeline runs end to end through the containerized stack.
 
 - **UI refresh** (2026-08-30). A design-system and content pass on `apps/web` with no backend change ([ADR-0023](docs/DECISIONS.md)): Tailwind v4 token additions (elevation, gradients), Radix + `lucide-react` primitives, a real multi-section marketing site (`/`, `/security`, `/about`) with a comparison table and the worked `$8.7M` example, and a grouped icon sidebar for the app shell. The FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visual language is unchanged.
+- **UX reframe + collection tracking** (2026-08-30). The in-app workflow rearranged around the ceded-reinsurance analyst's job ([docs/UX_STUDY.md](docs/UX_STUDY.md)): a four-area nav, two guided wizards ("Set up a treaty", "Start a recovery"), and a single-page recovery workspace with a **Loss basis · Calculation · Investigation · Packet · Notice · Collection** rail. **Collection tracking** ([ADR-0024](docs/DECISIONS.md), migration 0010) adds a `recoverables` object per `(recovery, reinsurer)` moving notified → agreed → billed → collected, with derived aging and a portfolio roll-up — no AI. The full slice is covered by `apps/web/e2e/golden-path.spec.ts` (live, gated). **233 backend tests + 4 live evals.**
 
 ## Quickstart
 

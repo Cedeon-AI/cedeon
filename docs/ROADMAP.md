@@ -81,9 +81,14 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
   `4.35M / 2.61M / 1.74M` split → the workspace rail. This is the "Golden
   end-to-end test" below, finally realised.
 
-- **C · Collection tracking** — a new phase: the recoverable as a first-class object
-  moving notified → agreed → billed → collected → aged. Needs a small model addition
-  and its own ADR. Not started.
+- **C · Collection tracking — ✅ done (ADR-0024, migration 0010).** A first-class
+  `recoverables` table, one row per `(recovery, reinsurer)`, materialised from the
+  confirmed calculation's allocations. `expected_amount` is a fact; `status`
+  (pending → notified → agreed → billed → collected, + disputed / written_off),
+  `agreed` / `billed` / `collected` / `due_date` / `note` are human facts on the
+  audit trail; aging is derived. `GET|POST /recoverables*` + the workspace's
+  **Collection** section + a Home "Open recoverable" figure. Pure — no AI. 14 new
+  tests (233 backend total).
 
 ---
 

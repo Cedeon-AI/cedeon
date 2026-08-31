@@ -2513,6 +2513,389 @@
         "title": "ProgramOut",
         "type": "object"
       },
+      "RecoverableList": {
+        "additionalProperties": false,
+        "properties": {
+          "recoverables": {
+            "items": {
+              "$ref": "#/components/schemas/RecoverableOut"
+            },
+            "title": "Recoverables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "recoverables"
+        ],
+        "title": "RecoverableList",
+        "type": "object"
+      },
+      "RecoverableOut": {
+        "additionalProperties": false,
+        "properties": {
+          "aging_bucket": {
+            "title": "Aging Bucket",
+            "type": "string"
+          },
+          "agreed_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreed Amount"
+          },
+          "agreed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreed At"
+          },
+          "billed_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billed Amount"
+          },
+          "billed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billed At"
+          },
+          "collected_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Collected Amount",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "days_overdue": {
+            "title": "Days Overdue",
+            "type": "integer"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "expected_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expected Amount",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          },
+          "outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "recovery_candidate_id": {
+            "format": "uuid",
+            "title": "Recovery Candidate Id",
+            "type": "string"
+          },
+          "reinsurer_id": {
+            "format": "uuid",
+            "title": "Reinsurer Id",
+            "type": "string"
+          },
+          "reinsurer_name": {
+            "title": "Reinsurer Name",
+            "type": "string"
+          },
+          "settled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecoverableStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recovery_candidate_id",
+          "reinsurer_id",
+          "reinsurer_name",
+          "currency",
+          "status",
+          "expected_amount",
+          "agreed_amount",
+          "billed_amount",
+          "collected_amount",
+          "outstanding",
+          "due_date",
+          "days_overdue",
+          "aging_bucket",
+          "notified_at",
+          "agreed_at",
+          "billed_at",
+          "settled_at",
+          "note",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RecoverableOut",
+        "type": "object"
+      },
+      "RecoverableStatus": {
+        "description": "One reinsurer's leg of a confirmed recovery.\n\nPENDING \u2500\u25b6 NOTIFIED \u2500\u25b6 AGREED \u2500\u25b6 BILLED \u2500\u25b6 COLLECTED\n               \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u25b6 DISPUTED \u2500\u2500\u25b6 (back to an active state)\n                                      \u2514\u2500\u2500\u25b6 WRITTEN_OFF",
+        "enum": [
+          "pending",
+          "notified",
+          "agreed",
+          "billed",
+          "collected",
+          "disputed",
+          "written_off"
+        ],
+        "title": "RecoverableStatus",
+        "type": "string"
+      },
+      "RecoverableStatusTotalOut": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RecoverableStatus"
+          }
+        },
+        "required": [
+          "status",
+          "count",
+          "outstanding"
+        ],
+        "title": "RecoverableStatusTotalOut",
+        "type": "object"
+      },
+      "RecoverableSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "by_aging": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "By Aging",
+            "type": "object"
+          },
+          "by_status": {
+            "items": {
+              "$ref": "#/components/schemas/RecoverableStatusTotalOut"
+            },
+            "title": "By Status",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "overdue_count": {
+            "title": "Overdue Count",
+            "type": "integer"
+          },
+          "overdue_outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Overdue Outstanding",
+            "type": "string"
+          },
+          "total_collected": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Collected",
+            "type": "string"
+          },
+          "total_expected": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Expected",
+            "type": "string"
+          },
+          "total_outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Outstanding",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "count",
+          "total_expected",
+          "total_collected",
+          "total_outstanding",
+          "overdue_count",
+          "overdue_outstanding",
+          "by_status",
+          "by_aging"
+        ],
+        "title": "RecoverableSummaryOut",
+        "type": "object"
+      },
+      "RecoverableUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "agreed_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreed Amount"
+          },
+          "billed_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billed Amount"
+          },
+          "clear_due_date": {
+            "default": false,
+            "title": "Clear Due Date",
+            "type": "boolean"
+          },
+          "collect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A positive amount just collected",
+            "title": "Collect"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecoverableStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "RecoverableUpdateRequest",
+        "type": "object"
+      },
       "RecoveryCalculationOut": {
         "additionalProperties": false,
         "properties": {
@@ -5684,6 +6067,129 @@
         ]
       }
     },
+    "/recoverables": {
+      "get": {
+        "operationId": "listRecoverables",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecoverableStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverableList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recoverables",
+        "tags": [
+          "recoverables"
+        ]
+      }
+    },
+    "/recoverables/summary": {
+      "get": {
+        "operationId": "getRecoverablesSummary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverableSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Recoverables Summary",
+        "tags": [
+          "recoverables"
+        ]
+      }
+    },
+    "/recoverables/{recoverable_id}": {
+      "post": {
+        "operationId": "updateRecoverable",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recoverable_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recoverable Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoverableUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverableOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Human update: status, agreed/billed figures, a collection, due date, a note",
+        "tags": [
+          "recoverables"
+        ]
+      }
+    },
     "/recovery-candidates": {
       "get": {
         "operationId": "listRecoveryCandidates",
@@ -6127,6 +6633,90 @@
           }
         },
         "summary": "Re-run the engine; a new immutable calculation is stored only if inputs changed",
+        "tags": [
+          "recovery-candidates"
+        ]
+      }
+    },
+    "/recovery-candidates/{candidate_id}/recoverables": {
+      "get": {
+        "operationId": "listRecoverablesForCandidate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverableList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recoverables For Candidate",
+        "tags": [
+          "recovery-candidates"
+        ]
+      },
+      "post": {
+        "operationId": "materializeRecoverables",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverableList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start collection tracking \u2014 one recoverable per reinsurer (idempotent)",
         "tags": [
           "recovery-candidates"
         ]

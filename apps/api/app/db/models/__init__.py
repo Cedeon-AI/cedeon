@@ -19,6 +19,7 @@ from app.db.models.losses import (
     UnderlyingLoss,
 )
 from app.db.models.recoveries import (
+    Recoverable,
     RecoveryAllocation,
     RecoveryCalculation,
     RecoveryCandidate,
@@ -55,6 +56,7 @@ __all__ = [
     "Membership",
     "Organization",
     "PromptVersion",
+    "Recoverable",
     "RecoveryAllocation",
     "RecoveryCalculation",
     "RecoveryCandidate",

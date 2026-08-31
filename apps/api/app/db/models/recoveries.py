@@ -14,6 +14,8 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -36,6 +38,7 @@ from app.domain.recoveries import (
     NoticeKind,
     NoticeStatus,
     PacketVersionStatus,
+    RecoverableStatus,
     RecoveryCandidateStatus,
 )
 
@@ -79,6 +82,13 @@ _notice_status = SAEnum(
     length=12,
     create_constraint=False,
     name="recovery_notice_status",
+)
+_recoverable_status = SAEnum(
+    RecoverableStatus,
+    native_enum=False,
+    length=16,
+    create_constraint=False,
+    name="recoverable_status",
 )
 
 MONEY = Numeric(20, 2)
@@ -407,3 +417,51 @@ class RecoveryNotice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     superseded_at: Mapped[dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class Recoverable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """One reinsurer's leg of a confirmed recovery, tracked from notified to cash
+    collected (docs/DECISIONS.md ADR-0024). ``expected_amount`` is a fact carried
+    from the immutable calculation; ``agreed`` / ``billed`` / ``collected`` are
+    human-entered facts, corrected over time — every change is audited. No AI."""
+
+    __tablename__ = "recoverables"
+    __table_args__ = (
+        UniqueConstraint(
+            "recovery_candidate_id",
+            "reinsurer_id",
+            name="uq_recoverables_candidate_reinsurer",
+        ),
+        CheckConstraint("expected_amount >= 0", name="expected_nonneg"),
+        CheckConstraint("collected_amount >= 0", name="collected_nonneg"),
+        Index("ix_recoverables_org_status", "organization_id", "status"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    recovery_candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_candidates.id", ondelete="RESTRICT"), nullable=False
+    )
+    recovery_calculation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recovery_calculations.id", ondelete="RESTRICT"), nullable=False
+    )
+    reinsurer_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("reinsurers.id", ondelete="RESTRICT"), nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    status: Mapped[RecoverableStatus] = mapped_column(
+        _recoverable_status, nullable=False, default=RecoverableStatus.PENDING
+    )
+    expected_amount: Mapped[Any] = mapped_column(MONEY, nullable=False)
+    agreed_amount: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
+    billed_amount: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
+    collected_amount: Mapped[Any] = mapped_column(MONEY, nullable=False, server_default=text("0"))
+    due_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    notified_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agreed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    billed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    settled_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    reinsurer: Mapped[Any] = relationship("Reinsurer")

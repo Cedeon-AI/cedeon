@@ -3,6 +3,7 @@ deterministically-calculated recovery. No AI in this module (ADR-0010)."""
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Annotated
 from uuid import UUID
 
@@ -33,6 +34,11 @@ from app.api.schemas.recoveries import (
     PacketReviewRequest,
     PacketSectionOut,
     PacketStatementOut,
+    RecoverableList,
+    RecoverableOut,
+    RecoverableStatusTotalOut,
+    RecoverableSummaryOut,
+    RecoverableUpdateRequest,
     RecoveryCalculationOut,
     RecoveryCandidateDetail,
     RecoveryCandidateList,
@@ -49,6 +55,7 @@ from app.api.schemas.recoveries import (
 )
 from app.db.models.extraction import Review, ToolCall
 from app.db.models.recoveries import (
+    Recoverable,
     RecoveryCalculation,
     RecoveryCandidate,
     RecoveryInvestigation,
@@ -56,7 +63,14 @@ from app.db.models.recoveries import (
     RecoveryPacket,
     RecoveryPacketVersion,
 )
-from app.domain.recoveries import RecoveryCandidateStatus
+from app.domain.recoveries import (
+    RecoverableStatus,
+    RecoveryCandidateStatus,
+    aging_bucket,
+    days_overdue,
+    outstanding,
+)
+from app.services.collection import CollectionService
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
 from app.services.notice import NoticeReview, NoticeService
@@ -66,6 +80,7 @@ from app.services.recoveries import RecoveryCandidateService
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
 packets_router = APIRouter(prefix="/recovery-packets", tags=["recovery-packets"])
 notices_router = APIRouter(prefix="/recovery-notices", tags=["recovery-notices"])
+recoverables_router = APIRouter(prefix="/recoverables", tags=["recoverables"])
 
 
 def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
@@ -533,3 +548,124 @@ async def review_recovery_notice(
         ),
     )
     return _notice_out(notice)
+
+
+# --- collection tracking (ADR-0024) ------------------------------------------
+
+
+def _recoverable_out(r: Recoverable, *, as_of: dt.date) -> RecoverableOut:
+    return RecoverableOut(
+        id=r.id,
+        recovery_candidate_id=r.recovery_candidate_id,
+        reinsurer_id=r.reinsurer_id,
+        reinsurer_name=r.reinsurer.name,
+        currency=r.currency,
+        status=r.status,
+        expected_amount=r.expected_amount,
+        agreed_amount=r.agreed_amount,
+        billed_amount=r.billed_amount,
+        collected_amount=r.collected_amount,
+        outstanding=outstanding(
+            status=r.status,
+            expected_amount=r.expected_amount,
+            agreed_amount=r.agreed_amount,
+            collected_amount=r.collected_amount,
+        ),
+        due_date=r.due_date,
+        days_overdue=days_overdue(r.due_date, as_of),
+        aging_bucket=aging_bucket(r.due_date, as_of).value,
+        notified_at=r.notified_at,
+        agreed_at=r.agreed_at,
+        billed_at=r.billed_at,
+        settled_at=r.settled_at,
+        note=r.note,
+        created_at=r.created_at,
+        updated_at=r.updated_at,
+    )
+
+
+@router.post(
+    "/{candidate_id}/recoverables",
+    response_model=RecoverableList,
+    summary="Start collection tracking — one recoverable per reinsurer (idempotent)",
+    operation_id="materializeRecoverables",
+)
+async def materialize_recoverables(
+    candidate_id: UUID, context: AuthedContext, session: DbSession
+) -> RecoverableList:
+    items = await CollectionService(session).materialize(context, candidate_id)
+    today = dt.datetime.now(tz=dt.UTC).date()
+    return RecoverableList(recoverables=[_recoverable_out(r, as_of=today) for r in items])
+
+
+@router.get(
+    "/{candidate_id}/recoverables",
+    response_model=RecoverableList,
+    operation_id="listRecoverablesForCandidate",
+)
+async def list_recoverables_for_candidate(
+    candidate_id: UUID, context: AuthedContext, session: DbSession
+) -> RecoverableList:
+    items = await CollectionService(session).list_for_candidate(context, candidate_id)
+    today = dt.datetime.now(tz=dt.UTC).date()
+    return RecoverableList(recoverables=[_recoverable_out(r, as_of=today) for r in items])
+
+
+@recoverables_router.get("", response_model=RecoverableList, operation_id="listRecoverables")
+async def list_recoverables(
+    context: AuthedContext,
+    session: DbSession,
+    status_filter: Annotated[RecoverableStatus | None, Query(alias="status")] = None,
+) -> RecoverableList:
+    items = await CollectionService(session).portfolio(context, status=status_filter)
+    today = dt.datetime.now(tz=dt.UTC).date()
+    return RecoverableList(recoverables=[_recoverable_out(r, as_of=today) for r in items])
+
+
+@recoverables_router.get(
+    "/summary", response_model=RecoverableSummaryOut, operation_id="getRecoverablesSummary"
+)
+async def get_recoverables_summary(
+    context: AuthedContext, session: DbSession
+) -> RecoverableSummaryOut:
+    s = await CollectionService(session).summary(context)
+    return RecoverableSummaryOut(
+        currency=s.currency,
+        count=s.count,
+        total_expected=s.total_expected,
+        total_collected=s.total_collected,
+        total_outstanding=s.total_outstanding,
+        overdue_count=s.overdue_count,
+        overdue_outstanding=s.overdue_outstanding,
+        by_status=[
+            RecoverableStatusTotalOut(status=t.status, count=t.count, outstanding=t.outstanding)
+            for t in s.by_status
+        ],
+        by_aging=s.by_aging,
+    )
+
+
+@recoverables_router.post(
+    "/{recoverable_id}",
+    response_model=RecoverableOut,
+    summary="Human update: status, agreed/billed figures, a collection, due date, a note",
+    operation_id="updateRecoverable",
+)
+async def update_recoverable(
+    recoverable_id: UUID,
+    payload: RecoverableUpdateRequest,
+    context: AuthedContext,
+    session: DbSession,
+) -> RecoverableOut:
+    r = await CollectionService(session).update(
+        context,
+        recoverable_id,
+        status=payload.status,
+        agreed_amount=payload.agreed_amount,
+        billed_amount=payload.billed_amount,
+        collect=payload.collect,
+        due_date=payload.due_date,
+        clear_due_date=payload.clear_due_date,
+        note=payload.note,
+    )
+    return _recoverable_out(r, as_of=dt.datetime.now(tz=dt.UTC).date())

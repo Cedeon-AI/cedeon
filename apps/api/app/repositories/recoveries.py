@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models.recoveries import (
+    Recoverable,
     RecoveryAllocation,
     RecoveryCalculation,
     RecoveryCandidate,
@@ -18,7 +19,7 @@ from app.db.models.recoveries import (
     RecoveryPacket,
     RecoveryPacketVersion,
 )
-from app.domain.recoveries import NoticeKind, RecoveryCandidateStatus
+from app.domain.recoveries import NoticeKind, RecoverableStatus, RecoveryCandidateStatus
 
 _WITH_CALCULATIONS = (
     selectinload(RecoveryCandidate.calculations)
@@ -208,4 +209,54 @@ class RecoveryNoticeRepository:
                 RecoveryNotice.superseded_at.is_(None),
             )
         )
+        return list(result.scalars().all())
+
+
+class RecoverableRepository:
+    """Org-scoped access to recoverables — one reinsurer's leg of a recovery."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, obj: object) -> None:
+        self._session.add(obj)
+
+    async def get(self, organization_id: UUID, recoverable_id: UUID) -> Recoverable | None:
+        result = await self._session.execute(
+            select(Recoverable)
+            .where(
+                Recoverable.id == recoverable_id,
+                Recoverable.organization_id == organization_id,
+            )
+            .options(selectinload(Recoverable.reinsurer))
+        )
+        return result.scalar_one_or_none()
+
+    async def for_candidate(self, organization_id: UUID, candidate_id: UUID) -> list[Recoverable]:
+        result = await self._session.execute(
+            select(Recoverable)
+            .where(
+                Recoverable.organization_id == organization_id,
+                Recoverable.recovery_candidate_id == candidate_id,
+            )
+            .options(selectinload(Recoverable.reinsurer))
+            .order_by(Recoverable.created_at)
+        )
+        return list(result.scalars().all())
+
+    async def portfolio(
+        self,
+        organization_id: UUID,
+        *,
+        status: RecoverableStatus | None = None,
+    ) -> list[Recoverable]:
+        stmt = (
+            select(Recoverable)
+            .where(Recoverable.organization_id == organization_id)
+            .options(selectinload(Recoverable.reinsurer))
+            .order_by(Recoverable.created_at.desc())
+        )
+        if status is not None:
+            stmt = stmt.where(Recoverable.status == status)
+        result = await self._session.execute(stmt)
         return list(result.scalars().all())
