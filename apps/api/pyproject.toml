@@ -47,6 +47,7 @@ dev = [
     "ruff>=0.7",
     "mypy>=1.13",
     "import-linter>=2.1",
+    "pydantic-evals>=1.0",
 ]
 
 [build-system]
@@ -117,6 +118,7 @@ markers = [
     "db: test requires a PostgreSQL container",
     "e2e: end-to-end vertical-slice test",
     "live: hits a real LLM provider (needs a key); run with -m live",
+    "eval: a regression eval dataset (also 'live'); run with -m eval",
 ]
 filterwarnings = [
     "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",

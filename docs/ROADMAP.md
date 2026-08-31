@@ -165,9 +165,17 @@ of gravity from "start a recovery" to "here is what needs you today."
   returns `list[RecoveryCandidate]`. Treaty detail shows the tower. 8 new tests, 290 backend.
   *Deferred:* per-layer participations (shared across the tower for now), a grouped
   "programme" view of the sibling candidates, multi-layer recovery-preview.
-- **Next — ⑧ real extraction/investigator eval datasets.**
+- **Next — ⑧ real extraction eval dataset — ✅ done (extraction; investigator follow-up).**
+  `pydantic-evals` added; `app/ai/evals/` holds the reusable task + graders
+  (`MoneyTermMatches` exact value, `MaterialTermIsCited`, `InjectionHandled` — keeps the
+  genuine limit *and* raises the flag). `tests/support/pdfs.py` gains an injection PDF and a
+  limit-omitted PDF. `tests/ai/test_evals.py` (marked `eval`, also `live` so the default CI
+  job skips it) runs the dataset against the real model and asserts every case's assertions
+  pass. Run with `pytest -m eval`. Investigator eval cases (grounding, no-recompute,
+  out-of-scope) are the natural next addition to the same module.
 - **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
-  ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence.**
+  ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence ·
+  per-layer participations + a grouped programme view (⑥ follow-ups).**
 
 ---
 
