@@ -54,14 +54,19 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
     "treaty library" → *treaties*, "loss imports" → *import claims*, "underlying losses"
     → *claims*, "activity" → *audit log*; Home is a "needs your attention" queue (terms
     to validate, recoveries to review) over counts. URLs unchanged.
-  - *A2 · guided wizards* — in progress.
-    - "Set up a treaty" (`/treaties/new`) — ✅ done & e2e-verified. Upload wording →
-      parse → program/cedent/name inline → extract → hands off to the existing
-      validation workspace. `components/ui/stepper.tsx` + `new-treaty-wizard.tsx`;
-      no new endpoints. The bare inline "New treaty" form is retired.
-    - "Start a recovery" (`/recovery-candidates/new`) — next: event → claims
-      (upload + guessed mapping + commit) → responding treaty → calculate.
-    - Then fold Documents / Import-claims out of the top nav.
+  - *A2 · guided wizards* — ✅ done & e2e-verified (both walk end-to-end against the
+    live stack; no new endpoints).
+    - "Set up a treaty" (`/treaties/new`) — upload wording → parse → program/cedent/
+      name inline → extract → hands off to the existing validation workspace.
+    - "Start a recovery" (`/recovery-candidates/new`) — loss event (leads with an
+      occurrence-basis reminder) → claims (upload + guessed mapping + validate +
+      commit, with an escape hatch to the full import screen) → responding treaty →
+      calculate → the recovery detail page.
+    - `components/ui/stepper.tsx`; the bare inline create forms on Treaties and
+      Recoveries are retired for "Set up" / "Start" buttons.
+  - *A3 · fold the nav* — deferred. Removing Documents / Import-claims from the top
+    nav needs treaty-detail and loss-event-detail to first grow proper document /
+    claims sub-views, so those destinations aren't orphaned. Not just a nav edit.
 
 ---
 
