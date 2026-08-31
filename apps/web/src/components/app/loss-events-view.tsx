@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Waves } from "lucide-react";
+import { Plus, Upload, Waves } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,14 @@ export function LossEventsView() {
     <div className="space-y-6">
       <PageHeader
         title="Loss events"
-        description="A loss event groups underlying claims from one occurrence. Committing a loss import creates or extends events; you can also create one here and commit into it."
+        description="A loss event groups claims from one occurrence. Import a claims CSV to create or extend one, or create it here and commit into it."
+        actions={
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/loss-imports">
+              <Upload /> Import claims
+            </Link>
+          </Button>
+        }
       />
 
       <Card>

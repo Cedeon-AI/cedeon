@@ -1,6 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackLink, PageHeader } from "@/components/ui/page-header";
 import { getLossEvent } from "@/lib/api";
@@ -29,7 +32,22 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
             ? `${event.date_of_loss_from} → ${event.date_of_loss_to}`
             : "no dated losses"
         }${event.catastrophe_code ? ` · ${event.catastrophe_code}` : ""}`}
+        actions={
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/loss-imports">
+              <Upload /> Import claims
+            </Link>
+          </Button>
+        }
       />
+
+      {event.peril || event.hours_clause_hours ? (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Occurrence basis</span> —{" "}
+          {event.peril ?? "peril not stated"}
+          {event.hours_clause_hours ? ` · ${event.hours_clause_hours}-hour clause` : ""}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         {event.totals.map((total) => (

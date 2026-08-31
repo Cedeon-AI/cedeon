@@ -107,6 +107,26 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
         <RecoveryPreview treatyId={treatyId} />
       ) : null}
 
+      {version?.source_document_id ? (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Source document</CardTitle>
+            <Link
+              href={`/documents/${version.source_document_id}`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Open the wording →
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              The contract PDF Cedeon parsed and extracted the terms from. Every validated term
+              cites a page and clause in it.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Validated terms</CardTitle>

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/field";
-import { EmptyState, PageHeader } from "@/components/ui/page-header";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import { type DocumentKind, listDocuments } from "@/lib/api";
 import { isProcessing, statusLabel, statusTone, uploadDocumentFile } from "@/lib/documents";
 
@@ -58,9 +58,10 @@ export function DocumentsView() {
 
   return (
     <div className="space-y-6">
+      <BackLink href="/treaties">Treaties</BackLink>
       <PageHeader
         title="Documents"
-        description="Upload treaty PDFs. Cedeon parses them into pages and clause-aware chunks — the evidence base for term extraction."
+        description="Every treaty PDF Cedeon has parsed. Normally you reach a document from its treaty; this is the full library."
       />
 
       <Card>

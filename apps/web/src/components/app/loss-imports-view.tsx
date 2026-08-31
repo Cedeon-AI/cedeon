@@ -7,7 +7,7 @@ import { type ChangeEvent, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState, PageHeader } from "@/components/ui/page-header";
+import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import { listLossImports } from "@/lib/api";
 import { importStatus, uploadLossImportFile } from "@/lib/losses";
 
@@ -42,6 +42,7 @@ export function LossImportsView() {
 
   return (
     <div className="space-y-6">
+      <BackLink href="/loss-events">Loss events</BackLink>
       <PageHeader
         title="Import claims"
         description="Upload a claim schedule as CSV. Cedeon keeps the raw file and every row, you map the columns to canonical fields, and validated rows commit to an immutable claim record. No AI touches this pipeline."

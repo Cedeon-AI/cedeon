@@ -1,16 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import {
-  FileText,
-  FolderTree,
-  Home,
-  ScrollText,
-  ShieldCheck,
-  Sigma,
-  Upload,
-  Waves,
-} from "lucide-react";
+import { FolderTree, Home, ScrollText, ShieldCheck, Sigma, Wallet, Waves } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -28,19 +19,18 @@ const GROUPS: Group[] = [
     items: [
       { label: "Treaties", href: "/treaties", icon: ScrollText },
       { label: "Programs", href: "/programs", icon: FolderTree },
-      { label: "Documents", href: "/documents", icon: FileText },
     ],
   },
   {
     title: "Losses",
-    items: [
-      { label: "Loss events", href: "/loss-events", icon: Waves },
-      { label: "Import claims", href: "/loss-imports", icon: Upload },
-    ],
+    items: [{ label: "Loss events", href: "/loss-events", icon: Waves }],
   },
   {
     title: "Recoveries",
-    items: [{ label: "Recoveries", href: "/recovery-candidates", icon: Sigma }],
+    items: [
+      { label: "Recoveries", href: "/recovery-candidates", icon: Sigma },
+      { label: "Recoverables", href: "/recoverables", icon: Wallet },
+    ],
   },
   {
     title: "Oversight",
