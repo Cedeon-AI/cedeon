@@ -100,7 +100,26 @@ workspace · **C** collection tracking (new phase) · **D** multi-layer programm
 - **Finding 8 · occurrence basis — ✅ done (migration 0011).** `loss_events` gains
   `peril` and `hours_clause_hours` — human facts the recovery wizard already asked
   for and now records. Informational only; the engine does not yet apply an hours
-  clause. 234 backend tests, 3 deselected.
+  clause.
+
+**Recovery-control build (from the Aug-2026 audit — make Cedeon *watch*, not just
+calculate).** The verdict: the spine is right, the posture is wrong. Move the centre
+of gravity from "start a recovery" to "here is what needs you today."
+
+- **Now — ① Recovery Work Queue — ✅ done.** `app/domain/worklist.py` (pure, deterministic,
+  explainable ranking — every urgency contribution is a named term) + `WorklistService`
+  (unions term-validation, recovery-review, packet-approval, overdue-recoverable signals;
+  notice-due / drift / suggested hooks stubbed for ②③⑤) + `GET /worklist`. Home is
+  rebuilt around it: one ranked "Needs you" list (icon by kind, countdown / age, amount,
+  deep link) + four at-a-glance figures (open recoverable, overdue, largest open recovery,
+  count). 15 new tests (249 total).
+- **Now — ② structured notice terms + computed deadlines.** Next.
+- **Now — ③ auto-recalc on loss commit + drift alerts.** Next.
+- **Now — ④ golden demo seed + walkthrough refresh.**
+- **Next — ⑤ system-suggested recovery candidates · ⑥ multi-layer programmes ·
+  ⑦ aged-recoverable intelligence · ⑧ real extraction/investigator eval datasets.**
+- **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
+  ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence.**
 
 ---
 

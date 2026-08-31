@@ -4785,6 +4785,25 @@
         "title": "UnderlyingLossOut",
         "type": "object"
       },
+      "UrgencyTermOut": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "points"
+        ],
+        "title": "UrgencyTermOut",
+        "type": "object"
+      },
       "UserProfile": {
         "additionalProperties": false,
         "properties": {
@@ -4849,6 +4868,180 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorklistItemOut": {
+        "additionalProperties": false,
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "due_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due In Days"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorklistKind"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "urgency": {
+            "title": "Urgency",
+            "type": "integer"
+          },
+          "urgency_terms": {
+            "items": {
+              "$ref": "#/components/schemas/UrgencyTermOut"
+            },
+            "title": "Urgency Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "title",
+          "detail",
+          "href",
+          "amount",
+          "currency",
+          "due_in_days",
+          "age_days",
+          "urgency",
+          "urgency_terms"
+        ],
+        "title": "WorklistItemOut",
+        "type": "object"
+      },
+      "WorklistKind": {
+        "description": "What kind of attention an item needs. Ordered roughly by how much a missed\none costs \u2014 the base weight in ``_KIND_WEIGHT`` follows the same order.",
+        "enum": [
+          "notice_due",
+          "recovery_drift",
+          "recovery_review",
+          "suggested_recovery",
+          "packet_approval",
+          "term_validation",
+          "recoverable_overdue"
+        ],
+        "title": "WorklistKind",
+        "type": "string"
+      },
+      "WorklistResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorklistItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/WorklistSummaryOut"
+          }
+        },
+        "required": [
+          "items",
+          "summary"
+        ],
+        "title": "WorklistResponse",
+        "type": "object"
+      },
+      "WorklistSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "largest_open_recovery": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Largest Open Recovery"
+          },
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "open_recoverable": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Open Recoverable",
+            "type": "string"
+          },
+          "overdue_outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Overdue Outstanding",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_count",
+          "currency",
+          "open_recoverable",
+          "overdue_outstanding",
+          "largest_open_recovery"
+        ],
+        "title": "WorklistSummaryOut",
         "type": "object"
       }
     }
@@ -7472,6 +7665,27 @@
         "summary": "Validate Treaty Version",
         "tags": [
           "treaties"
+        ]
+      }
+    },
+    "/worklist": {
+      "get": {
+        "operationId": "getWorklist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorklistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Worklist",
+        "tags": [
+          "worklist"
         ]
       }
     }
