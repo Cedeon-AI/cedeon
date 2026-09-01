@@ -6,8 +6,8 @@ from decimal import Decimal
 
 from app.domain.recoveries.collection import RecoverableStatus
 from app.domain.recoveries.reconciliation import (
-    RecoverableAmounts,
     ReconcileKind,
+    RecoverableAmounts,
     reconcile,
 )
 
@@ -15,14 +15,14 @@ D = Decimal
 
 
 def _amounts(**kw: object) -> RecoverableAmounts:
-    base = dict(
-        status=RecoverableStatus.AGREED,
-        currency="USD",
-        expected=D("1000000.00"),
-        agreed=None,
-        billed=None,
-        collected=D("0.00"),
-    )
+    base = {
+        "status": RecoverableStatus.AGREED,
+        "currency": "USD",
+        "expected": D("1000000.00"),
+        "agreed": None,
+        "billed": None,
+        "collected": D("0.00"),
+    }
     base.update(kw)
     return RecoverableAmounts(**base)  # type: ignore[arg-type]
 
