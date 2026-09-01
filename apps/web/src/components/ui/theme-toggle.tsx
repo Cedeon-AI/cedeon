@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type Theme = "system" | "light" | "dark";
 
 const KEY = "cedeon-theme";
+const SYNC_EVENT = "cedeon-theme-change";
 
 const OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
   { value: "system", label: "System theme", Icon: Monitor },
@@ -33,6 +34,14 @@ export function ThemeToggle({ className }: { className?: string }) {
     } catch {
       // localStorage unavailable — stay on "system"
     }
+
+    // Keep every toggle on the page (header, mobile menu, footer) in sync.
+    const onSync = (event: Event) => {
+      const next = (event as CustomEvent<Theme>).detail;
+      if (next === "light" || next === "dark" || next === "system") setTheme(next);
+    };
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
   }, []);
 
   function choose(next: Theme) {
@@ -43,6 +52,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     } catch {
       // ignore — the choice still applies for this session
     }
+    window.dispatchEvent(new CustomEvent<Theme>(SYNC_EVENT, { detail: next }));
   }
 
   return (

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -64,10 +63,7 @@ export function SiteFooter() {
       <div className="border-t border-border/60">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Cedeon. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <p>Privacy notice and terms available on request.</p>
-            <ThemeToggle />
-          </div>
+          <p>Privacy notice and terms available on request.</p>
         </div>
       </div>
     </footer>

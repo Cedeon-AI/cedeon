@@ -249,6 +249,35 @@ body {
   color: transparent;
 }
 
+/* Nav link whose underline wipes in from the left on hover / focus and out to
+ * the right on leave — so the line always travels the same direction. The inset
+ * matches the link's horizontal padding (px-3) so it sits under the label only.
+ */
+.nav-underline {
+  position: relative;
+}
+
+.nav-underline::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.375rem;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-underline:hover::after,
+.nav-underline:focus-visible::after,
+.nav-underline[data-active="true"]::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
 .animate-accordion-down {
   animation: cedeon-accordion-down 0.2s ease-out;
 }
