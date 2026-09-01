@@ -157,6 +157,33 @@ async def test_editing_a_candidate_value_is_honoured(
     assert Decimal(version["layers"][0]["limit"]) == Decimal("25000000.00")
 
 
+async def test_reconfirming_a_participation_reuses_the_reinsurer(
+    client: AsyncClient, object_store, session
+) -> None:
+    """Reject then re-confirm a participation: the earlier reject leaves the
+    Reinsurer row, so the second confirm must reuse it rather than hit the
+    (organization, name) unique constraint with a 500."""
+    ctx = await _bootstrap(client, object_store, session)
+    base = _candidates_url(ctx)
+    candidates = (await client.get(base)).json()["candidates"]
+    part = next(c for c in candidates if c["key"] == "participation")
+
+    assert (
+        await client.post(f"{base}/{part['id']}/review", json={"decision": "confirm"})
+    ).status_code == 200
+    assert (
+        await client.post(f"{base}/{part['id']}/review", json={"decision": "reject"})
+    ).status_code == 200
+    again = await client.post(f"{base}/{part['id']}/review", json={"decision": "confirm"})
+    assert again.status_code == 200, again.text
+    assert again.json()["resolution"] == "confirmed"
+
+    detail = (await client.get(f"/treaties/{ctx['treaty_id']}")).json()
+    names = [p["reinsurer_name"] for p in detail["current_version"]["participations"]]
+    part_name = (part.get("normalized_value") or {}).get("reinsurer_name")
+    assert names.count(part_name) == 1
+
+
 async def test_audit_trail_covers_extraction_and_validation(
     client: AsyncClient, object_store, session
 ) -> None:

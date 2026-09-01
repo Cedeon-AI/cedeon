@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_correlation_id
@@ -185,7 +186,7 @@ class ValidationService:
                 else _candidate_value(candidate)
             )
             resolved_currency = review.currency or candidate.currency or version.currency
-            self._apply_confirmed(version, candidate, resolved_value, resolved_currency)
+            await self._apply_confirmed(version, candidate, resolved_value, resolved_currency)
             value_after["value"] = resolved_value
             value_after["currency"] = resolved_currency
             candidate.resolution = "confirmed"
@@ -222,7 +223,11 @@ class ValidationService:
                 correlation_id=get_correlation_id(),
             )
         )
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError as exc:  # pragma: no cover - guarded find-or-create above
+            await self._session.rollback()
+            raise ConflictError("could not save that review, please retry") from exc
         refreshed = await self._candidates.get(context.organization.id, candidate_id)
         assert refreshed is not None
         return refreshed
@@ -580,7 +585,7 @@ class ValidationService:
             raise NotFoundError("treaty version not found")
         return version
 
-    def _apply_confirmed(
+    async def _apply_confirmed(
         self,
         version: TreatyVersion,
         candidate: TreatyTermCandidate,
@@ -588,7 +593,7 @@ class ValidationService:
         currency: str | None,
     ) -> None:
         if candidate.key == "participation":
-            self._upsert_participation(version, candidate, value)
+            await self._upsert_participation(version, candidate, value)
             return
         if value is None or value == "":
             raise ValidationError(f"a value is required to confirm {candidate.key!r}")
@@ -626,7 +631,7 @@ class ValidationService:
             return
         version.terms[:] = [t for t in version.terms if t.key != candidate.key]
 
-    def _upsert_participation(
+    async def _upsert_participation(
         self, version: TreatyVersion, candidate: TreatyTermCandidate, value: str | None
     ) -> None:
         data = candidate.normalized_value or {}
@@ -655,8 +660,13 @@ class ValidationService:
             existing.placed_share = share
             return
 
-        reinsurer = Reinsurer(organization_id=version.organization_id, name=name)
-        self._session.add(reinsurer)
+        # Reinsurer is reference data keyed by (organization, name) — reuse the row if
+        # it already exists (another treaty, the demo seed, or a prior confirm that was
+        # rejected), otherwise a re-confirm hits the unique constraint.
+        reinsurer = await self._reinsurers.get_by_name(version.organization_id, name)
+        if reinsurer is None:
+            reinsurer = Reinsurer(organization_id=version.organization_id, name=name)
+            self._reinsurers.add(reinsurer)
         version.participations.append(
             TreatyParticipation(
                 organization_id=version.organization_id,
