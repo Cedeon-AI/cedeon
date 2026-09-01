@@ -108,16 +108,22 @@ this swap does not touch domain or API code. See [ADR-0007](DECISIONS.md).
 | Local dev | Docker Compose: `postgres`, `minio`, `api`, `worker`, `web` |
 | Secrets | Env provider locally; AWS Secrets Manager in prod. Never in source. |
 
-### Production (initial — no Kubernetes)
+### Deployment
 
-| Component | Target |
-| --- | --- |
-| Web (Next.js) | Vercel **or** ECS/Fargate (see [ADR-0004](DECISIONS.md)); single public origin |
-| API + worker | AWS ECS/Fargate (two services, one image or two) |
-| Database | AWS RDS for PostgreSQL |
-| Files | AWS S3 |
-| Secrets | AWS Secrets Manager |
-| Durable workflows | *None for MVP.* Temporal Cloud considered at Phase 10. |
+The demo runs on **Render** from one committed blueprint; **AWS ECS/RDS/S3** is the
+growth target — same Docker images, no topology change. See
+[ADR-0027](DECISIONS.md), [`infra/render.yaml`](../infra/render.yaml), and the
+runbook in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+| Component | Demo (Render) | Growth (AWS) |
+| --- | --- | --- |
+| Web (Next.js) — the single public origin | Render Web Service | ECS/Fargate |
+| API + worker (private) | Render Private Service + Background Worker | ECS/Fargate (two services) |
+| Database | Render Postgres | RDS for PostgreSQL |
+| Files | AWS S3 (from day one) | AWS S3 |
+| Email | Amazon SES (from day one) | Amazon SES |
+| Secrets | Render env groups | AWS Secrets Manager |
+| Durable workflows | *None for MVP.* Temporal Cloud considered at Phase 10. | |
 
 ---
 

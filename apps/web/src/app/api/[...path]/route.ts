@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { apiInternalUrl } from "@/lib/api-internal";
 
 /**
  * Runtime reverse proxy: the browser only ever talks to Next.js (ADR-0004); this
@@ -6,7 +7,6 @@ import { type NextRequest, NextResponse } from "next/server";
  * one image works across environments. Server-side code uses `getSession()` /
  * direct calls instead of this route.
  */
-const API_INTERNAL_URL = process.env.CEDEON_API_INTERNAL_URL ?? "http://localhost:8000";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ async function proxy(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
   const { path } = await context.params;
-  const target = `${API_INTERNAL_URL}/${path.join("/")}${request.nextUrl.search}`;
+  const target = `${apiInternalUrl()}/${path.join("/")}${request.nextUrl.search}`;
 
   const forwardHeaders = new Headers();
   request.headers.forEach((value, key) => {

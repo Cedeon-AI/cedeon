@@ -10,6 +10,7 @@ from app.notifications.email import (
     ConsoleEmailSender,
     EmailMessage,
     EmailSender,
+    SesEmailSender,
     build_email_sender,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "ConsoleEmailSender",
     "EmailMessage",
     "EmailSender",
+    "SesEmailSender",
     "build_email_sender",
 ]

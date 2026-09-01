@@ -42,10 +42,12 @@ class Settings(BaseSettings):
     invitation_ttl_days: int = 7
     # Public origin the accept link points at (the single Next.js origin, ADR-0004).
     public_base_url: str = "http://localhost:3000"
-    # "console" logs the accept link (dev / no provider configured). "smtp" and hosted
-    # providers are a documented seam — not wired without credentials.
-    email_sender: Literal["console"] = "console"
+    # "console" logs the message (dev / no provider). "ses" uses Amazon SES via the
+    # ambient AWS credential chain — inert until AWS creds + a verified sending domain
+    # exist (ADR-0027).
+    email_sender: Literal["console", "ses"] = "console"
     email_from: str = "Cedeon <no-reply@cedeon.app>"
+    ses_region: str = "us-east-1"
 
     # Signup gating (ADR-0028). "open" self-serve · "code" needs an access code you
     # minted (`just mint-code`) · "closed" no self-serve at all. Forced to code/closed
@@ -116,8 +118,21 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _derive_and_validate(self) -> Settings:
+        # Managed platforms (Render, Fly, Heroku, …) inject a bare `postgres://` or
+        # `postgresql://` URL. Attach the drivers Cedeon uses: asyncpg for the app,
+        # psycopg (v3) for Alembic + Procrastinate.
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url.removeprefix("postgres://")
+        if url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url.removeprefix("postgresql://")
+        self.database_url = url
         if not self.database_url_sync:
-            self.database_url_sync = self.database_url.replace("+asyncpg", "")
+            self.database_url_sync = self.database_url.replace("+asyncpg", "+psycopg")
+
+        # Accept a scheme-less public origin (e.g. Render's `fromService` host value).
+        if self.public_base_url and "://" not in self.public_base_url:
+            self.public_base_url = f"https://{self.public_base_url}"
 
         if self.env in ("staging", "production"):
             if _DEV_SECRET_MARKER in self.session_secret:

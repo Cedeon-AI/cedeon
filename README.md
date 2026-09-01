@@ -121,6 +121,10 @@ gated `apps/web/e2e/golden-path.spec.ts`.
 Without `just`: `cd apps/api && uv sync && uv run pytest`, and
 `cd apps/web && pnpm install && pnpm gen:client && pnpm test run && pnpm build`.
 
+**Deploying** is a Render Blueprint ([`infra/render.yaml`](infra/render.yaml)) plus an
+S3 bucket and SES — the full runbook and the AWS growth path are in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Built with
 
 | | |
@@ -158,6 +162,7 @@ value object.
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Entity catalogue, ERD, versioning & immutability rules |
 | [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | Extraction, retrieval, the Recovery Investigator agent, evals, provider strategy |
 | [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | How the demo is hosted (Render), the AWS growth path, the day-to-day runbook |
 | [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, the re-framed IA, phasing |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build history, current status, what's next |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0028) |

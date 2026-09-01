@@ -39,6 +39,7 @@ queue is a derived view, not a table (ARCHITECTURE.md §9, PRODUCT §1a).
 | — | Marketing-site reframe + all 6 deferred items (⑥ ⑨ ⑩ ⑫ + statement reconciliation) | ✅ **Complete** (2026-09-01) — ADR-0025; migrations 0014–0016 |
 | — | Multi-user organization — first-class membership capability, `admin`/`member` roles, email invitations, write-role enforcement on every mutating route, Settings area | ✅ **Complete** (2026-09-01) — ADR-0026; migration 0017 |
 | — | Pre-demo controls — signup gating (`open`/`code`/`closed` + access codes), per-org monthly AI-spend budget, ops alerts | ✅ **Complete** (2026-09-01) — ADR-0028; migration 0018 |
+| — | Hosting — `infra/render.yaml` blueprint (web/api/worker/Postgres), SES email sender, `docs/DEPLOYMENT.md`; AWS as the growth target | ✅ **Complete** (2026-09-01) — ADR-0027 |
 
 **The 10-phase MVP is complete**, plus the recovery-control build, the six
 deferred items, the multi-user organization system, and the pre-demo access /
@@ -326,6 +327,15 @@ who may create an org, and how much any org may spend.
   Jobs skip on `UsageLimitError` (no retry). `just set-org-budget <slug> <usd>`.
 - **Alerts** — ops emailed once/month at 80% of budget and on every org creation
   (`CEDEON_OPS_EMAIL`, best-effort, also audited).
+
+**Hosting — ✅ done (2026-09-01, ADR-0027).** [`infra/render.yaml`](../infra/render.yaml)
+stands up web (public) + api (Private Service) + worker + managed Postgres from the
+existing Dockerfiles; migrations run in `preDeployCommand`. `SesEmailSender`
+(`CEDEON_EMAIL_SENDER=ses`, ambient AWS creds — inert until a domain is verified);
+config now normalises a bare `postgres://` URL and a scheme-less public origin so a
+managed platform's injected values work. `docs/DEPLOYMENT.md` is the runbook. AWS
+ECS/RDS/S3 stays the growth target — same images, `pg_dump`, no topology change.
+The Render account + repo connection + `sync: false` secrets are the operator's step.
 
 ---
 

@@ -1,0 +1,118 @@
+# Cedeon on Render — the demo host (docs/DECISIONS.md ADR-0027, docs/DEPLOYMENT.md).
+#
+#   web (public)  ──private network──▶  api (Private Service)  ──▶  Postgres
+#                                        worker  ──────────────────▶  Postgres
+#
+# One blueprint, built from the existing Dockerfiles. `sync: false` values are set
+# once in the Render dashboard (secrets + your S3 bucket + ops email). Everything
+# else is wired here. The AWS growth path (ECS/RDS/S3) is the same images + a
+# pg_dump — see ADR-0027.
+
+databases:
+  - name: cedeon-db
+    plan: basic-1gb
+    region: virginia
+    postgresMajorVersion: "16"
+    # Daily backups are on by default; turn on PITR before the first customer upload.
+
+envVarGroups:
+  - name: cedeon-core
+    envVars:
+      - key: CEDEON_ENV
+        value: production # → forbids `open` signup + a dev session secret (ADR-0028)
+      - key: CEDEON_LOG_JSON
+        value: "true"
+      - key: CEDEON_SESSION_SECRET
+        generateValue: true
+      - key: CEDEON_COOKIE_SECURE
+        value: "true"
+      - key: CEDEON_SIGNUP_MODE
+        value: code # `just mint-code` per prospect; `closed` to shut it entirely
+      - key: CEDEON_EMAIL_SENDER
+        value: ses
+      - key: CEDEON_SES_REGION
+        value: us-east-1
+      - key: CEDEON_EMAIL_FROM
+        value: Cedeon <no-reply@cedeon.ai>
+      - key: CEDEON_OPS_EMAIL
+        sync: false # where new-workspace + budget alerts go
+      - key: CEDEON_OBJECT_STORE
+        value: s3
+      - key: CEDEON_S3_REGION
+        value: us-east-1
+      - key: CEDEON_S3_FORCE_PATH_STYLE
+        value: "false"
+      - key: CEDEON_S3_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # least-privilege IAM user: this bucket + SES send only
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_WORKSPACE_ID
+        sync: false # only if the key is workspace-scoped
+      - key: CEDEON_TREATY_EXTRACTION_MODEL
+        value: anthropic:claude-opus-5
+
+services:
+  - type: pserv # private — no public URL (ADR-0004)
+    name: cedeon-api
+    runtime: docker
+    dockerfilePath: infra/api.Dockerfile
+    dockerContext: .
+    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    preDeployCommand: alembic upgrade head # runs once per deploy, not per instance
+    plan: starter
+    region: virginia
+    healthCheckPath: /healthz # /readyz also checks DB + S3 (use it after setup)
+    autoDeploy: true
+    envVars:
+      - fromGroup: cedeon-core
+      - key: CEDEON_DATABASE_URL
+        fromDatabase:
+          name: cedeon-db
+          property: connectionString # bare postgres:// → config attaches the drivers
+      - key: CEDEON_PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: cedeon-web
+          property: host # <name>.onrender.com → config adds https:// ; override for a custom domain
+
+  - type: worker
+    name: cedeon-worker
+    runtime: docker
+    dockerfilePath: infra/api.Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      sh -c "procrastinate --app=app.jobs.app.procrastinate_app schema --apply || true &&
+      procrastinate --app=app.jobs.app.procrastinate_app worker"
+    plan: starter
+    region: virginia
+    autoDeploy: true
+    envVars:
+      - fromGroup: cedeon-core
+      - key: CEDEON_DATABASE_URL
+        fromDatabase:
+          name: cedeon-db
+          property: connectionString
+      - key: CEDEON_DOCUMENT_PARSER
+        value: pymupdf
+
+  - type: web # the only public origin
+    name: cedeon-web
+    runtime: docker
+    dockerfilePath: infra/web.Dockerfile
+    dockerContext: .
+    plan: starter
+    region: virginia
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CEDEON_API_INTERNAL_URL
+        fromService:
+          type: pserv
+          name: cedeon-api
+          property: hostport # host:port → apiInternalUrl() adds http://

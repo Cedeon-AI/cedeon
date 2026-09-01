@@ -31,6 +31,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0024 | Collection tracking: a recoverable per reinsurer, human facts on an audit trail | Accepted |
 | 0025 | Scope expansion: reinstatements + hours-clause grouping; each exception check stays concrete | Accepted |
 | 0026 | Team model: first-class membership, email invitations, admin / member (no owner) | Accepted |
+| 0027 | Hosting: Render for the demo (one committed blueprint), AWS ECS/RDS/S3 as the growth target | Accepted |
 | 0028 | Signup gating (`open` / `code` / `closed`) + per-organization monthly AI budget | Accepted |
 
 ---
@@ -710,6 +711,69 @@ design). No change to `users`, `sessions`, or the session mechanism. `Role` is n
 service accounts, custom roles, a permission-policy engine, and org-switching UI are
 **intentionally deferred** — the model does not block any of them (docs/SECURITY.md
 §2, §7).
+
+---
+
+## ADR-0027 — Hosting: Render for the demo, AWS as the growth target
+
+**Context.** Cedeon needs to be reachable for customer demos. ARCHITECTURE.md §2
+already names the destination — Next.js + FastAPI + a Procrastinate worker on AWS
+ECS/Fargate, RDS Postgres, S3, Secrets Manager, no Kubernetes. That is the right
+target but several days of infra work. The demo needs the *same shape* on a platform
+that stands up in a day, without a topology the AWS move would have to undo.
+
+**Decision.**
+
+1. **Render for the demo, from one committed `infra/render.yaml`.** Three services
+   built from the existing Dockerfiles — `web` (public), `api` (**Private Service**,
+   no public URL), `worker` (Background Worker) — plus a **managed Render Postgres**.
+   The web container reaches the api over Render's private network exactly as
+   `app/api/[...path]` expects, so **ADR-0004's single public origin is preserved** —
+   the browser only ever talks to Next.js. Do **not** split the web onto Vercel: it
+   would trade the private hop for a public API + shared-secret auth, for no feature
+   currently used.
+
+2. **Object storage is AWS S3 from day one** (not a Render disk, not R2). The code
+   already has `S3ObjectStore`; S3 is the documented target; a demo-scale bill is
+   pennies. One bucket, one least-privilege IAM user, `org/{id}/…` keys, SSE on.
+
+3. **Email is Amazon SES** behind the ADR-0026 `EmailSender` seam (`SesEmailSender`,
+   `CEDEON_EMAIL_SENDER=ses`), using the ambient AWS credential chain — the same
+   credentials as S3. Inert until a sending domain is verified; `console` until then.
+   SES over a third-party (Resend) because the project already depends on AWS for S3,
+   `aioboto3` is already a dependency (no new package), and it is the ARCHITECTURE.md
+   target.
+
+4. **Migrations run once per deploy, not per instance.** The api image CMD keeps
+   `alembic upgrade head && uvicorn …` for local `docker compose` (single instance);
+   on Render the api service overrides the command to `uvicorn …` only and runs
+   `alembic upgrade head` in `preDeployCommand`, so scaling the api past one replica
+   cannot race the schema.
+
+5. **The worker keeps a direct Postgres connection** (no transaction-mode pooler) so
+   Procrastinate's `LISTEN/NOTIFY` job pickup stays low-latency. This rules out a
+   scale-to-zero / transaction-pooled serverless Postgres for now.
+
+6. **Errors → Sentry** (api + web), logs → the platform. A hosted OTel backend is a
+   later add; `CEDEON_OTEL_ENABLED` stays off. Postgres PITR on before the first
+   customer upload.
+
+7. **The growth path is a compute swap, not a redesign.** Moving to AWS = the same
+   Docker images on ECS/Fargate + `pg_dump`/restore to RDS + the same S3 bucket +
+   the same env var names in Secrets Manager. The codebase, the single-origin
+   topology, the tenancy model, and the auth model do not change. Per-customer
+   single-tenant stacks (some reinsurers will ask) are then "run the same ECS stack
+   again", not new work.
+
+**Consequences.** New: `infra/render.yaml`, `docs/DEPLOYMENT.md` (the runbook),
+`SesEmailSender` + `CEDEON_EMAIL_SENDER=ses` / `CEDEON_SES_REGION`. `render.yaml`
+sets `CEDEON_SIGNUP_MODE=code` and `CEDEON_ENV=production` (which, per ADR-0028 /
+the config validator, forbids open registration and a dev session secret). Render
+itself is SOC 2 Type II, which does not give Cedeon any attestation and none is
+claimed. Anthropic API spend — not hosting (~$30–80/mo) — is the real variable cost;
+a workspace budget alert plus the per-org caps (ADR-0028) bound it. Docling, when it
+lands, makes the worker image multi-GB — size the worker service then; PyMuPDF needs
+almost nothing today.
 
 ---
 
