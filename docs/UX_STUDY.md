@@ -7,6 +7,11 @@ Cedeon's screens should be arranged around that job instead of around its databa
 - **In scope:** information architecture, in-app flow, wording
 - **Not in scope:** the domain model (`PRODUCT.md §1a` stands — no generalised
   financial-exception type, no reshaping of the recovery object)
+- **Status:** the reframe this study proposed is **built** — Home is an attention
+  queue, the nav is four job areas, the recovery workspace is one page, collection
+  tracking exists, and findings 7 (recovery ends at cash) and 8 (occurrence basis)
+  are done. The pre-reframe descriptions below are kept as the record of *why*.
+  See [ROADMAP.md](ROADMAP.md).
 
 ---
 

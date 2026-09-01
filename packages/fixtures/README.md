@@ -53,4 +53,19 @@ Start from a fresh org at `/register`, then:
 8. **Collection** → Start tracking, then move each reinsurer leg toward collected.
 
 Commit more claims into the same event and watch the recovery **drift** back onto the
-worklist. Everything is on the audit trail — see **Audit log**.
+queue. Everything is on the audit trail — see **Audit log**.
+
+### Going further with the same fixtures
+
+- **Multi-layer** — on Treaty detail (before validating), use the **Layer stack**
+  editor to enter e.g. `$5M xs $50M` / `$20M xs $55M` / `$25M xs $75M`, then give the
+  top layer its own **panel** and the whole tower a **reinstatement** rate. One
+  Hurricane Demo commit opens a recovery on every pierced layer, grouped as a
+  *programme* on the Recoveries list, with the reinstatement premium on the workspace.
+- **Endorsement** — on a validated treaty, **New version** with a source document
+  re-runs extraction; the validation workspace shows a **term diff**.
+- **Hours clause** — on the loss event, set a 72-hour clause and import claims that
+  span more than three days to see the **occurrence proposal** split the event.
+- **Statements** — under Recoveries → **Statements**, enter a reinsurer's stated
+  agreed / paid figures below what Cedeon calculated and watch the discrepancy land on
+  the queue.

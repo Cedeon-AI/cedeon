@@ -3,14 +3,18 @@
 When choosing between "build more framework" and "get treaty → validated terms →
 deterministic recovery working," choose the latter.
 
-**Positioning vs. scope.** The long-term thesis (PRODUCT.md §1) is that Cedeon is an
-independent reinsurance financial-intelligence layer surfacing many financially
-material exception types. This roadmap is **unchanged** by that: the MVP is exactly
-the pipeline below — treaty → parsed document → AI-extracted terms with provenance →
-human validation → executable XOL treaty → loss ingestion → deterministic
-`RecoveryCalculation` → `RecoveryCandidate` → Recovery Investigator → Recovery
-Packet → human review → notice draft. No generalised financial-exception model,
-no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
+**Positioning vs. scope.** The long-term thesis (PRODUCT.md §1) is that Cedeon is the
+intelligence system for ceded reinsurance surfacing many financially material
+exception types. The MVP spine below is unchanged — treaty → parsed document →
+AI-extracted terms with provenance → human validation → executable XOL treaty → loss
+ingestion → deterministic `RecoveryCalculation` → `RecoveryCandidate` → Recovery
+Investigator → Recovery Packet → human review → notice draft. Since the MVP, and a
+**user-directed scope expansion on 2026-09-01** (see PRODUCT §7), the spine has
+grown: multi-layer programmes with per-layer panels, endorsement re-versioning +
+re-extraction, reinstatement premium math, an assistive hours-clause occurrence
+view, and reconciliation (internal + against reinsurer statements). **Still no
+generalised `FinancialException` model** — each check is concrete and the attention
+queue is a derived view, not a table (ARCHITECTURE.md §9, PRODUCT §1a).
 
 ---
 
@@ -31,12 +35,14 @@ no genericising `RecoveryCandidate` (ARCHITECTURE.md §9).
 | 10 | Durability + observability hardening (evaluate Temporal *here*) | ✅ **Complete** (2026-08-30) — Temporal **not adopted** |
 | — | UI refresh — design system, marketing site, app shell (no backend change) | ✅ **Complete** (2026-08-30) — ADR-0023; trust-class language unchanged |
 | — | Post-MVP UX — reframe (A), recovery workspace (B), collection tracking (C) + portfolio screen, occurrence basis (finding 8) | ✅ **Complete** (2026-08-31) — ADR-0024; migrations 0010–0011 |
+| — | Recovery-control build ①–⑧ + intelligence-system reframe (⑨, ⑪) | ✅ **Complete** (2026-08-31) — migrations 0012–0013 |
+| — | Marketing-site reframe + all 6 deferred items (⑥ ⑨ ⑩ ⑫ + statement reconciliation) | ✅ **Complete** (2026-09-01) — ADR-0025; migrations 0014–0016 |
 
-**The 10-phase MVP is complete.** Full pipeline: treaty → parsed document → AI-extracted
-terms with provenance → human validation → executable XOL treaty → loss ingestion →
-deterministic `RecoveryCalculation` → `RecoveryCandidate` → Recovery Investigator →
-Recovery Packet → human review → notice draft — all built, tested (219 backend + 4 live
-evals), and running through the containerized stack.
+**The 10-phase MVP is complete**, plus the recovery-control build and the six
+deferred items. Full pipeline through notice draft + the intelligence layers on top,
+all built, tested (**358 backend** + `pytest -m eval` extraction & investigator
+datasets + a live golden-path e2e), migrations 0001–0016, running through the
+containerized stack.
 
 **First meaningful success criterion:** a reinsurance professional uploads a
 real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and Cedeon

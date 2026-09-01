@@ -2,10 +2,14 @@
 
 **Reinsurance intelligence from contract to recovery.**
 
-Cedeon is an independent reinsurance financial-intelligence layer. It takes two
-inputs a ceded-reinsurance team already has — the **treaty wording** (as PDFs) and
-the **loss data** (as claim schedules) — and turns them into a defensible,
-evidence-backed **recovery**, tracked all the way to cash collected.
+Cedeon is the intelligence system for ceded reinsurance. It takes two inputs a
+ceded-reinsurance team already has — the **treaty wording** (as PDFs) and the
+**loss data** (as claim schedules) — turns the contracts into executable terms,
+watches the losses against them, and opens the desk on one ranked queue: recoveries
+to review, notices coming due, treaty changes, reinstatement premium owed, figures
+that moved, and what doesn't reconcile — each backed by a citation, a deterministic
+calculation, and a human decision. Recovery identification is the wedge; the
+recovery is then tracked all the way to cash collected.
 
 It sits beside your claims, reinsurance-administration and accounting systems; it
 does not replace any of them.
@@ -25,8 +29,9 @@ does not replace any of them.
 
 1. **Ingest the contract.** Upload the wording. Cedeon parses it with page, section
    and clause structure intact; an AI pass proposes each term — attachment, limit,
-   reinstatements, the occurrence definition, participations — with an **exact
-   citation** and a confidence score.
+   the notice provision, participations — with an **exact citation** and a confidence
+   score. Operational terms a human enters directly (the layer stack, per-layer
+   panels, reinstatement rates) never touch a model.
 2. **Validate.** A person confirms each term against the wording in a two-pane
    workspace. Only confirmed terms become an executable treaty layer. Nothing an
    LLM produced is trusted until a human signs it.
@@ -51,6 +56,35 @@ does not replace any of them.
 Every state transition, agent run, tool call, token and human decision is on an
 append-only audit trail.
 
+### What it watches
+
+Steps 1–8 are the vertical thread. On top of it, Cedeon keeps deriving *what needs a
+person today* and groups it on Home:
+
+- **Notice deadlines** — from a validated, structured notice provision, the deadline
+  in calendar or business days, counted down. The model never sets a date.
+- **Recalculation & drift** — every committed loss re-runs the affected recoveries; a
+  figure that moves without a person reverts a confirmed recovery to review.
+- **Suggested recoveries** — each validated treaty layer screened against each loss
+  event; a recovery proposed where none exists.
+- **Aged recoverables** — each leg tracked to cash, aging derived, a deterministic
+  next action (chase an acknowledgement, issue the bill, chase payment) per open leg.
+- **Contract changes** — an endorsement opens a new treaty version (terms, layers,
+  panels copied forward, re-extracted for a term diff); recoveries on the superseded
+  version are flagged.
+- **Multi-layer programmes & per-layer panels** — a treaty version is a stack of XOL
+  layers, each with its own reinsurer panel; a loss opens a recovery on every layer
+  it pierces.
+- **Reinstatement premium** — deterministic: when a loss erodes a layer, the premium
+  due from the deposit premium, the rate per reinstatement, and prior erosion.
+- **Hours-clause occurrence view** — an *assistive* grouping of a loss event's claims
+  into occurrence windows; the cedent chooses each window's start.
+- **Reconciliation** — expected vs agreed vs billed vs collected on a leg, and what a
+  reinsurer states vs what Cedeon holds — the material gaps, with the evidence.
+
+Each check is deterministic and concrete. The queue (`app/domain/worklist.py`) is a
+*derived read-model* over those objects — not a stored generic "finding".
+
 ## Architectural non-negotiables
 
 1. **LLMs interpret. Deterministic code calculates. Humans approve material interpretations and actions.**
@@ -69,8 +103,9 @@ a thin wrapper — run `just --list`.
 cp .env.example .env
 just bootstrap        # deps + generate the typed API client
 just up               # docker compose: postgres, minio, api, worker, web
-just seed-demo        # optional: a synthetic org you can sign in to
+just seed-demo        # optional: a synthetic org — sign in, Home opens on a populated queue
 # web → http://localhost:3000     api → http://localhost:8000/docs
+# (override CEDEON_WEB_PORT / CEDEON_API_PORT in .env if 3000/8000 are taken)
 just ci               # lint · typecheck · test · build (the merge gate)
 ```
 
@@ -125,15 +160,21 @@ value object.
 | [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
 | [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, the re-framed IA, phasing |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build history, current status, what's next |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0024) |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0025) |
 
 ## Status
 
 The MVP is complete and runs end to end through the containerized stack: treaty →
 validated terms → deterministic recovery → AI investigation → evidence-backed
-packet → notice draft → collection tracking. **233 backend tests** (+ 4 live
-Anthropic evals), a live golden-path e2e, all CI gates green. What's next is in
-[docs/ROADMAP.md](docs/ROADMAP.md); the build history is there and in `git log`.
+packet → notice draft → collection tracking. On top of it: the attention queue,
+multi-layer programmes with per-layer panels, notice deadlines, drift detection,
+system-suggested recoveries, aged-recoverable chasing, endorsement re-versioning
+with re-extraction + a term diff, reinstatement premium math, an assistive
+hours-clause occurrence view, and reconciliation (internal + against reinsurer
+statements). **358 backend tests** + `pytest -m eval` extraction & investigator
+datasets, a live golden-path e2e, all CI gates green; migrations 0001–0016. What's
+next is in [docs/ROADMAP.md](docs/ROADMAP.md); the build history is there and in
+`git log`.
 
 ## License
 

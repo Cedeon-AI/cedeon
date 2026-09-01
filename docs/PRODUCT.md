@@ -65,10 +65,11 @@ now:
 
 Cedeon sits **above and beside** existing systems (claims, reinsurance admin,
 accounting, spreadsheets, documents). It does not replace them. It is an
-independent financial-intelligence / control layer that produces **recovery
-findings + evidence + human decisions + workflow**. Recovery is the first finding
-type; the long-term thesis (see §1, §1a) is a broader financial-exception layer,
-but that is future positioning only and changes nothing about what is built now.
+independent financial-intelligence / control layer that produces **findings +
+evidence + human decisions + workflow**, grouped on one attention queue. Recovery
+is module one and still the wedge; the checks around it (notice deadlines, drift,
+contract changes, aged recoverables, reconciliation — see §1a, §2a) are each
+concrete, not a generic model.
 
 ### 2a. Recovery is module one of an intelligence system
 

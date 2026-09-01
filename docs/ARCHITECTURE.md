@@ -1,7 +1,9 @@
 # Cedeon — Architecture
 
-Status: Phase 0 review complete. This document is the source of truth for structure
-and stack. Decisions with meaningful trade-offs are recorded in
+Status: the stack below is **built and running** (10-phase MVP + the intelligence
+layers, migrations 0001–0016). This document is the source of truth for structure and
+stack; §1 records the original Phase-0 verdict, everything since is in
+[ROADMAP.md](ROADMAP.md). Decisions with meaningful trade-offs are in
 [DECISIONS.md](DECISIONS.md).
 
 ---
@@ -293,6 +295,20 @@ GET    /recovery-candidates/{id}/packet ; POST .../packet (regenerate)
 POST   /recovery-packets/{id}/versions/{v}/review
 POST   /recovery-candidates/{id}/notices           draft only
 GET    /activity/agent-runs · /agent-runs/{id} · /audit · /ai-spend          observability   [Phase 10]
+
+# --- the intelligence layers on top of the spine ---
+GET    /worklist                                  the ceded-desk attention queue (derived, category-grouped)
+GET    /recovery-candidates                        also returns programmes[] (multi-layer siblings grouped)
+GET    /recovery-candidates/{id}                   also returns siblings[] + reinstatement (computed on read)
+PUT    /treaties/{id}/versions/{v}/layers                       set the XOL layer stack (pre-validation)
+PUT    /treaties/{id}/versions/{v}/layers/{n}/participations    a layer's own reinsurer panel
+PUT    /treaties/{id}/versions/{v}/layers/{n}/reinstatement-terms   deposit premium · rates · basis
+PUT    /treaties/{id}/versions/{v}/notice-term                  structured notice provision → computed deadline
+POST   /treaties/{id}/versions                     open a new version from an endorsement doc → re-extraction
+GET    /treaties/{id}/versions/{v}/term-diff        carried-forward vs re-extracted (unchanged/changed/new)
+GET    /recoverables · POST /recovery-candidates/{id}/recoverables · POST /recoverables/{id}   collection tracking
+GET    /loss-events/{id}/occurrence-proposal        assistive hours-clause grouping (proposes; human confirms)
+GET|POST /reinsurer-statements · POST /{id}/lines/{n}/resolve   reconcile stated figures vs what Cedeon holds
 ```
 
 ---
@@ -331,25 +347,28 @@ def allocate_recovery(
 
 | # | Screen | Purpose |
 | --- | --- | --- |
-| 0 | **Marketing / landing** | `(marketing)` route group: sticky nav + 4-column footer, a hero with an HTML product mockup, and sections for how-it-works, platform, who-it's-for, a Cedeon vs manual-review vs generic-assistant comparison table, the worked `$8.7M` example, security, "what Cedeon is not", and an FAQ accordion. Plus `/security` and `/about` pages. Visually rich, animated (`motion`) — the only place animation libs load. |
-| 1 | Dashboard | Treaties, active programs, loss events, recovery candidates, needs-review queue, outstanding notices |
+| 0 | **Marketing / landing** | `(marketing)` route group: sticky nav + 4-column footer, a hero with an HTML product mockup (the attention queue), and sections for the queue's four categories, what Cedeon watches, how-it-works, platform, "recovery is module one" (the layer arc), who-it's-for, a Cedeon vs manual-review vs generic-assistant comparison, the worked `$8.7M` example, security, "what Cedeon is not", FAQ. Plus `/security` and `/about`. Animated (`motion`) — the only place animation libs load. |
+| 1 | **Home** | The ceded-reinsurance desk's **attention queue** — one ranked "Needs you" list grouped by category (Recovery / Obligations / Contract / Exceptions), plus at-a-glance figures. A derived read-model over `GET /worklist`. |
 | 2 | Programs | List / manage reinsurance programs |
-| 3 | Treaty Library | Treaty · version · effective dates · status · validation state |
-| 4 | Treaty Detail | Overview · Validated Terms · Document · Participants · Layers · Evidence · Audit |
-| 5 | **Treaty Validation Workspace** | **The critical screen.** Left: treaty page. Right: term candidate (value, confidence, page, clause, exact evidence span). Actions: Confirm / Edit / Reject / Ambiguous. Only confirmed terms feed calculations. |
+| 3 | Treaties | Treaty · version · status · validation state |
+| 4 | Treaty Detail | Layers (the XOL tower) · Participants · per-layer panels · reinstatement terms · notice provision editor · version history · Validated Terms · Source document |
+| 5 | **Treaty Validation Workspace** | **The critical screen.** Left: treaty page. Right: term candidates (value, confidence, page, clause, exact span) + a "What the endorsement changed" term-diff card on a re-extracted version. Actions: Confirm / Edit / Reject / Ambiguous. Only confirmed terms feed calculations. |
 | 6 | Loss Imports | CSV upload · column mapping · validation report |
-| 7 | Loss Events | Aggregated underlying losses |
-| 8 | Recovery Candidates | Queue by status (Needs Review / Confirmed / Rejected / Notice Drafted) |
-| 9 | Recovery Candidate Detail | Deterministic calculation · treaty/layer · underlying losses · AI investigation · citations · missing evidence · notice obligations · human decision |
-| 10 | Recovery Packet | Audit-friendly artifact. HTML first; PDF export later. FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visually distinct. |
-| 11 | **Activity** *(Phase 10)* | Three tabs: **AI runs** (every `agent_run` — model, prompt version, tokens, cost, latency, status; drill in for tool calls + structured output) · **Audit log** (the append-only feed, filterable by action / actor) · **AI spend** (per-agent + per-day token / cost / failure rollup). Enough to explain a decision — **not** an AgentOps product. |
+| 7 | Loss Event Detail | Claim schedule · occurrence basis · "Treaties that may respond" · an assistive **hours-clause view** (proposed occurrence windows) |
+| 8 | Recoveries | The queue by status, plus a **Programmes** card grouping the sibling layers a multi-layer loss opens |
+| 9 | **Recovery Workspace** | One page, left rail — Loss basis · Calculation (+ reinstatement premium, drift banner) · Investigation · Packet · Notice · Collection — sections open in place via `?section=`. A "Layer N of M" strip links siblings. |
+| 10 | Recovery Packet | Audit-friendly artifact (embedded in the workspace + a printable HTML). FACT / CALCULATION / AI INTERPRETATION / HUMAN DECISION visually distinct. |
+| 11 | Recoverables | The head-of-ceded portfolio — open / collected / overdue, an aging chart, the legs table with a next-action per leg, a ⚠ where a leg doesn't reconcile |
+| 12 | **Statements** | Enter a reinsurer's stated agreed / paid figures; Cedeon reconciles each line against what it holds and lists the gaps to resolve |
+| 13 | **Activity** *(Phase 10)* | Three tabs: **AI runs** · **Audit log** · **AI spend**. Enough to explain a decision — **not** an AgentOps product. |
 
 Design language: calm, dense, and legible — this is a review tool for financial
 professionals. Every AI-authored statement in the UI is visually badged and carries
 its citation. Light and dark themes. The app shell is a grouped icon sidebar
-(Overview / Contracts / Losses / Recovery / Oversight) with a mobile sheet;
-shared primitives (`Button`, `Badge`, `Card`, `PageHeader`, `Stat`, `EmptyState`,
-`Tabs`, `Accordion`) live in `components/ui/`. See ADR-0023.
+(**Home** / Reinsurance program / Losses / **Recoveries** [Recoveries · Recoverables ·
+Statements] / Oversight) with a mobile sheet; shared primitives (`Button`, `Badge`,
+`Card`, `PageHeader`, `Stat`, `EmptyState`, `Tabs`, `Accordion`, `Stepper`) live in
+`components/ui/`. See ADR-0023.
 
 ---
 
@@ -364,23 +383,23 @@ entities. Key entities carry an optional `external_refs` JSONB for later mapping
 
 ---
 
-## 9. What we explicitly are NOT doing in MVP
+## 9. What we explicitly are NOT doing
 
 Kubernetes · Kafka / event bus · microservices · a second backend language · GraphQL ·
-a separate vector database · Temporal (deferred to Phase 10) · Celery · multiple agent
-frameworks · a model gateway · autonomous financial decisions · autonomous notice
-sending · speculative caching · multi-currency / FX · multi-region.
+a separate vector database · **Temporal** (evaluated at Phase 10 — *not adopted*, no
+saga exists; Procrastinate + entity state machines + the append-only audit log stay,
+ADR-0022) · Celery · multiple agent frameworks · a model gateway · autonomous
+financial decisions · autonomous notice sending · speculative caching · multi-currency
+/ FX · multi-region.
 
-**Also not now: a generalised financial-exception abstraction.** The long-term
-product thesis (PRODUCT.md §1, §1a) is that Cedeon becomes an independent
-reinsurance financial-intelligence layer surfacing many exception types (missed
-recoveries, notice exceptions, participation mismatches, booked-vs-billed-vs-collected
-reconciliation, aging recoverables, …). That is **positioning, not scope**. Do not
-add a `FinancialException` / `FinancialFinding` base model; do not make
-`RecoveryCandidate` a generic abstraction. `RecoveryCandidate` is the one concrete
-finding type. A shared abstraction is revisited only after two or three further
-exception types are validated through customer discovery and their shapes are known —
-extracting one from a single example would be the speculative abstraction §3 and the
-engineering rules forbid.
+**Still not: a generalised financial-exception abstraction.** Cedeon now surfaces
+several exception types — missed recoveries, notice deadlines, contract changes,
+aged recoverables, internal reconciliation, reinsurer-statement reconciliation —
+**each a concrete check** (`ReconcileFinding`, `StatementFinding`, `RecoveryCandidate`,
+…). The **only** generalisation is the attention queue (`app/domain/worklist.py`), and
+it is a *derived read-model* carrying an `AttentionCategory` — not a stored
+`FinancialException` table. Do not add such a table; do not make `RecoveryCandidate`
+generic. Resist a shared domain abstraction until the real customer-validated shapes
+clearly converge (PRODUCT.md §1a).
 
 If implementation starts drifting toward any of these: **stop.**

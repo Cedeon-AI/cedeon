@@ -37,6 +37,9 @@ versioning / immutability rules, and the provenance model.
 | `recovery_calculations`, `recovery_allocations` | **Immutable.** Recalculation = new `recovery_calculations` row; `recovery_candidates.current_calculation_id` moves. |
 | `recovery_investigations` | Immutable per agent run. |
 | `recovery_packet_versions` | Immutable; new version on regenerate. |
+| `recoverables` | Mutable current-state (collection tracking): `status` + `agreed`/`billed`/`collected`/`due_date`/`note` are human facts, every change audited. `expected_amount` is a frozen fact. |
+| `reinsurer_statements` | Header + `label`/`currency`/`statement_date`. |
+| `reinsurer_statement_lines` | The reconciliation output — `findings` JSONB frozen at reconcile time; `resolved` bool is the one mutable field (a human clears a handled line). |
 | `agent_runs`, `tool_calls`, `model_usage` | Immutable telemetry. |
 | `audit_events` | **Append-only.** Enforced by a `BEFORE UPDATE OR DELETE` trigger that raises. |
 
@@ -97,9 +100,15 @@ deferred — `treaty_participations.broker_name` for now)* · `treaties` (`treat
 NEEDS_VALIDATION→VALIDATED→ACTIVE→SUPERSEDED, `effective_date`, `expiration_date`,
 `currency`, `validated_by`, `validated_at`; `UNIQUE(treaty_id, version_no)`;
 immutable once `status.is_frozen`) · `treaty_layers` (`layer_no`, `attachment`,
-`limit` `NUMERIC(20,2)`, `currency`, `reinstatements` nullable) ·
-`treaty_participations` (`reinsurer_id`, `broker_name` nullable, `placed_share`,
-`signed_share` `NUMERIC(9,6)`; `UNIQUE(treaty_version_id, reinsurer_id)`) ·
+`limit` `NUMERIC(20,2)`, `currency`, `reinstatements` nullable; **reinstatement
+premium terms — human-validated, never AI —** `deposit_premium` `MONEY` nullable,
+`reinstatement_rates` JSONB nullable *(rate per reinstatement, e.g. `["1","1"]`)*,
+`reinstatement_basis` `flat`/`pro_rata_time` nullable; migration 0015) ·
+`treaty_participations` (`reinsurer_id`, `treaty_layer_id` **nullable** — NULL is the
+programme-wide panel, a layer id overrides it for that one layer (migration 0014);
+`broker_name` nullable, `placed_share`, `signed_share` `NUMERIC(9,6)`; two partial
+unique indexes — `(version, reinsurer) WHERE layer_id IS NULL` and
+`(version, layer, reinsurer) WHERE layer_id IS NOT NULL`) ·
 `treaty_terms` (`key`, `value` JSONB, `currency` nullable, `status`
 CONFIRMED/AMBIGUOUS/REJECTED, `derived_from_candidate_id`, `review_id`;
 `UNIQUE(treaty_version_id, key)`).
@@ -145,7 +154,9 @@ uploaded/mapped/validated/committed/failed, `report` JSONB, `uploaded_by`,
 `UNIQUE(loss_import_id, row_number)`) ·
 `loss_events` (`name`, `event_identifier` nullable, `catastrophe_code` nullable,
 `program_id` nullable, `date_of_loss_from/to`, `currency` nullable — all derived
-from committed losses or set manually) ·
+from committed losses or set manually; `peril` nullable, `hours_clause_hours`
+nullable *(migration 0011 — human facts; the hours value drives the assistive
+occurrence view, `GET /loss-events/{id}/occurrence-proposal`)*) ·
 `underlying_losses` — immutable snapshot of one committed row: (`claim_id`,
 `loss_event_id` nullable `SET NULL`, `loss_import_id` / `loss_import_row_id`
 **`RESTRICT`** so provenance survives, `date_of_loss`, `reported_date`,
@@ -162,8 +173,15 @@ returns the existing row): (`treaty_id`, `status`
 draft/needs_review/in_review/confirmed/rejected/notice_drafted, `currency`,
 `gross_event_incurred` `NUMERIC(20,2)`, `currency_mismatch` bool,
 `current_calculation_id` → `recovery_calculations` (circular, added post-create),
-`created_by`, `reviewed_at`/`reviewed_by`). FKs to treaty/version/layer/event are
-`RESTRICT`. ·
+`knowledge_date` nullable *(migration 0012 — the reference date a
+knowledge-triggered notice deadline counts from; the AI never sets it)*,
+`drifted_at` + `pre_drift_recovery` nullable *(migration 0013 — stamped when a
+committed loss moved the figure without a human; a confirmed candidate reverts to
+needs-review)*, `created_by`, `reviewed_at`/`reviewed_by`). FKs to
+treaty/version/layer/event are `RESTRICT`. A multi-layer loss opens one candidate
+per pierced layer; siblings group as a *programme* on read. Reinstatement premium is
+computed on read from the layer's terms + prior erosion (Σ current `layer_recovery`
+of earlier confirmed recoveries on the same layer) — not stored. ·
 `recovery_calculations` — **immutable**, one row per engine run: (`engine_version`,
 `treaty_version_id`, `treaty_layer_id`, frozen `inputs` JSONB, `currency`,
 `gross_loss`, `attachment`, `amount_above_attachment`, `layer_limit`,
@@ -226,6 +244,22 @@ pending / notified / agreed / billed / collected / disputed / written_off, with
 `billed_amount`, `collected_amount` (running total), `due_date`, `note` are mutable
 human facts — every change writes an `audit_events` row. **Aging is derived, never
 stored.** No AI (pure `app/domain/recoveries/collection.py`).
+**Reconciliation is derived on read**: `app/domain/recoveries/reconciliation.py`
+compares `expected_amount` against `agreed`/`billed`/`collected` and returns typed
+findings; a `reconciliation_mismatch` attention item surfaces the top gap.
+
+**Reinsurer statements** *(migration 0016 — the larger Exception module; no AI)*
+`reinsurer_statements` (`label`, `currency`, `statement_date` nullable,
+`created_by`) — a batch of figures a reinsurer stated. ·
+`reinsurer_statement_lines` (`statement_id` CASCADE, `row_number`
+`UNIQUE(statement_id, row_number)`, `reinsurer_name`, `reference` nullable,
+`currency`, `their_agreed`/`their_paid` `MONEY` nullable, `matched_recoverable_id`
+nullable `SET NULL`, `findings` JSONB — the frozen output of
+`app/domain/recoveries/statement_reconciliation.py` matching the stated figures
+against the recoverable's expected / our-agreed / our-collected, `resolved` bool —
+the one mutable field). A `statement_discrepancy` attention item per unresolved
+line. Lines are entered directly; a file importer for real bordereau formats is a
+later addition (PRODUCT §1a).
 
 **Review & audit**
 `reviews` (`subject_type`, `subject_id`, `reviewer_id`, `decision`, `value_before`
@@ -265,6 +299,7 @@ erDiagram
     DOCUMENTS ||--o{ TREATY_VERSIONS : "source_document"
     TREATY_VERSIONS ||--o{ TREATY_LAYERS : defines
     TREATY_VERSIONS ||--o{ TREATY_PARTICIPATIONS : places
+    TREATY_LAYERS ||--o{ TREATY_PARTICIPATIONS : "per-layer panel (optional)"
     TREATY_VERSIONS ||--o{ TREATY_TERMS : "validated terms"
     TREATY_VERSIONS ||--o{ TREATY_TERM_CANDIDATES : "AI candidates"
     REINSURERS ||--o{ TREATY_PARTICIPATIONS : participates
@@ -294,6 +329,10 @@ erDiagram
     RECOVERY_CANDIDATES ||--o| RECOVERY_PACKETS : "packaged as"
     RECOVERY_PACKETS ||--o{ RECOVERY_PACKET_VERSIONS : versions
     RECOVERY_PACKET_VERSIONS ||--o{ RECOVERY_NOTICES : "drafts"
+    RECOVERY_CALCULATIONS ||--o{ RECOVERABLES : "materialises (per reinsurer)"
+    REINSURERS ||--o{ RECOVERABLES : "owes"
+    REINSURER_STATEMENTS ||--o{ REINSURER_STATEMENT_LINES : "reconciles"
+    RECOVERABLES }o--o| REINSURER_STATEMENT_LINES : "matched by a statement line"
 
     RECOVERY_INVESTIGATIONS }o--|| AGENT_RUNS : "recorded as"
     TREATY_TERM_CANDIDATES }o--|| AGENT_RUNS : "produced by"
@@ -329,9 +368,14 @@ Property assertions: `0 ≤ layer_recovery ≤ limit`; monotonic non-decreasing 
 
 ## 7. Deferred model surface (do not build)
 
-Aggregate structures · inuring order · reinstatement waterfalls · hours-clause /
-event-window clustering · cat-event grouping · FX / multi-currency conversion ·
-retrocession chains · settlement / cash-ledger · Schedule F · assumed reinsurance.
+Aggregate structures · inuring order · automated cat-event modelling · FX /
+multi-currency conversion · retrocession chains · settlement / cash-ledger ·
+Schedule F · assumed reinsurance · a bordereau/statement **file** importer (lines
+are entered directly for now) · a generalised `FinancialException` base model.
 Where a hook is cheap and honest (`treaty_type` enum, `external_refs` JSONB,
-`treaty_layers` as a list rather than scalar columns), it is included. Nothing
-speculative beyond that.
+`treaty_layers` as a list, `treaty_participations.treaty_layer_id`), it is included.
+
+**Modelled since the MVP** (2026-09-01 scope expansion, PRODUCT §7): reinstatement
+premium terms on a layer + a deterministic engine; an *assistive* hours-clause
+occurrence grouping (`app/domain/losses/occurrences.py` — proposes, a human
+confirms; no new persistence). Nothing speculative beyond that.

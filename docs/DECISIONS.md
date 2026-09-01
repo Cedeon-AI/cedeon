@@ -571,7 +571,65 @@ status), `GET /recoverables/summary` (org roll-up — feeds the Home "Open recov
 figure), `POST /recoverables/{id}` (the human update). UI: the workspace's **Collection**
 rail section, unlocked once the recovery is confirmed.
 
-**Consequences.** Cedeon now spans the desk's whole job — contract to cash. What it
-still does *not* do: reinstatement-premium accounting, multi-currency settlement,
-broker-statement reconciliation (booked vs billed vs collected across the portfolio) —
-those are their own future work, not folded in here (PRODUCT.md §1a discipline).
+**Consequences.** Cedeon now spans the desk's whole job — contract to cash. Left for
+their own work (not folded in here): multi-currency settlement. *(Reinstatement
+premium and reinsurer-statement reconciliation were later built as their own modules —
+ADR-0025.)*
+
+---
+
+## ADR-0025 — Scope expansion: reinstatements and hours-clause grouping become supported; each exception check stays concrete
+
+**Context.** The MVP deliberately modelled **one treaty structure** (per-occurrence
+XOL) and kept a long do-not-build list (PRODUCT.md §7): aggregate covers, reinstatement
+waterfalls, hours-clause event clustering, and more. After the recovery-control build
+(①–⑧), the intelligence-system reframe (⑨, ⑪), and the marketing refresh, the user
+restored Anthropic credits and directed: **build the whole deferred backlog** — the
+⑥ follow-ups (per-layer participations, a grouped programme view), ⑨ re-extraction +
+term diff, ⑩ reinstatement premium math, ⑫ hours-clause grouping, and the larger
+reinsurer-statement reconciliation module.
+
+Three of those sat on the §7 do-not-build list. Per the standing guardrail protocol,
+the conflict was surfaced with alternatives and a recommendation before any code; the
+user confirmed the expansion.
+
+**Decision.**
+
+1. **Reinstatements and hours-clause grouping move from "do not build" to
+   "supported v1"** (PRODUCT.md §7 rewritten). The *LLMs interpret / code calculates /
+   humans approve* line is untouched:
+   - **Reinstatement premium** is deterministic arithmetic (`app/domain/recoveries/
+     reinstatements.py`, migration 0015): reinstatement *k* restores the erosion band
+     `[(k-1)·limit, k·limit]`; premium = `deposit_premium × (amount this loss reinstates
+     / limit) × rate(k) × time_factor` (1 for flat, unexpired-period fraction for
+     pro-rata-as-to-time). The deposit premium and rates are **human-entered layer
+     terms**, never extracted. Prior erosion in the period = Σ current `layer_recovery`
+     of earlier confirmed recoveries on the same layer; computed on read, not stored.
+   - **Hours-clause grouping is *assistive*** (`app/domain/losses/occurrences.py`): a
+     greedy anchored grouping of a loss event's claims into rolling windows
+     (`ceil(hours/24)` days) that Cedeon **proposes** for a human to accept or
+     re-anchor. It never auto-decides an occurrence, never splits an event, adds no
+     persistence. `GET /loss-events/{id}/occurrence-proposal`.
+
+2. **Still deferred:** aggregate XOL / aggregate deductibles, quota share / surplus,
+   inuring order, FX, retrocession, automated catastrophe-event modelling, and a
+   bordereau/statement **file** importer (statement lines are entered directly).
+
+3. **No generalised finding model, even now that several exception types exist.**
+   Internal reconciliation (`ReconcileFinding`), reinsurer-statement reconciliation
+   (`StatementFinding`, migration 0016), suggested recoveries, notice deadlines,
+   contract-change alerts, aged-recoverable chasing — **each stays a concrete check**.
+   Findings persist as typed rows or JSONB on the concrete parent
+   (`recoverables`, `reinsurer_statement_lines`), never in a `FinancialException`
+   table. The **only** generalisation is `app/domain/worklist.py` — a *derived
+   read-model* carrying an `AttentionCategory` (recovery / obligation / contract /
+   exception). A shared domain abstraction is still deferred until the real
+   customer-validated shapes converge (PRODUCT.md §1a).
+
+**Consequences.** Migrations 0014 (per-layer participations), 0015 (reinstatement
+terms), 0016 (reinsurer statements). The engine still models per-occurrence XOL plus a
+stack of such layers — reinstatements are a premium calculation *on* a layer, not a new
+structure. The import-linter "domain is pure" and "calc engine imports only Money"
+contracts still hold (the new pure modules are `app/domain/recoveries/` and
+`app/domain/losses/`, standard-library only). PRODUCT.md §1a, §2a, §5, §7 and
+ARCHITECTURE.md §9 updated; DATA_MODEL.md §4/§7 updated.

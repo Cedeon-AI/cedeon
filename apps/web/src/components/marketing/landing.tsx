@@ -4,6 +4,7 @@ import {
   Boxes,
   Check,
   ClipboardCheck,
+  Clock,
   Coins,
   FileSearch,
   FileText,
@@ -13,6 +14,7 @@ import {
   Layers,
   LineChart,
   Minus,
+  RefreshCw,
   Scale,
   ScrollText,
   ShieldCheck,
@@ -113,13 +115,28 @@ const WATCHES: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: "Contract changes",
-    body: "An endorsement opens a new treaty version with terms, layers and participations copied forward for re-validation. Recoveries calculated against the superseded version are flagged for re-review.",
+    body: "An endorsement opens a new treaty version — terms, layers and panels copied forward — and re-runs extraction against the endorsement so the validator sees a term-by-term diff of what changed. Recoveries on the superseded version are flagged.",
     icon: <GitBranch />,
   },
   {
-    title: "Reconciliation mismatches",
-    body: "Cedeon compares its own expected figure with the agreed, billed and collected amounts on the record and flags what doesn't reconcile — agreed below expected, billed without agreement, collected short.",
+    title: "Reinstatement premium",
+    body: "When a loss erodes a layer, Cedeon computes the reinstatement premium due — from the deposit premium, the rate per reinstatement, the flat or pro-rata-as-to-time basis, and how much of the limit earlier losses in the period already used. Deterministic; the analyst validates the terms.",
+    icon: <RefreshCw />,
+  },
+  {
+    title: "Hours-clause occurrence view",
+    body: "For a catastrophe loss, Cedeon proposes how the claims group into occurrence windows under the treaty's hours clause. It proposes — the cedent chooses when each window starts.",
+    icon: <Clock />,
+  },
+  {
+    title: "Internal reconciliation",
+    body: "Cedeon's own expected figure against the agreed, billed and collected amounts on the record — agreed below expected, billed without agreement, collected short.",
     icon: <Scale />,
+  },
+  {
+    title: "Statement reconciliation",
+    body: "Enter the figures a reinsurer stated — agreed, paid — and Cedeon reconciles each line against what it holds: their agreed below yours or below the calculated figure, paid short or over.",
+    icon: <FileWarning />,
   },
 ];
 
@@ -170,12 +187,12 @@ const CAPABILITIES: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: "Deterministic recovery engine",
-    body: "Attachment, exhaustion, layer recovery and per-reinsurer allocation are versioned, unit-tested code. Exact decimal arithmetic — never floating point.",
+    body: "Attachment, exhaustion, layer recovery, per-reinsurer allocation and reinstatement premium are versioned, unit-tested code. Exact decimal arithmetic — never floating point.",
     icon: <Sigma />,
   },
   {
     title: "Multi-layer programmes",
-    body: "A treaty version carries a stack of excess-of-loss layers. A loss opens a deterministic recovery on every layer it reaches, each with its own calculation.",
+    body: "A treaty version is a stack of excess-of-loss layers, each with its own reinsurer panel. A loss opens a deterministic recovery on every layer it reaches; the siblings group as one programme.",
     icon: <Layers />,
   },
   {
@@ -219,13 +236,14 @@ const LAYERS: { name: string; question: string; state: LayerState }[] = [
   },
   {
     name: "Obligation intelligence",
-    question: "What has a claim triggered that I owe?",
-    state: "foundation",
+    question: "What has a claim triggered that I owe — a notice, a reinstatement premium?",
+    state: "built",
   },
   {
     name: "Exception / reconciliation",
-    question: "What doesn't line up — expected vs agreed vs billed vs collected?",
-    state: "started",
+    question:
+      "What doesn't line up — expected vs agreed vs billed vs collected, and vs what the reinsurer says?",
+    state: "built",
   },
   {
     name: "Portfolio / renewal",
@@ -288,7 +306,7 @@ const COMPARE: { row: string; cedeon: Cell; manual: Cell; assistant: Cell }[] = 
     assistant: false,
   },
   {
-    row: "Notice deadlines computed and counted down",
+    row: "Notice deadlines & reinstatement premium computed",
     cedeon: true,
     manual: "partial",
     assistant: false,
@@ -299,29 +317,39 @@ const COMPARE: { row: string; cedeon: Cell; manual: Cell; assistant: Cell }[] = 
     manual: "partial",
     assistant: false,
   },
+  {
+    row: "Your figures — and a reinsurer's — reconciled",
+    cedeon: true,
+    manual: "partial",
+    assistant: false,
+  },
   { row: "Immutable audit trail of every decision", cedeon: true, manual: false, assistant: false },
 ];
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Is this a recovery calculator?",
-    a: "Recovery is the first module, but the product you open is the ceded-reinsurance desk's queue — what needs you today. It watches: notices coming due, recovery figures that moved, treaty endorsements, recoverables aging past their date, amounts that don't reconcile. The deterministic recovery calculation sits underneath that.",
+    a: "Recovery is module one, but the product you open is the ceded-reinsurance desk's queue — what needs you today. It watches: notices coming due, reinstatement premium owed, recovery figures that moved, treaty endorsements, recoverables aging past their date, and where your figures — or a reinsurer's — don't reconcile. The deterministic recovery calculation sits underneath that.",
   },
   {
-    q: "Does an LLM ever calculate the recovery figure?",
-    a: "No. Extraction and drafting use language models; every financial calculation runs in a versioned, unit-tested engine using exact decimal arithmetic. The investigator agent is handed the deterministic figure as a fact and cannot overwrite it.",
+    q: "Does an LLM ever calculate a financial figure?",
+    a: "No. Extraction and notice drafting use language models; every financial calculation — layer recovery, per-reinsurer allocation, reinstatement premium, reconciliation — runs in versioned, unit-tested code using exact decimal arithmetic. The investigator agent is handed the deterministic figure as a fact and cannot overwrite it.",
   },
   {
     q: "What treaty structures does the engine support today?",
-    a: "Per-occurrence excess of loss — $X limit excess of $Y attachment — including a stack of such layers in one programme. Quota share, aggregate covers, reinstatements, hours-clause event clustering and index clauses are deliberately out of scope for now; the data model is built so they can be added without a rewrite.",
+    a: "Per-occurrence excess of loss — $X limit excess of $Y attachment — a stack of such layers in one programme, each with its own reinsurer panel, and reinstatement premium terms on a layer. Quota share, aggregate covers and index clauses are out of scope for now; the data model is built so they can be added without a rewrite.",
+  },
+  {
+    q: "How does the hours clause work?",
+    a: "It is assistive. Cedeon groups a catastrophe loss's claims into rolling occurrence windows under the treaty's hours clause and proposes the grouping. The cedent chooses when each window starts — Cedeon never auto-decides an occurrence or splits an event.",
   },
   {
     q: "What does a person actually have to approve?",
-    a: "Material interpretations. A human validates each extracted term before it can feed a calculation, reviews the recovery packet before it is final, and approves any notice draft. Confirm, edit, reject or request more information — every action is attributed and audited.",
+    a: "Material interpretations. A human validates each extracted term before it can feed a calculation, enters the operational terms (the layer stack, panels, reinstatement rates) directly, reviews the recovery packet before it is final, and approves any notice draft. Every action is attributed and audited.",
   },
   {
-    q: "How does the reconciliation check work?",
-    a: "It is internal: Cedeon compares its own expected recovery for a reinsurer's leg with the agreed, billed and collected amounts entered on the record, and flags the material gaps. Ingesting reinsurer statements or an accounting feed is a larger module that is not built yet.",
+    q: "How does reconciliation work?",
+    a: "Two checks, both deterministic. Internal: Cedeon's own expected figure for a leg against the agreed / billed / collected amounts on the record. External: a batch of figures a reinsurer stated — agreed, paid — matched to your recoverables and checked line by line. Both surface the material gaps with the evidence; a file importer for real bordereau formats is the next step.",
   },
   {
     q: "Does Cedeon send notices to reinsurers or brokers?",
