@@ -77,7 +77,7 @@ because it has direct, provable ROI; the layers below it feed the ones above.
 
 | Layer | Question it answers | Status |
 | --- | --- | --- |
-| **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack, endorsement re-versioning still Later) |
+| **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack; per-layer panels; endorsement re-versioning with re-extraction + a term-level diff) |
 | **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, candidates, investigator, packet, notice draft) |
 | **Obligation intelligence** | What has a claim triggered that I owe? | Foundation built (structured notice terms → computed deadlines on the queue); other obligation types Later |
 | **Exception / reconciliation intelligence** | What does not line up — expected vs agreed vs billed vs collected? | Started — internal reconciliation (`app/domain/recoveries/reconciliation.py`) flags a leg where Cedeon's calculated figure and the human-entered agreed / billed / collected disagree; surfaces on the recoverable and as an `EXCEPTION` attention item. Reinsurer-statement ingest is the larger module, Later. |

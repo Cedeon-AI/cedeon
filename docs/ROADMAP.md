@@ -188,8 +188,14 @@ build ①–⑧ already delivered the "continuous intelligence" pivot; minimal c
   endorsement changed (layers via `set_layers`, notice term via the notice-term endpoint)
   and re-validates. A recovery calculated against a now-superseded version surfaces as a
   `contract_change` worklist item (category = contract). Treaty detail gets a version-history
-  card + "New version" action. 5 new tests, 298 backend. *Deferred:* re-extraction against
-  the endorsement doc + a term-level diff; a superseded-version banner on the recovery workspace.
+  card + "New version" action. 5 new tests, 298 backend.
+  - **⑨ re-extraction + term diff — ✅ done.** `POST /treaties/{id}/versions` with a
+    `source_document_id` whose document is parsed now re-runs extraction against that
+    endorsement. `ValidationService.term_diff` + `GET .../versions/{vid}/term-diff` compare
+    each carried-forward confirmed term with the freshly-extracted candidate —
+    `unchanged` / `changed` / `new` / `not_extracted`, money-normalised. The validation
+    workspace shows a "What the endorsement changed" card. Copy-forward re-points per-layer
+    panels at the copied layer. 2 new tests.
 - **⑪ reconciliation intelligence — ✅ started (internal, no migration).** The first
   *Exception* module. `app/domain/recoveries/reconciliation.py` (pure) checks the amounts
   already on a recoverable — Cedeon's calculated `expected` vs the human-entered
@@ -209,9 +215,24 @@ build ①–⑧ already delivered the "continuous intelligence" pivot; minimal c
   demo user and walks the attention queue + categories, the recoverables portfolio + aging
   chart, treaty version history + executable layer, and the recovery workspace rail —
   selectors independent of demo-data vintage, each test self-skips when unseeded.
-- **Later — ⑩ reinstatement premium math · ⑫ CAT/event intelligence · reinsurer-statement
-  reconciliation · per-layer participations + a grouped programme view (⑥ follow-ups) ·
-  ⑨ endorsement re-extraction + term diff.**
+- **⑥ per-layer participations — ✅ done (migration 0014).** A single layer of an XOL tower
+  can carry its own reinsurer panel (`treaty_participations.treaty_layer_id`); the rest of
+  the stack uses the programme panel. `PUT .../layers/{layer_no}/participations`; the calc
+  engine, input hash and the investigator resolve the panel per layer; `validate_version`
+  checks each panel ≤ 100% separately. Treaty-detail "Layer panels" editor. 4 new tests.
+- **⑥ grouped programme view — ✅ done.** `GET /recovery-candidates` gains `programmes[]`
+  (siblings grouped by tower + event, bottom→top, with each layer's recovery); every row
+  carries treaty / event names + the layer figure; the detail response gains `siblings[]`.
+  Web: a "Programmes" card on the list + a "Layer N of M" strip on the workspace. 4 new tests.
+
+**Scope expansion (2026-09-01, user-directed — see PRODUCT §7).** The user restored
+Anthropic credits and asked to build the whole deferred backlog. Reinstatements and
+hours-clause grouping move from "do not build" to "supported (v1)"; the
+*LLMs-interpret / code-calculates / humans-approve* line is unchanged (reinstatement
+math is deterministic, occurrence grouping is human-confirmed).
+
+- **Still to build — ⑩ reinstatement premium math · ⑫ hours-clause / occurrence grouping ·
+  reinsurer-statement ingest.**
 - **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
   `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
   reinsurance" (keeps the "contract to recovery" line); the product mockup is now the

@@ -5018,6 +5018,85 @@
         "title": "TermCandidatesResponse",
         "type": "object"
       },
+      "TermDiffEntryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "carried_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carried Value"
+          },
+          "change": {
+            "title": "Change",
+            "type": "string"
+          },
+          "extracted_candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Candidate Id"
+          },
+          "extracted_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Value"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "carried_value",
+          "extracted_value",
+          "extracted_candidate_id",
+          "change"
+        ],
+        "title": "TermDiffEntryOut",
+        "type": "object"
+      },
+      "TermDiffResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/TermDiffEntryOut"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "treaty_version_id": {
+            "format": "uuid",
+            "title": "Treaty Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "treaty_version_id",
+          "entries"
+        ],
+        "title": "TermDiffResponse",
+        "type": "object"
+      },
       "TermOut": {
         "additionalProperties": false,
         "properties": {
@@ -8696,6 +8775,59 @@
           }
         },
         "summary": "Review Term Candidate",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/term-diff": {
+      "get": {
+        "operationId": "getTermDiff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermDiffResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "What re-extraction of the endorsement changed vs the carried-forward terms",
         "tags": [
           "treaties"
         ]

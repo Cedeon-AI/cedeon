@@ -93,10 +93,29 @@ def golden_result() -> ExtractionResult:
 
 
 async def run_extraction(
-    session: object, settings: object, org_id: UUID, version_id: UUID
+    session: object,
+    settings: object,
+    org_id: UUID,
+    version_id: UUID,
+    *,
+    extraction: TreatyExtraction | None = None,
 ) -> object:
+    result = golden_result()
+    if extraction is not None:
+        result = ExtractionResult(
+            extraction=extraction,
+            provider=result.provider,
+            model=result.model,
+            prompt_version=result.prompt_version,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            cost_usd=result.cost_usd,
+            latency_ms=result.latency_ms,
+            output=extraction.model_dump(mode="json"),
+        )
+
     async def _fake(**_kwargs: object) -> ExtractionResult:
-        return golden_result()
+        return result
 
     service = TreatyExtractionService(session, settings, extractor=_fake)  # type: ignore[arg-type]
     return await service.run(org_id, version_id)

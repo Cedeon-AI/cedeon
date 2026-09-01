@@ -6,6 +6,8 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
+from app.core.config import get_settings
+from tests.support.extraction import golden_extraction, run_extraction
 from tests.support.scenario import committed_hurricane_event, validated_golden_treaty
 
 pytestmark = pytest.mark.db
@@ -96,3 +98,57 @@ class TestContractChangeOnWorklist:
         assert change[0]["category"] == "contract"
         assert change[0]["href"] == f"/recovery-candidates/{candidate['id']}?section=calculation"
         assert change[0]["amount"] == "8700000.00"
+
+
+class TestTermDiff:
+    async def test_re_extraction_of_an_endorsement_surfaces_the_changed_term(
+        self, client: AsyncClient, object_store, session
+    ) -> None:
+        golden = await validated_golden_treaty(client, object_store, session)
+        detail = (await client.get(f"/treaties/{golden.treaty_id}")).json()
+        source_doc = detail["current_version"]["source_document_id"]
+
+        v2 = (
+            await client.post(
+                f"/treaties/{golden.treaty_id}/versions",
+                json={"note": "Endorsement 7 — limit cut", "source_document_id": source_doc},
+            )
+        ).json()
+        v2_id = v2["current_version"]["id"]
+
+        # the endorsement document extracts a lower limit; everything else the same
+        endorsed = golden_extraction()
+        for term in endorsed.terms:
+            if term.key == "limit":
+                term.value = "15000000.00"
+        await run_extraction(session, get_settings(), golden.org_id, v2_id, extraction=endorsed)
+
+        diff = (
+            await client.get(f"/treaties/{golden.treaty_id}/versions/{v2_id}/term-diff")
+        ).json()["entries"]
+        by_key = {e["key"]: e for e in diff}
+        assert by_key["limit"]["carried_value"] == "20000000.00"
+        assert by_key["limit"]["extracted_value"] == "15000000.00"
+        assert by_key["limit"]["change"] == "changed"
+        assert by_key["limit"]["extracted_candidate_id"] is not None
+        assert by_key["attachment"]["change"] == "unchanged"
+        # notice_provision was never confirmed on v1, so re-extraction surfaces it fresh
+        assert by_key["notice_provision"]["change"] == "new"
+
+    async def test_a_version_with_no_endorsement_document_has_no_extracted_side(
+        self, client: AsyncClient, object_store, session
+    ) -> None:
+        golden = await validated_golden_treaty(client, object_store, session)
+        v2 = (
+            await client.post(
+                f"/treaties/{golden.treaty_id}/versions", json={"note": "Endorsement 8"}
+            )
+        ).json()
+        v2_id = v2["current_version"]["id"]
+
+        diff = (
+            await client.get(f"/treaties/{golden.treaty_id}/versions/{v2_id}/term-diff")
+        ).json()["entries"]
+        assert diff  # the carried-forward terms are listed
+        assert all(e["change"] == "not_extracted" for e in diff)
+        assert all(e["extracted_value"] is None for e in diff)

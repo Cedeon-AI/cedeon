@@ -12,6 +12,7 @@ import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
 import type { ReviewDecision, TermCandidateOut } from "@/lib/api";
 import {
   asProblem,
+  getTermDiff,
   getTreaty,
   listTermCandidates,
   reviewTermCandidate,
@@ -36,6 +37,18 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
     enabled: Boolean(versionId),
     queryFn: async () => {
       const { data } = await listTermCandidates({
+        path: { treaty_id: treatyId, version_id: versionId as string },
+        throwOnError: true,
+      });
+      return data;
+    },
+  });
+
+  const termDiff = useQuery({
+    queryKey: ["term-diff", versionId],
+    enabled: Boolean(versionId),
+    queryFn: async () => {
+      const { data } = await getTermDiff({
         path: { treaty_id: treatyId, version_id: versionId as string },
         throwOnError: true,
       });
@@ -77,6 +90,10 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
       setValidateError(problem?.detail ?? "Could not validate the treaty yet.");
     },
   });
+
+  const diffRows = (termDiff.data?.entries ?? []).filter(
+    (e) => e.change === "changed" || e.change === "new",
+  );
 
   const scalar = (workspace.data?.candidates ?? []).filter((c) => c.key !== "participation");
   const participations = (workspace.data?.candidates ?? []).filter(
@@ -145,6 +162,43 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
 
         {/* RIGHT — proposed terms */}
         <div className="space-y-3">
+          {diffRows.length > 0 ? (
+            <Card className="border-warning/40 bg-warning/5">
+              <CardHeader>
+                <CardTitle>What the endorsement changed</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  Re-extraction of the endorsement document against the terms carried forward from
+                  the previous version. Confirm each below.
+                </p>
+                <ul className="divide-y divide-border/70">
+                  {diffRows.map((e) => (
+                    <li key={e.key} className="flex items-baseline justify-between gap-3 py-2">
+                      <span className="font-medium">{termLabel(e.key)}</span>
+                      <span className="text-right">
+                        {e.change === "changed" ? (
+                          <>
+                            <span className="text-muted-foreground line-through">
+                              {e.carried_value}
+                            </span>{" "}
+                            <span className="font-mono">{e.extracted_value}</span>{" "}
+                            <Badge tone="warning">changed</Badge>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-mono">{e.extracted_value}</span>{" "}
+                            <Badge tone="info">new</Badge>
+                          </>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {scalar.map((candidate) => (
             <CandidateCard
               key={candidate.id}

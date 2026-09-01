@@ -45,6 +45,19 @@ class TermCandidatesResponse(ApiModel):
     pages: list[DocumentPageOut]
 
 
+class TermDiffEntryOut(ApiModel):
+    key: str
+    carried_value: str | None
+    extracted_value: str | None
+    extracted_candidate_id: UUID | None
+    change: str  # unchanged | changed | new | not_extracted
+
+
+class TermDiffResponse(ApiModel):
+    treaty_version_id: UUID
+    entries: list[TermDiffEntryOut]
+
+
 class ReviewRequest(ApiModel):
     decision: ReviewDecision
     value: str | None = Field(default=None, max_length=2000)

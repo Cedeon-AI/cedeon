@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_correlation_id
+from app.db.models.documents import Document
 from app.db.models.reinsurance import (
     Cedent,
     ReinsuranceProgram,
@@ -326,7 +327,11 @@ class TreatyService:
                 "only a validated treaty version can be superseded — validate the current one first"
             )
 
-        source_document_id = await self._resolve_source_document(org_id, source_document_id)
+        source_document = await self._resolve_source_document(org_id, source_document_id)
+        source_document_id = source_document.id if source_document is not None else None
+        rerun_extraction = (
+            source_document is not None and source_document.status == DocumentStatus.PARSED
+        )
 
         new_version = TreatyVersion(
             organization_id=org_id,
@@ -404,14 +409,18 @@ class TreatyService:
             )
         )
         await self._session.commit()
+        # An endorsement document → re-extract against it. The carried-forward terms
+        # stay usable; the fresh candidates drive the term diff on the workspace.
+        if rerun_extraction:
+            await self._enqueue_extract(org_id, new_version.id)
         return await self.get_treaty(context, treaty_id)
 
     async def _resolve_source_document(
         self, organization_id: UUID, source_document_id: UUID | None
-    ) -> UUID | None:
+    ) -> Document | None:
         if source_document_id is None:
             return None
         document = await self._documents.get(organization_id, source_document_id)
         if document is None:
             raise NotFoundError("source document not found")
-        return source_document_id
+        return document

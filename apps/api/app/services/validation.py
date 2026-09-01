@@ -43,6 +43,39 @@ class CandidateReview:
     reason: str | None = None
 
 
+@dataclass(slots=True)
+class TermDiffEntry:
+    """One term, as it stands on the new (endorsement) version vs what was carried
+    forward from the superseded version."""
+
+    key: str
+    carried_value: str | None  # the confirmed value copied from the prior version
+    extracted_value: str | None  # what re-extraction found in the endorsement document
+    extracted_candidate_id: UUID | None
+    change: str  # unchanged | changed | new | not_extracted
+
+
+_MONEY_KEYS = frozenset({"attachment", "limit"})
+
+
+def _norm_term_value(key: str, value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if key in _MONEY_KEYS:
+        cleaned = text.replace(",", "").replace("$", "").strip()
+        for token in cleaned.replace("USD", "").split():
+            try:
+                return str(Decimal(token))
+            except InvalidOperation:
+                continue
+        try:
+            return str(Decimal(cleaned))
+        except InvalidOperation:
+            return text.lower()
+    return text.lower()
+
+
 class ValidationService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -75,6 +108,51 @@ class ValidationService:
         self, context: AuthenticatedContext, candidate_id: UUID
     ) -> list[Review]:
         return await self._reviews.list_for_subject(context.organization.id, candidate_id)
+
+    async def term_diff(
+        self, context: AuthenticatedContext, treaty_version_id: UUID
+    ) -> list[TermDiffEntry]:
+        """What changed between the carried-forward terms and what re-extraction found
+        in the endorsement document. Empty when this version was not re-extracted."""
+        version = await self._require_version(context, treaty_version_id)
+        candidates = await self._candidates.list_for_version(
+            context.organization.id, treaty_version_id
+        )
+        carried = {
+            t.key: str(t.value.get("value", ""))
+            for t in version.terms
+            if t.status is TermStatus.CONFIRMED and t.key != "participation"
+        }
+        # newest candidate per key
+        latest: dict[str, TreatyTermCandidate] = {}
+        for c in candidates:
+            if c.key == "participation":
+                continue
+            latest.setdefault(c.key, c)
+
+        entries: list[TermDiffEntry] = []
+        for key in sorted(carried.keys() | latest.keys()):
+            carried_value = carried.get(key)
+            candidate = latest.get(key)
+            extracted_value = _candidate_value(candidate) if candidate is not None else None
+            if carried_value is not None and candidate is None:
+                change = "not_extracted"
+            elif carried_value is None:
+                change = "new"
+            elif _norm_term_value(key, carried_value) == _norm_term_value(key, extracted_value):
+                change = "unchanged"
+            else:
+                change = "changed"
+            entries.append(
+                TermDiffEntry(
+                    key=key,
+                    carried_value=carried_value,
+                    extracted_value=extracted_value,
+                    extracted_candidate_id=candidate.id if candidate is not None else None,
+                    change=change,
+                )
+            )
+        return entries
 
     # --- reviewing ---------------------------------------------------
 

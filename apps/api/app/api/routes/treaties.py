@@ -35,6 +35,8 @@ from app.api.schemas.validation import (
     SetNoticeTermRequest,
     TermCandidateOut,
     TermCandidatesResponse,
+    TermDiffEntryOut,
+    TermDiffResponse,
 )
 from app.db.models.extraction import TreatyTermCandidate
 from app.db.models.reinsurance import Treaty, TreatyParticipation, TreatyVersion
@@ -227,6 +229,34 @@ async def rerun_extraction(
 ) -> TreatyOut:
     treaty = await service.rerun_extraction(context, treaty_id)
     return _treaty_out(treaty)
+
+
+@router.get(
+    "/{treaty_id}/versions/{version_id}/term-diff",
+    response_model=TermDiffResponse,
+    summary="What re-extraction of the endorsement changed vs the carried-forward terms",
+    operation_id="getTermDiff",
+)
+async def get_term_diff(
+    treaty_id: UUID,
+    version_id: UUID,
+    context: AuthedContext,
+    session: DbSession,
+) -> TermDiffResponse:
+    entries = await ValidationService(session).term_diff(context, version_id)
+    return TermDiffResponse(
+        treaty_version_id=version_id,
+        entries=[
+            TermDiffEntryOut(
+                key=e.key,
+                carried_value=e.carried_value,
+                extracted_value=e.extracted_value,
+                extracted_candidate_id=e.extracted_candidate_id,
+                change=e.change,
+            )
+            for e in entries
+        ],
+    )
 
 
 @router.get(
