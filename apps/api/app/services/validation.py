@@ -178,6 +178,8 @@ class ValidationService:
         for existing in list(version.layers):
             await self._session.delete(existing)
         version.layers.clear()
+        # flush the deletes before re-inserting the same (version_id, layer_no)
+        await self._session.flush()
         for i, (attachment, limit) in enumerate(ordered, start=1):
             version.layers.append(
                 TreatyLayer(

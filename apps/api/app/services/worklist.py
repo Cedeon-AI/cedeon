@@ -87,6 +87,7 @@ class WorklistService:
 
         items: list[WorklistItem] = []
         items += await self._term_validation_items(org_id, today)
+        items += await self._contract_change_items(org_id, candidates, event_names, treaty_names)
         items += self._recovery_review_items(candidates, event_names, treaty_names, today)
         items += await self._notice_due_items(context, candidates, event_names, treaty_names)
         items += await self._suggested_recovery_items(context)
@@ -112,6 +113,46 @@ class WorklistService:
                     detail="Extracted from the wording — awaiting your confirmation.",
                     href=f"/treaties/{treaty.id}/validate",
                     age_days=(today - version.created_at.date()).days,
+                )
+            )
+        return out
+
+    async def _contract_change_items(
+        self,
+        org_id: UUID,
+        candidates: list[RecoveryCandidate],
+        event_names: dict[UUID, str],
+        treaty_names: dict[UUID, str],
+    ) -> list[WorklistItem]:
+        """A recovery calculated against a treaty version that has since been
+        superseded (an endorsement opened a new version) — its basis may have
+        moved. Re-open it against the current wording."""
+        superseded = {
+            v.id
+            for treaty in await self._treaties.list(org_id)
+            for v in treaty.versions
+            if v.status is TreatyVersionStatus.SUPERSEDED
+        }
+        out: list[WorklistItem] = []
+        for c in candidates:
+            if (
+                c.status is RecoveryCandidateStatus.REJECTED
+                or c.treaty_version_id not in superseded
+            ):
+                continue
+            event = event_names.get(c.loss_event_id, "loss event")
+            treaty = treaty_names.get(c.treaty_id, "treaty")
+            calc = next((x for x in c.calculations if x.id == c.current_calculation_id), None)
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.CONTRACT_CHANGE,
+                    key=f"contract_change:{c.id}",
+                    title=f"{event} · {treaty}",
+                    detail="The treaty was superseded by a new version — re-open this recovery "
+                    "against the current wording.",
+                    href=f"/recovery-candidates/{c.id}?section=calculation",
+                    amount=Decimal(calc.layer_recovery) if calc is not None else None,
+                    currency=c.currency,
                 )
             )
         return out

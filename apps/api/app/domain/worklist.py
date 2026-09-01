@@ -41,6 +41,7 @@ class WorklistKind(StrEnum):
 
     NOTICE_DUE = "notice_due"
     RECOVERY_DRIFT = "recovery_drift"
+    CONTRACT_CHANGE = "contract_change"
     RECOVERY_REVIEW = "recovery_review"
     SUGGESTED_RECOVERY = "suggested_recovery"
     PACKET_APPROVAL = "packet_approval"
@@ -51,6 +52,7 @@ class WorklistKind(StrEnum):
 _KIND_CATEGORY: dict[WorklistKind, AttentionCategory] = {
     WorklistKind.NOTICE_DUE: AttentionCategory.OBLIGATION,
     WorklistKind.RECOVERY_DRIFT: AttentionCategory.RECOVERY,
+    WorklistKind.CONTRACT_CHANGE: AttentionCategory.CONTRACT,
     WorklistKind.RECOVERY_REVIEW: AttentionCategory.RECOVERY,
     WorklistKind.SUGGESTED_RECOVERY: AttentionCategory.RECOVERY,
     WorklistKind.PACKET_APPROVAL: AttentionCategory.RECOVERY,
@@ -64,11 +66,13 @@ def category_for(kind: WorklistKind) -> AttentionCategory:
 
 
 # A missed notice contests a recovery; a stale number mis-books an asset; a
-# review or approval is a queue that has already been triaged; an overdue
-# recoverable is chased continuously and rarely a surprise.
+# contract change under an open recovery invalidates its basis; a review or
+# approval is a queue that has already been triaged; an overdue recoverable is
+# chased continuously and rarely a surprise.
 _KIND_WEIGHT: dict[WorklistKind, int] = {
     WorklistKind.NOTICE_DUE: 600,
     WorklistKind.RECOVERY_DRIFT: 500,
+    WorklistKind.CONTRACT_CHANGE: 450,
     WorklistKind.RECOVERY_REVIEW: 300,
     WorklistKind.SUGGESTED_RECOVERY: 250,
     WorklistKind.PACKET_APPROVAL: 200,

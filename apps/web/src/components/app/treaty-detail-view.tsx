@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NoticeProvisionEditor } from "@/components/app/notice-provision-editor";
 import { RecoveryPreview } from "@/components/app/recovery-preview";
 import { TreatyLayersEditor } from "@/components/app/treaty-layers-editor";
+import { TreatyVersionsCard } from "@/components/app/treaty-versions-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,6 +138,13 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
           </CardContent>
         </Card>
       ) : null}
+
+      <TreatyVersionsCard
+        treatyId={treatyId}
+        versions={treaty.data?.versions ?? []}
+        currentVersionId={version?.id}
+        currentStatus={version?.status}
+      />
 
       {version &&
       version.status !== "validated" &&

@@ -122,6 +122,18 @@ class TreatyCreate(ApiModel):
     source_document_id: UUID | None = None
 
 
+class NewTreatyVersionRequest(ApiModel):
+    """Supersede the current version — the path an endorsement takes."""
+
+    note: str = Field(
+        min_length=1, max_length=300, description="what changed, e.g. 'Endorsement 3'"
+    )
+    source_document_id: UUID | None = Field(
+        default=None, description="the endorsement document, if uploaded"
+    )
+
+
 class TreatyDetail(ApiModel):
     treaty: TreatyOut
     current_version: TreatyVersionOut | None
+    versions: list[TreatyVersionSummary] = Field(default_factory=list)

@@ -16,6 +16,7 @@ from app.api.schemas.recoveries import (
 )
 from app.api.schemas.reinsurance import (
     LayerOut,
+    NewTreatyVersionRequest,
     ParticipationOut,
     TermOut,
     TreatyCreate,
@@ -151,6 +152,15 @@ async def create_treaty(
     return _treaty_out(treaty)
 
 
+def _version_summary(version: TreatyVersion) -> TreatyVersionSummary:
+    return TreatyVersionSummary(
+        id=version.id,
+        version_no=version.version_no,
+        status=version.status,
+        source_document_id=version.source_document_id,
+    )
+
+
 @router.get("/{treaty_id}", response_model=TreatyDetail, operation_id="getTreaty")
 async def get_treaty(
     treaty_id: UUID, context: AuthedContext, service: TreatyServiceDep
@@ -160,6 +170,40 @@ async def get_treaty(
     return TreatyDetail(
         treaty=_treaty_out(treaty),
         current_version=_version_out(current) if current else None,
+        versions=[
+            _version_summary(v)
+            for v in sorted(treaty.versions, key=lambda x: x.version_no, reverse=True)
+        ],
+    )
+
+
+@router.post(
+    "/{treaty_id}/versions",
+    response_model=TreatyDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Open a new treaty version (supersede the current one — the endorsement path)",
+    operation_id="createTreatyVersion",
+)
+async def create_treaty_version(
+    treaty_id: UUID,
+    payload: NewTreatyVersionRequest,
+    context: AuthedContext,
+    service: TreatyServiceDep,
+) -> TreatyDetail:
+    treaty = await service.create_new_version(
+        context,
+        treaty_id,
+        source_document_id=payload.source_document_id,
+        note=payload.note,
+    )
+    current = await service.get_current_version(context, treaty)
+    return TreatyDetail(
+        treaty=_treaty_out(treaty),
+        current_version=_version_out(current) if current else None,
+        versions=[
+            _version_summary(v)
+            for v in sorted(treaty.versions, key=lambda x: x.version_no, reverse=True)
+        ],
     )
 
 

@@ -173,9 +173,26 @@ of gravity from "start a recovery" to "here is what needs you today."
   job skips it) runs the dataset against the real model and asserts every case's assertions
   pass. Run with `pytest -m eval`. Investigator eval cases (grounding, no-recompute,
   out-of-scope) are the natural next addition to the same module.
-- **Later — ⑨ endorsement change intelligence · ⑩ reinstatement premium math ·
-  ⑪ expected-vs-billed-vs-collected reconciliation · ⑫ CAT/event intelligence ·
-  per-layer participations + a grouped programme view (⑥ follow-ups).**
+**Intelligence-system reframe (2026-08-31, 2nd strategy prompt).** Cedeon = *the
+intelligence system for ceded reinsurance*; Recovery is module one. The recovery-control
+build ①–⑧ already delivered the "continuous intelligence" pivot; minimal changes:
+- **Attention categories** (`2d8f21d`) — `AttentionCategory` (recovery / obligation /
+  contract / exception) + `category` on `WorklistItem` + `GET /worklist`; Home groups
+  "Needs you". `PRODUCT.md §2a` names the layers. No new object, no migration.
+- **Citations deep-link** (`c0e76ce`) — investigation + packet citations → `/documents/{id}?page=N`.
+
+- **⑨ endorsement re-versioning — ✅ done (v1, no migration).** `POST /treaties/{id}/versions
+  {note, source_document_id?}` copies the frozen state (layers / participations / terms)
+  into a new `NEEDS_VALIDATION` version, supersedes the old (`SUPERSEDED`), moves
+  `current_version_id`. Guard: current must be validated. The analyst edits what the
+  endorsement changed (layers via `set_layers`, notice term via the notice-term endpoint)
+  and re-validates. A recovery calculated against a now-superseded version surfaces as a
+  `contract_change` worklist item (category = contract). Treaty detail gets a version-history
+  card + "New version" action. 5 new tests, 298 backend. *Deferred:* re-extraction against
+  the endorsement doc + a term-level diff; a superseded-version banner on the recovery workspace.
+- **Later — ⑩ reinstatement premium math · ⑪ expected-vs-billed-vs-collected reconciliation ·
+  ⑫ CAT/event intelligence · per-layer participations + a grouped programme view (⑥ follow-ups)
+  · investigator eval cases (⑧ follow-up).**
 
 ---
 

@@ -14,6 +14,9 @@ from app.db.models.reinsurance import (
     ReinsuranceProgram,
     Reinsurer,
     Treaty,
+    TreatyLayer,
+    TreatyParticipation,
+    TreatyTerm,
     TreatyVersion,
 )
 from app.domain.audit import ActorType, AuditRecord
@@ -290,3 +293,121 @@ class TreatyService:
         await self._session.commit()
         await self._enqueue_extract(context.organization.id, version.id)
         return await self.get_treaty(context, treaty_id)
+
+    async def create_new_version(
+        self,
+        context: AuthenticatedContext,
+        treaty_id: UUID,
+        *,
+        source_document_id: UUID | None,
+        note: str,
+    ) -> Treaty:
+        """Supersede the current validated version with a fresh one — the path an
+        endorsement takes. The new version is a full copy of the frozen state
+        (layers, participations, terms) at status ``NEEDS_VALIDATION``, so the
+        analyst edits only what the endorsement changed and re-validates. The old
+        version is retained as ``SUPERSEDED``; open recoveries against it surface
+        on the worklist as contract-change items."""
+        org_id = context.organization.id
+        note = note.strip()
+        if not note:
+            raise ValidationError(
+                "say what changed (e.g. 'Endorsement 3 — revised occurrence limit')"
+            )
+
+        treaty = await self.get_treaty(context, treaty_id)
+        if treaty.current_version_id is None:
+            raise ConflictError("this treaty has no current version to supersede")
+        current = await self._versions.get(org_id, treaty.current_version_id)
+        if current is None:
+            raise NotFoundError("the current treaty version no longer exists")
+        if current.status not in (TreatyVersionStatus.VALIDATED, TreatyVersionStatus.ACTIVE):
+            raise ConflictError(
+                "only a validated treaty version can be superseded — validate the current one first"
+            )
+
+        source_document_id = await self._resolve_source_document(org_id, source_document_id)
+
+        new_version = TreatyVersion(
+            organization_id=org_id,
+            version_no=current.version_no + 1,
+            source_document_id=source_document_id,
+            status=TreatyVersionStatus.NEEDS_VALIDATION,
+            effective_date=current.effective_date,
+            expiration_date=current.expiration_date,
+            currency=current.currency,
+        )
+        new_version.treaty = treaty  # back-populates treaty.versions in memory
+        for layer in current.layers:
+            new_version.layers.append(
+                TreatyLayer(
+                    organization_id=org_id,
+                    layer_no=layer.layer_no,
+                    attachment=layer.attachment,
+                    limit=layer.limit,
+                    currency=layer.currency,
+                    reinstatements=layer.reinstatements,
+                    description=layer.description,
+                )
+            )
+        for part in current.participations:
+            new_version.participations.append(
+                TreatyParticipation(
+                    organization_id=org_id,
+                    reinsurer_id=part.reinsurer_id,
+                    placed_share=part.placed_share,
+                    signed_share=part.signed_share,
+                    broker_name=part.broker_name,
+                )
+            )
+        for term in current.terms:
+            new_version.terms.append(
+                TreatyTerm(
+                    organization_id=org_id,
+                    key=term.key,
+                    value=dict(term.value),
+                    currency=term.currency,
+                    status=term.status,
+                    derived_from_candidate_id=term.derived_from_candidate_id,
+                    review_id=term.review_id,
+                )
+            )
+
+        self._versions.add(new_version)
+        current.status = TreatyVersionStatus.SUPERSEDED
+        await self._session.flush()
+        treaty.current_version_id = new_version.id
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=org_id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="treaty_version.superseded",
+                entity_type="treaty",
+                entity_id=treaty.id,
+                summary=(
+                    f"{context.user.email} opened treaty version {new_version.version_no} — {note}"
+                ),
+                payload={
+                    "note": note,
+                    "from_version_id": str(current.id),
+                    "to_version_id": str(new_version.id),
+                    "version_no": new_version.version_no,
+                    "source_document_id": (str(source_document_id) if source_document_id else None),
+                },
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        return await self.get_treaty(context, treaty_id)
+
+    async def _resolve_source_document(
+        self, organization_id: UUID, source_document_id: UUID | None
+    ) -> UUID | None:
+        if source_document_id is None:
+            return None
+        document = await self._documents.get(organization_id, source_document_id)
+        if document is None:
+            raise NotFoundError("source document not found")
+        return source_document_id

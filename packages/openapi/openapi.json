@@ -1933,6 +1933,37 @@
         "title": "MemberOut",
         "type": "object"
       },
+      "NewTreatyVersionRequest": {
+        "additionalProperties": false,
+        "description": "Supersede the current version \u2014 the path an endorsement takes.",
+        "properties": {
+          "note": {
+            "description": "what changed, e.g. 'Endorsement 3'",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the endorsement document, if uploaded",
+            "title": "Source Document Id"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "NewTreatyVersionRequest",
+        "type": "object"
+      },
       "NoticeKind": {
         "enum": [
           "initial_loss_advice",
@@ -4850,6 +4881,13 @@
           },
           "treaty": {
             "$ref": "#/components/schemas/TreatyOut"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/TreatyVersionSummary"
+            },
+            "title": "Versions",
+            "type": "array"
           }
         },
         "required": [
@@ -5422,6 +5460,7 @@
         "enum": [
           "notice_due",
           "recovery_drift",
+          "contract_change",
           "recovery_review",
           "suggested_recovery",
           "packet_approval",
@@ -8039,6 +8078,59 @@
           }
         },
         "summary": "Deterministic 'what would this treaty recover' \u2014 read-only, not persisted",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions": {
+      "post": {
+        "operationId": "createTreatyVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewTreatyVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Open a new treaty version (supersede the current one \u2014 the endorsement path)",
         "tags": [
           "treaties"
         ]

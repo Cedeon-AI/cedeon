@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Check,
   FileText,
+  FileWarning,
   Hourglass,
   ScrollText,
   Sigma,
@@ -28,6 +29,7 @@ import { CATEGORY_LABEL, CATEGORY_ORDER, worklistClock, worklistKind } from "@/l
 const ICON: Record<WorklistKind, LucideIcon> = {
   notice_due: AlarmClock,
   recovery_drift: TrendingUp,
+  contract_change: FileWarning,
   recovery_review: Sigma,
   suggested_recovery: Sparkles,
   packet_approval: FileText,
