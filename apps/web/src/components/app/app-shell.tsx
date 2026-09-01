@@ -1,3 +1,4 @@
+import { Settings } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppNav } from "@/components/app/app-nav";
@@ -41,6 +42,13 @@ export function AppShell({ session, children }: { session: Session; children: Re
             <span className="hidden rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground sm:inline">
               {session.role}
             </span>
+            <Link
+              href="/settings/members"
+              title="Organization settings"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <Settings className="size-4" />
+            </Link>
             <span
               className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
               title={session.user.email}

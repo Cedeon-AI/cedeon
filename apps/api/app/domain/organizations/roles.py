@@ -1,22 +1,28 @@
-"""Membership roles and the authorization rank order.
+"""Organization roles and the authorization rank order.
 
-    viewer  < member < admin < owner
+    viewer  <  member  <  admin
 
-* viewer — read only
-* member — can perform reviews / approvals and day-to-day work
-* admin  — can also manage members
-* owner  — full control, cannot be removed by a non-owner
+* viewer — read-only. Reserved for a future auditor / executive persona; not
+  assigned anywhere in the product today, but every consequential mutation is
+  gated at ``member`` so the boundary is real when it is.
+* member — day-to-day reinsurance work: upload, validate, review, approve.
+* admin  — everything a member can do, plus manage the organization and its
+  people (invite, remove, change roles, rename the organization).
+
+There is deliberately **no ``owner``**. An organization must always keep at least
+one admin (enforced in ``MembershipService``); that rule replaces a single
+immutable owner and keeps a clean path to SSO / SCIM deprovisioning later
+(docs/DECISIONS.md ADR-0026).
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
 
-_RANK: dict[str, int] = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}
+_RANK: dict[str, int] = {"viewer": 0, "member": 1, "admin": 2}
 
 
 class Role(StrEnum):
-    OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
     VIEWER = "viewer"
@@ -36,3 +42,7 @@ class Role(StrEnum):
     @property
     def can_write(self) -> bool:
         return self.satisfies(Role.MEMBER)
+
+
+# Roles an admin may assign through the invitation / role-change flows.
+ASSIGNABLE_ROLES: tuple[Role, ...] = (Role.ADMIN, Role.MEMBER)

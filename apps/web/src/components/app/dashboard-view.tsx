@@ -16,15 +16,16 @@ import {
   Sparkles,
   TrendingUp,
   Upload,
+  UserPlus,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, PageHeader, Stat } from "@/components/ui/page-header";
 import type { AttentionCategory, WorklistItemOut, WorklistKind } from "@/lib/api";
-import { getCurrentUser, getWorklist, listMembers } from "@/lib/api";
+import { getCurrentUser, getWorklist, listInvitations } from "@/lib/api";
 import { cn, formatMoneyCompact } from "@/lib/utils";
 import { CATEGORY_LABEL, CATEGORY_ORDER, worklistClock, worklistKind } from "@/lib/worklist";
 
@@ -47,10 +48,13 @@ export function DashboardView() {
     queryKey: ["auth", "me"],
     queryFn: async () => (await getCurrentUser({ throwOnError: true })).data,
   });
-  const members = useQuery({
-    queryKey: ["memberships"],
-    queryFn: async () => (await listMembers({ throwOnError: true })).data,
+  const isAdmin = me.data?.role === "admin";
+  const invitations = useQuery({
+    queryKey: ["invitations"],
+    enabled: isAdmin,
+    queryFn: async () => (await listInvitations({ throwOnError: true })).data.invitations,
   });
+  const pendingInvites = invitations.data?.length ?? 0;
   const worklist = useQuery({
     queryKey: ["worklist"],
     queryFn: async () => (await getWorklist({ throwOnError: true })).data,
@@ -181,28 +185,25 @@ export function DashboardView() {
         </div>
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Team</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {members.isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (
-            <ul className="divide-y divide-border/70 text-sm">
-              {members.data?.members.map((member) => (
-                <li key={member.user_id} className="flex items-center justify-between py-2.5">
-                  <span>
-                    <span className="font-medium">{member.name}</span>{" "}
-                    <span className="text-muted-foreground">{member.email}</span>
-                  </span>
-                  <span className="capitalize text-muted-foreground">{member.role}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {isAdmin && pendingInvites > 0 ? (
+        <Link
+          href="/settings/members"
+          className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm shadow-xs transition hover:border-border-strong"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning/15 text-warning">
+            <UserPlus className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium">
+              {pendingInvites} invitation{pendingInvites === 1 ? "" : "s"} awaiting a reply
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Resend or cancel them in organization settings.
+            </span>
+          </span>
+          <ArrowRight className="size-4 shrink-0 text-muted-foreground/50 transition group-hover:text-foreground" />
+        </Link>
+      ) : null}
     </div>
   );
 }

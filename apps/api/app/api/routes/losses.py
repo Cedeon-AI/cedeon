@@ -7,13 +7,14 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies.context import (
     AuthedContext,
     LossEventServiceDep,
     LossImportServiceDep,
+    require_write_role,
 )
 from app.api.schemas.losses import (
     CanonicalFieldList,
@@ -44,8 +45,12 @@ from app.domain.losses.occurrences import (
     propose_occurrences,
 )
 
-imports_router = APIRouter(prefix="/loss-imports", tags=["loss-imports"])
-events_router = APIRouter(prefix="/loss-events", tags=["loss-events"])
+imports_router = APIRouter(
+    prefix="/loss-imports", tags=["loss-imports"], dependencies=[Depends(require_write_role)]
+)
+events_router = APIRouter(
+    prefix="/loss-events", tags=["loss-events"], dependencies=[Depends(require_write_role)]
+)
 
 _ROW_SAMPLE_LIMIT = 500
 

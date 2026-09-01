@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from uuid import UUID
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr
 
 from app.api.schemas import ApiModel
 from app.domain.organizations import Role
@@ -15,14 +15,12 @@ class MemberOut(ApiModel):
     name: str
     role: Role
     joined_at: dt.datetime
+    is_self: bool = False
 
 
 class MemberList(ApiModel):
     members: list[MemberOut]
 
 
-class AddMemberRequest(ApiModel):
-    email: EmailStr
-    name: str = Field(min_length=1, max_length=200)
-    role: Role = Role.MEMBER
-    initial_password: str = Field(min_length=12, max_length=1024)
+class ChangeRoleRequest(ApiModel):
+    role: Role

@@ -6,9 +6,9 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies.context import AuthedContext, DbSession
+from app.api.dependencies.context import AuthedContext, DbSession, require_write_role
 from app.api.schemas.statements import (
     CreateStatementRequest,
     StatementFindingOut,
@@ -21,7 +21,11 @@ from app.db.models.recoveries import ReinsurerStatement, ReinsurerStatementLine
 from app.services.errors import ValidationError
 from app.services.statements import ReinsurerStatementService, StatementLineInput
 
-router = APIRouter(prefix="/reinsurer-statements", tags=["reinsurer-statements"])
+router = APIRouter(
+    prefix="/reinsurer-statements",
+    tags=["reinsurer-statements"],
+    dependencies=[Depends(require_write_role)],
+)
 
 
 def _amount(raw: str | None, field: str) -> Decimal | None:

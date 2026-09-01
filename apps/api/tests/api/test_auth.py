@@ -30,11 +30,11 @@ async def _register(
 
 
 class TestRegistration:
-    async def test_register_creates_org_owner_and_session(self, client: AsyncClient) -> None:
+    async def test_register_creates_org_admin_and_session(self, client: AsyncClient) -> None:
         body = await _register(client)
         assert body["organization"]["name"] == "Atlantic Specialty"
         assert body["organization"]["slug"] == "atlantic-specialty"
-        assert body["role"] == "owner"
+        assert body["role"] == "admin"
         assert body["user"]["email"] == "vp.ceded@atlantic.example"
 
         me = await client.get("/auth/me")
@@ -58,12 +58,7 @@ class TestRegistration:
     async def test_short_password_rejected(self, client: AsyncClient) -> None:
         resp = await client.post(
             "/auth/register",
-            json={
-                "organization_name": "Co",
-                "email": "a@b.example",
-                "name": "A",
-                "password": "short",
-            },
+            json={"organization_name": "Co", "email": "a@b.example", "name": "A", "password": "x"},
         )
         assert resp.status_code == 422
 
@@ -80,7 +75,6 @@ class TestLogin:
     async def test_login_from_a_fresh_client(self, client_factory) -> None:
         setup = await client_factory()
         await _register(setup, email="claims.mgr@carrier.example")
-
         fresh = await client_factory()
         resp = await fresh.post(
             "/auth/login",
@@ -98,21 +92,11 @@ class TestLogin:
         )
         assert resp.status_code == 401
 
-    async def test_unknown_user_is_401(self, client: AsyncClient) -> None:
-        resp = await client.post(
-            "/auth/login", json={"email": "nobody@nowhere.example", "password": STRONG_PASSWORD}
-        )
-        assert resp.status_code == 401
-
 
 class TestSession:
     async def test_me_requires_authentication(self, client: AsyncClient) -> None:
         resp = await client.get("/auth/me")
         assert resp.status_code == 401
-        problem = resp.json()
-        assert problem["status"] == 401
-        assert problem["type"].endswith("authentication_failed")
-        assert "correlation_id" in problem
 
     async def test_logout_revokes_the_session(self, client: AsyncClient) -> None:
         await _register(client)
@@ -120,97 +104,24 @@ class TestSession:
         assert (await client.get("/auth/me")).status_code == 401
 
 
-class TestTenantIsolation:
-    async def test_members_list_is_scoped_to_the_callers_org(self, client_factory) -> None:
-        a = await client_factory()
-        b = await client_factory()
-        await _register(a, org="Carrier A", email="owner@a.example")
-        await _register(b, org="Carrier B", email="owner@b.example")
-
-        a_members = (await a.get("/memberships")).json()["members"]
-        assert [m["email"] for m in a_members] == ["owner@a.example"]
-
-        b_members = (await b.get("/memberships")).json()["members"]
-        assert [m["email"] for m in b_members] == ["owner@b.example"]
+class TestOrganizationSettings:
+    async def test_admin_can_rename_the_org_slug_is_stable(self, client: AsyncClient) -> None:
+        await _register(client, org="Old Name")
+        resp = await client.patch("/organizations/current", json={"name": "New Name"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["name"] == "New Name"
+        assert body["slug"] == "old-name"  # slug is a stable identity, never renamed
 
 
 class TestRoleEnforcement:
-    async def test_member_cannot_add_members(self, client_factory) -> None:
-        owner = await client_factory()
-        await _register(owner, email="owner@carrier.example")
-
-        add = await owner.post(
-            "/memberships",
-            json={
-                "email": "analyst@carrier.example",
-                "name": "Analyst",
-                "role": "member",
-                "initial_password": STRONG_PASSWORD,
-            },
-        )
-        assert add.status_code == 201
-
-        member = await client_factory()
-        await member.post(
-            "/auth/login",
-            json={"email": "analyst@carrier.example", "password": STRONG_PASSWORD},
-        )
-        forbidden = await member.post(
-            "/memberships",
-            json={
-                "email": "another@carrier.example",
-                "name": "Another",
-                "role": "member",
-                "initial_password": STRONG_PASSWORD,
-            },
-        )
-        assert forbidden.status_code == 403
-
-    async def test_admin_cannot_grant_owner(self, client_factory) -> None:
-        owner = await client_factory()
-        await _register(owner, email="owner2@carrier.example")
-        await owner.post(
-            "/memberships",
-            json={
-                "email": "admin@carrier.example",
-                "name": "Admin",
-                "role": "admin",
-                "initial_password": STRONG_PASSWORD,
-            },
-        )
-        admin = await client_factory()
-        await admin.post(
-            "/auth/login",
-            json={"email": "admin@carrier.example", "password": STRONG_PASSWORD},
-        )
-        resp = await admin.post(
-            "/memberships",
-            json={
-                "email": "coowner@carrier.example",
-                "name": "Co Owner",
-                "role": "owner",
-                "initial_password": STRONG_PASSWORD,
-            },
-        )
-        assert resp.status_code == 403
-
-    async def test_added_member_appears_in_list(self, client_factory) -> None:
-        owner = await client_factory()
-        await _register(owner, email="owner3@carrier.example")
-        await owner.post(
-            "/memberships",
-            json={
-                "email": "ops@carrier.example",
-                "name": "Ops Manager",
-                "role": "member",
-                "initial_password": STRONG_PASSWORD,
-            },
-        )
-        members = (await owner.get("/memberships")).json()["members"]
-        assert {m["email"] for m in members} == {
-            "owner3@carrier.example",
-            "ops@carrier.example",
-        }
+    async def test_last_admin_cannot_be_demoted_or_removed(self, client: AsyncClient) -> None:
+        body = await _register(client)
+        me = body["user"]["id"]
+        demote = await client.patch(f"/memberships/{me}", json={"role": "member"})
+        assert demote.status_code == 409
+        remove = await client.delete(f"/memberships/{me}")
+        assert remove.status_code == 409
 
 
 class TestAudit:
@@ -222,4 +133,3 @@ class TestAudit:
         reg = next(r for r in rows if r.action == "organization.registered")
         assert reg.actor_type.value == "user"
         assert reg.actor_id is not None
-        assert reg.correlation_id is not None

@@ -33,6 +33,8 @@ versioning / immutability rules, and the provenance model.
 | `treaty_layers`, `treaty_participations`, `treaty_terms` | Belong to a `treaty_version`; follow its freeze. |
 | `treaty_term_candidates` | Immutable AI output. |
 | `reviews` | **Append-only.** Never updated or deleted. |
+| `memberships` | Mutable `role`; deleting one revokes access, keeps the user + their history. |
+| `invitations` | `status` and `token_hash` mutable (revoke, resend); single-use once `accepted`. |
 | `underlying_losses` | Immutable snapshot of a committed import row. Corrections = new import + new rows; superseded losses excluded from calculations by a status flag. |
 | `recovery_calculations`, `recovery_allocations` | **Immutable.** Recalculation = new `recovery_calculations` row; `recovery_candidates.current_calculation_id` moves. |
 | `recovery_investigations` | Immutable per agent run. |
@@ -87,10 +89,19 @@ treaty_term_candidates(
 
 ## 4. Entity catalogue (MVP)
 
-**Identity & tenancy**
-`organizations` · `users` (`password_hash` nullable) · `memberships` (role:
-owner/admin/member/viewer) · `sessions` (server-side, `token_hash`, `expires_at`,
-`revoked_at`).
+**Identity & tenancy** *(migration 0001; `invitations` added in 0017)*
+`organizations` (`name`, `slug` unique — the stable identity, never renamed) ·
+`users` (`email` unique lower-cased, `password_hash` **nullable** — SSO seam, `name`,
+`is_active`, `last_login_at`; **no `organization_id`** — org membership is
+first-class) · `memberships` (`organization_id`, `user_id`, `role`
+**`admin` / `member`** *(`viewer` reserved, unused — ADR-0026)*;
+`UNIQUE(organization_id, user_id)`; a user may hold more than one) ·
+`invitations` (`organization_id`, `email`, `role`, `token_hash` — HMAC not plaintext,
+`status` pending/accepted/revoked, `invited_by_user_id` `SET NULL`, `expires_at`,
+`accepted_at`; **partial unique index** `(organization_id, email) WHERE status
+= 'PENDING'` — one live invite per email per org; single-use, bound to the email) ·
+`sessions` (server-side, `token_hash`, `organization_id` + `user_id`, `expires_at`,
+`revoked_at`, `last_seen_at` idle timeout).
 
 **Reinsurance structure** *(built in Phase 3; migration 0003)*
 `cedents` · `reinsurance_programs` (`treaty_year`) · `reinsurers` · *(`brokers`
@@ -289,6 +300,8 @@ the user-visible progress signal.
 erDiagram
     ORGANIZATIONS ||--o{ MEMBERSHIPS : has
     USERS ||--o{ MEMBERSHIPS : in
+    ORGANIZATIONS ||--o{ INVITATIONS : "pending / accepted"
+    USERS |o--o{ INVITATIONS : "invited by"
     ORGANIZATIONS ||--o{ CEDENTS : owns
     ORGANIZATIONS ||--o{ REINSURERS : owns
     CEDENTS ||--o{ REINSURANCE_PROGRAMS : sponsors

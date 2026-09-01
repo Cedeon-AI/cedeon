@@ -27,14 +27,24 @@ otherwise in product, marketing, or docs.
 - **Server-side sessions** in Postgres (`sessions.token_hash`, `expires_at`,
   `revoked_at`); opaque token in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie on
   the single public origin. No JWT for session state in MVP.
-- Rotation on privilege change; explicit logout revokes; idle + absolute expiry.
-- Authorization: role check (`owner` / `admin` / `member` / `viewer`) on mutating
-  routes; object-level checks that the target belongs to the caller's org. Approvals
-  and reviews require at least `member`.
+- Explicit logout revokes; idle + absolute expiry. `authenticate()` re-reads the
+  caller's membership on **every request**, so removing someone kills their session.
+- **Roles: `admin` / `member`** (`viewer` reserved, unused — ADR-0026). Every
+  domain-mutating router carries a `require_write_role` dependency: safe methods pass,
+  anything else needs `member`. Organization administration (rename, members,
+  invitations) needs `admin`. **Object-level** checks — the target row must belong to
+  the caller's `organization_id` — are in every repository query, not just the route.
+  Cross-org access by direct id returns 404, tested per resource
+  (`tests/api/test_tenant_isolation.py`).
+- **Invitations** (ADR-0026): high-entropy token, **HMAC stored not plaintext**,
+  7-day expiry, single-use, bound to the invited email (you can only accept as that
+  address), one pending per `(org, email)`. Admin-only to create / resend / revoke.
+- **Last-admin protection**: an organization always keeps ≥ 1 admin.
 - `password_hash` is nullable so SSO / SAML (e.g. WorkOS) attaches later without
-  changing the meaning of existing rows. **Not built in MVP** — but enterprise
-  reinsurance buyers will require it, so the seam exists.
-- Rate-limit auth endpoints; generic failure messages; audit every auth event.
+  changing the meaning of existing rows. **Not built** — but the seam exists, and the
+  membership-not-user-owns-org model + admin/member roles keep the path clean.
+- Generic auth failure messages; a timing-guard hash for unknown users; audit every
+  auth event. **Rate-limiting auth / invitation endpoints is a documented follow-up.**
 
 ## 3. Object storage
 

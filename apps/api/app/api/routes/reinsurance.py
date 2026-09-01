@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies.context import AuthedContext, DbSession
+from app.api.dependencies.context import AuthedContext, DbSession, require_write_role
 from app.api.schemas.reinsurance import (
     CedentCreate,
     CedentList,
@@ -19,7 +19,7 @@ from app.api.schemas.reinsurance import (
 from app.db.models.reinsurance import ReinsuranceProgram
 from app.services.reinsurance import ProgramService, ReferenceDataService
 
-router = APIRouter(tags=["reinsurance"])
+router = APIRouter(tags=["reinsurance"], dependencies=[Depends(require_write_role)])
 
 
 @router.get("/cedents", response_model=CedentList, operation_id="listCedents")

@@ -59,7 +59,7 @@ this swap does not touch domain or API code. See [ADR-0007](DECISIONS.md).
 | 3 | **Extraction ≠ agent** | Treaty term extraction is a **single typed structured-output call** (PydanticAI `output_type`), not a tool-loop agent. The agent/tool abstraction is reserved for the Recovery Investigator. Keeps extraction cheap, deterministic in shape, and easy to eval. |
 | 4 | **Single public origin** | The browser talks only to Next.js. A runtime catch-all route handler (`app/api/[...path]/route.ts`) proxies `/api/*` to FastAPI over the private network — runtime, not a build-time rewrite, so one image works across environments. FastAPI is not publicly exposed in production. One origin → simple `SameSite=Lax` httpOnly session cookies, no CORS, no cross-site cookie pain. The generated TS client points at same-origin `/api`; server components call the API directly via `getSession()`. See [ADR-0004](DECISIONS.md). |
 | 5 | **Money value object** | A `Money(amount: Decimal, currency: str)` value object; a bare `Decimal` never crosses a domain boundary as money. Currency mismatch is a hard error in MVP (no FX). Allocations use largest-remainder penny distribution so participant shares sum **exactly** to the layer recovery. |
-| 6 | **Auth** | Email + password (`argon2id`) + server-side sessions in Postgres. No hand-rolled crypto, no external IdP yet. `User.password_hash` is nullable so SSO/SAML (WorkOS) links in later without a migration of meaning. Enterprise reinsurance buyers *will* require SSO — the model allows it, we don't build it now. |
+| 6 | **Auth & team** | Email + password (`argon2id`) + server-side sessions in Postgres. `Organization ← Membership → User` (membership is first-class; a user has no `organization_id` and may hold more than one membership). Roles `admin` / `member` (`viewer` reserved). Adding people is an **email invitation** → accept (token HMAC'd, expiring, single-use, bound to the invited email). `User.password_hash` nullable so SSO/SAML links in later without a migration of meaning. Last-admin protection replaces a sacred owner. See ADR-0026. |
 | 7 | **Observability** | OpenTelemetry + structured JSON logs + correlation IDs from **Phase 1** (cheap early, painful to retrofit). Export to a hosted backend (or Sentry + logs) — do not self-host Grafana/Tempo for MVP. AI cost/latency/tokens are just columns on `agent_runs` (Phase 3). |
 | 8 | **Calc engine tests** | Golden tables **and** property-based tests (Hypothesis): recovery ∈ `[0, limit]`; recovery is monotonic non-decreasing in gross loss; allocations sum to layer recovery exactly; zero/negative inputs rejected. See [DATA_MODEL.md](DATA_MODEL.md) §6. |
 
@@ -268,8 +268,11 @@ ML deps + pre-baked models). Both share `apps/api/app`.
 Resource sketch (semantics finalised per phase):
 
 ```
-POST   /auth/login · /auth/logout · GET /auth/me
-GET    /organizations/current · POST /memberships (invite)
+POST   /auth/register · /auth/login · /auth/logout · GET /auth/me
+GET    /organizations/current · PATCH /organizations/current (rename, admin)
+GET    /memberships · PATCH /memberships/{user_id} (role) · DELETE /memberships/{user_id}   admin
+POST   /invitations · GET /invitations · POST /invitations/{id}/{resend|revoke}             admin
+GET    /auth/invitation/{token} (preview) · POST /auth/invitation/{token}/accept           public
 CRUD   /cedents · /programs · /reinsurers · /brokers
 POST   /treaties                          create shell
 POST   /treaties/{id}/documents           upload → parse job
@@ -361,6 +364,8 @@ def allocate_recovery(
 | 11 | Recoverables | The head-of-ceded portfolio — open / collected / overdue, an aging chart, the legs table with a next-action per leg, a ⚠ where a leg doesn't reconcile |
 | 12 | **Statements** | Enter a reinsurer's stated agreed / paid figures; Cedeon reconciles each line against what it holds and lists the gaps to resolve |
 | 13 | **Activity** *(Phase 10)* | Three tabs: **AI runs** · **Audit log** · **AI spend**. Enough to explain a decision — **not** an AgentOps product. |
+| 14 | **Settings → Organization / Members** | Rename the workspace; manage people — active members (role, remove), pending invitations (resend, cancel), invite by email. Reached from the top-bar gear. Home shows only an *actionable* "N invitations awaiting a reply" nudge, never a static roster. |
+| — | **`/invite/{token}`** *(public)* | Accept-invitation page — shows the organization, inviter and role, then a mini-register (new user) or "sign in to accept" (existing account). |
 
 Design language: calm, dense, and legible — this is a review tool for financial
 professionals. Every AI-authored statement in the UI is visually badged and carries

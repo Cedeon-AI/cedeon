@@ -160,7 +160,7 @@ value object.
 | [docs/SECURITY.md](docs/SECURITY.md) | Tenancy, authz, prompt-injection defense, secrets, data handling |
 | [docs/UX_STUDY.md](docs/UX_STUDY.md) | The ceded-reinsurance-desk workflow study — findings, the re-framed IA, phasing |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build history, current status, what's next |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0025) |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records (ADR-0001 … ADR-0026) |
 
 ## Status
 
@@ -171,8 +171,11 @@ multi-layer programmes with per-layer panels, notice deadlines, drift detection,
 system-suggested recoveries, aged-recoverable chasing, endorsement re-versioning
 with re-extraction + a term diff, reinstatement premium math, an assistive
 hours-clause occurrence view, and reconciliation (internal + against reinsurer
-statements). **358 backend tests** + `pytest -m eval` extraction & investigator
-datasets, a live golden-path e2e, all CI gates green; migrations 0001–0016. What's
+statements). Several people from one carrier work together in one organization —
+first-class membership, `admin` / `member` roles, email invitations, tenant
+isolation enforced per object server-side. **369 backend tests** + `pytest -m eval`
+extraction & investigator datasets, a live golden-path e2e, all CI gates green;
+migrations 0001–0017. What's
 next is in [docs/ROADMAP.md](docs/ROADMAP.md); the build history is there and in
 `git log`.
 

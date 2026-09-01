@@ -37,12 +37,13 @@ queue is a derived view, not a table (ARCHITECTURE.md §9, PRODUCT §1a).
 | — | Post-MVP UX — reframe (A), recovery workspace (B), collection tracking (C) + portfolio screen, occurrence basis (finding 8) | ✅ **Complete** (2026-08-31) — ADR-0024; migrations 0010–0011 |
 | — | Recovery-control build ①–⑧ + intelligence-system reframe (⑨, ⑪) | ✅ **Complete** (2026-08-31) — migrations 0012–0013 |
 | — | Marketing-site reframe + all 6 deferred items (⑥ ⑨ ⑩ ⑫ + statement reconciliation) | ✅ **Complete** (2026-09-01) — ADR-0025; migrations 0014–0016 |
+| — | Multi-user organization — first-class membership capability, `admin`/`member` roles, email invitations, write-role enforcement on every mutating route, Settings area | ✅ **Complete** (2026-09-01) — ADR-0026; migration 0017 |
 
-**The 10-phase MVP is complete**, plus the recovery-control build and the six
-deferred items. Full pipeline through notice draft + the intelligence layers on top,
-all built, tested (**358 backend** + `pytest -m eval` extraction & investigator
-datasets + a live golden-path e2e), migrations 0001–0016, running through the
-containerized stack.
+**The 10-phase MVP is complete**, plus the recovery-control build, the six
+deferred items, and the multi-user organization system. Full pipeline through notice
+draft + the intelligence layers on top, all built, tested (**369 backend** +
+`pytest -m eval` extraction & investigator datasets + a live golden-path e2e),
+migrations 0001–0017, running through the containerized stack.
 
 **First meaningful success criterion:** a reinsurance professional uploads a
 real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and Cedeon
@@ -274,6 +275,38 @@ PRODUCT §1a/§7 are the next candidates only after customer discovery.
   build status). Platform grid gains multi-layer programmes; comparison table + FAQ + about
   page + metadata + nav updated. Scope stays honest per §39 (per-occurrence XOL + a stack of
   layers; no aggregate/QS/reinstatement/hours-clause claims; reconciliation is internal-only).
+
+**Multi-user organization — ✅ done (2026-09-01, user-directed audit — ADR-0026,
+migration 0017).** The identity schema was already right (membership is first-class,
+`User` has no `organization_id`, sessions re-read membership every request, login
+already handles multi-org). What was missing was the *team capability* and RBAC
+enforcement. Added:
+
+- **Roles `admin` / `member`** (was a single `owner`). `viewer` is defined but
+  unused — reserved for a read-only seat. First registrant is `admin`. Migration 0017
+  rewrites `OWNER` → `ADMIN` in place (additive, reversible).
+- **Email invitations** — `Invitation` model, high-entropy token stored as an HMAC,
+  7-day expiry, single-use, one pending per `(org, email)`, bound to the invited
+  address. `InvitationService` (invite / resend / revoke, admin-only) +
+  `AuthService.accept_invitation` (new user signs up into the org; an existing user
+  must sign in first, then accept — §31 undefined behaviour is now defined).
+  Delivery goes through an `EmailSender` protocol; the only implementation is
+  `ConsoleEmailSender` (logs the link, never claims delivery). No provider wired.
+- **`require_write_role`** on every domain-mutating router — safe methods pass,
+  anything else needs `member`. Org administration (rename, members, invitations)
+  needs `admin`. Object-level org scoping already in every repository query;
+  `tests/api/test_tenant_isolation.py` now pins cross-org 404 per resource.
+- **Last-admin protection** — an org always keeps ≥ 1 admin (can't demote or remove
+  the last one).
+- **Web** — a `/settings` area (Organization: rename; Members: invite, change role,
+  remove / leave, pending invitations). The Home "Team" card is gone; Home shows a
+  pending-invitations nudge to admins only. `/invite/[token]` accept page. Register
+  copy says "you'll start as an admin."
+- **`password_hash` stays nullable** — the SSO/SAML seam is untouched; the
+  membership-owns-nothing model keeps that path clean (SECURITY §2, §9).
+- One genuine bug found and fixed en route: `CollectionService.list_for_candidate`
+  didn't re-check the parent candidate's org, so a cross-org id returned `200 []`
+  instead of 404.
 
 ---
 

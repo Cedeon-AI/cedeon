@@ -5,9 +5,14 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies.context import AuthedContext, DbSession, TreatyServiceDep
+from app.api.dependencies.context import (
+    AuthedContext,
+    DbSession,
+    TreatyServiceDep,
+    require_write_role,
+)
 from app.api.schemas.recoveries import (
     AllocationOut,
     CalcStepOut,
@@ -47,7 +52,9 @@ from app.services.obligations import ObligationService
 from app.services.recoveries import RecoveryPreviewService
 from app.services.validation import CandidateReview, ValidationService
 
-router = APIRouter(prefix="/treaties", tags=["treaties"])
+router = APIRouter(
+    prefix="/treaties", tags=["treaties"], dependencies=[Depends(require_write_role)]
+)
 
 
 def _treaty_out(treaty: Treaty) -> TreatyOut:

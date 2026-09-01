@@ -1,4 +1,4 @@
-"""Identity & tenancy: organizations, users, memberships, server-side sessions."""
+"""Identity & tenancy: organizations, users, memberships, invitations, sessions."""
 
 from __future__ import annotations
 
@@ -22,11 +22,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin
 from app.domain.organizations import Role
+from app.domain.organizations.invitations import InvitationStatus
 
 # native_enum=False → a VARCHAR column with Python-side enum coercion. No DB CHECK
 # constraint: Role is an exhaustive code enum and the app is the sole writer, and
 # native_enum CHECK constraints do not round-trip cleanly through `alembic check`.
 _role_enum = SAEnum(Role, native_enum=False, length=20, create_constraint=False, name="member_role")
+_invitation_status = SAEnum(
+    InvitationStatus,
+    native_enum=False,
+    length=16,
+    create_constraint=False,
+    name="invitation_status",
+)
 
 
 class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -75,6 +83,43 @@ class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     organization: Mapped[Organization] = relationship(back_populates="memberships")
     user: Mapped[User] = relationship(back_populates="memberships")
+
+
+class Invitation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A pending / accepted / revoked offer to join an organization. One live
+    (pending, unexpired) invitation per ``(organization_id, email)`` — enforced by a
+    partial unique index."""
+
+    __tablename__ = "invitations"
+    __table_args__ = (
+        # SAEnum(native_enum=False) stores the enum name — hence 'PENDING', not 'pending'.
+        Index(
+            "uq_invitations_org_email_pending",
+            "organization_id",
+            "email",
+            unique=True,
+            postgresql_where=text("status = 'PENDING'"),
+        ),
+        Index("ix_invitations_org_status", "organization_id", "status"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    role: Mapped[Role] = mapped_column(_role_enum, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    status: Mapped[InvitationStatus] = mapped_column(
+        _invitation_status, nullable=False, default=InvitationStatus.PENDING
+    )
+    invited_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    organization: Mapped[Organization] = relationship()
+    invited_by: Mapped[User | None] = relationship(foreign_keys=[invited_by_user_id])
 
 
 class UserSession(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

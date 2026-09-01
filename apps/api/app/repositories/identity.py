@@ -1,15 +1,23 @@
-"""Repositories for organizations, users, memberships, and sessions."""
+"""Repositories for organizations, users, memberships, invitations, and sessions."""
 
 from __future__ import annotations
 
 import datetime as dt
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models.identity import Membership, Organization, User, UserSession
+from app.db.models.identity import (
+    Invitation,
+    Membership,
+    Organization,
+    User,
+    UserSession,
+)
+from app.domain.organizations import Role
+from app.domain.organizations.invitations import InvitationStatus
 
 
 class OrganizationRepository:
@@ -54,10 +62,12 @@ class MembershipRepository:
 
     async def get(self, organization_id: UUID, user_id: UUID) -> Membership | None:
         result = await self._session.execute(
-            select(Membership).where(
+            select(Membership)
+            .where(
                 Membership.organization_id == organization_id,
                 Membership.user_id == user_id,
             )
+            .options(selectinload(Membership.user))
         )
         return result.scalar_one_or_none()
 
@@ -81,6 +91,67 @@ class MembershipRepository:
 
     def add(self, membership: Membership) -> None:
         self._session.add(membership)
+
+    async def count_admins(self, organization_id: UUID) -> int:
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(Membership)
+            .where(
+                Membership.organization_id == organization_id,
+                Membership.role == Role.ADMIN,
+            )
+        )
+        return int(result.scalar_one())
+
+    async def delete(self, membership: Membership) -> None:
+        await self._session.delete(membership)
+
+
+class InvitationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, invitation: Invitation) -> None:
+        self._session.add(invitation)
+
+    async def get(self, organization_id: UUID, invitation_id: UUID) -> Invitation | None:
+        result = await self._session.execute(
+            select(Invitation).where(
+                Invitation.id == invitation_id,
+                Invitation.organization_id == organization_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_token_hash(self, token_hash: str) -> Invitation | None:
+        result = await self._session.execute(
+            select(Invitation)
+            .where(Invitation.token_hash == token_hash)
+            .options(selectinload(Invitation.organization), selectinload(Invitation.invited_by))
+        )
+        return result.scalar_one_or_none()
+
+    async def pending_for_email(self, organization_id: UUID, email: str) -> Invitation | None:
+        result = await self._session.execute(
+            select(Invitation).where(
+                Invitation.organization_id == organization_id,
+                Invitation.email == email,
+                Invitation.status == InvitationStatus.PENDING,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def list_pending(self, organization_id: UUID) -> list[Invitation]:
+        result = await self._session.execute(
+            select(Invitation)
+            .where(
+                Invitation.organization_id == organization_id,
+                Invitation.status == InvitationStatus.PENDING,
+            )
+            .options(selectinload(Invitation.invited_by))
+            .order_by(Invitation.created_at.desc())
+        )
+        return list(result.scalars().all())
 
 
 class SessionRepository:

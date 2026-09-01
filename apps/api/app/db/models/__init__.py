@@ -11,7 +11,13 @@ from app.db.models.extraction import (
     ToolCall,
     TreatyTermCandidate,
 )
-from app.db.models.identity import Membership, Organization, User, UserSession
+from app.db.models.identity import (
+    Invitation,
+    Membership,
+    Organization,
+    User,
+    UserSession,
+)
 from app.db.models.losses import (
     LossEvent,
     LossImport,
@@ -50,6 +56,7 @@ __all__ = [
     "DocumentChunk",
     "DocumentPage",
     "DocumentParse",
+    "Invitation",
     "LossEvent",
     "LossImport",
     "LossImportRow",

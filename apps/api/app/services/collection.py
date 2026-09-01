@@ -53,6 +53,9 @@ class CollectionService:
     async def list_for_candidate(
         self, context: AuthenticatedContext, candidate_id: UUID
     ) -> list[Recoverable]:
+        # Confirm the parent candidate is the caller's before listing (cross-org → 404).
+        if await self._candidates.get(context.organization.id, candidate_id) is None:
+            raise NotFoundError("recovery candidate not found")
         return await self._recoverables.for_candidate(context.organization.id, candidate_id)
 
     async def portfolio(

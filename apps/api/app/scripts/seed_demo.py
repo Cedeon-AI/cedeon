@@ -79,7 +79,7 @@ async def _seed(session: AsyncSession) -> None:
     user = User(email=DEMO_EMAIL, name=DEMO_USER_NAME, password_hash=hash_password(DEMO_PASSWORD))
     session.add_all([org, user])
     await session.flush()
-    session.add(Membership(organization_id=org.id, user_id=user.id, role=Role.OWNER))
+    session.add(Membership(organization_id=org.id, user_id=user.id, role=Role.ADMIN))
 
     cedent = Cedent(organization_id=org.id, name="Demo Specialty Insurance Co.")
     session.add(cedent)

@@ -1,13 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { asProblem, login } from "@/lib/api";
 
+function safeNext(raw: string | null): string {
+  // only same-origin, absolute-path redirects
+  return raw?.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+}
+
 export function LoginForm() {
   const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -25,7 +31,7 @@ export function LoginForm() {
       setError(problem?.detail ?? "Sign in failed. Check your email and password.");
       return;
     }
-    router.push("/dashboard");
+    router.push(next);
     router.refresh();
   }
 

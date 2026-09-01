@@ -1,15 +1,28 @@
-"""Membership listing and (admin) member creation."""
+"""Organization members: list, change role, remove. Adding people is the
+invitation flow (see routes/invitations.py)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from uuid import UUID
 
-from app.api.dependencies.context import AuthedContext, DbSession, require_role
-from app.api.schemas.memberships import AddMemberRequest, MemberList, MemberOut
-from app.domain.organizations import Role
+from fastapi import APIRouter, status
+
+from app.api.dependencies.context import AdminContext, AuthedContext, DbSession
+from app.api.schemas.memberships import ChangeRoleRequest, MemberList, MemberOut
 from app.services.memberships import MembershipService
 
 router = APIRouter(prefix="/memberships", tags=["memberships"])
+
+
+def _member_out(m, *, self_user_id) -> MemberOut:  # type: ignore[no-untyped-def]
+    return MemberOut(
+        user_id=m.user_id,
+        email=m.user.email,
+        name=m.user.name,
+        role=m.role,
+        joined_at=m.created_at,
+        is_self=m.user_id == self_user_id,
+    )
 
 
 @router.get(
@@ -19,47 +32,31 @@ router = APIRouter(prefix="/memberships", tags=["memberships"])
     operation_id="listMembers",
 )
 async def list_members(context: AuthedContext, session: DbSession) -> MemberList:
-    service = MembershipService(session)
-    memberships = await service.list_members(context)
-    return MemberList(
-        members=[
-            MemberOut(
-                user_id=m.user_id,
-                email=m.user.email,
-                name=m.user.name,
-                role=m.role,
-                joined_at=m.created_at,
-            )
-            for m in memberships
-        ]
-    )
+    members = await MembershipService(session).list_members(context)
+    return MemberList(members=[_member_out(m, self_user_id=context.user.id) for m in members])
 
 
-@router.post(
-    "",
+@router.patch(
+    "/{user_id}",
     response_model=MemberOut,
-    status_code=status.HTTP_201_CREATED,
-    summary="Add a member to the current organization (admin/owner only)",
-    operation_id="addMember",
-    dependencies=[Depends(require_role(Role.ADMIN))],
+    summary="Change a member's role (admin only)",
+    operation_id="changeMemberRole",
 )
-async def add_member(
-    payload: AddMemberRequest,
-    context: AuthedContext,
+async def change_member_role(
+    user_id: UUID,
+    payload: ChangeRoleRequest,
+    context: AdminContext,
     session: DbSession,
 ) -> MemberOut:
-    service = MembershipService(session)
-    membership = await service.add_member(
-        context,
-        email=payload.email,
-        name=payload.name,
-        role=payload.role,
-        initial_password=payload.initial_password,
-    )
-    return MemberOut(
-        user_id=membership.user_id,
-        email=membership.user.email,
-        name=membership.user.name,
-        role=membership.role,
-        joined_at=membership.created_at,
-    )
+    membership = await MembershipService(session).change_role(context, user_id, payload.role)
+    return _member_out(membership, self_user_id=context.user.id)
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a member from the current organization (admin only)",
+    operation_id="removeMember",
+)
+async def remove_member(user_id: UUID, context: AdminContext, session: DbSession) -> None:
+    await MembershipService(session).remove_member(context, user_id)

@@ -27,6 +27,10 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0020 | Recovery Packet: classified statements, immutable versions, edit = regenerate | Accepted |
 | 0021 | Notice drafter: whitelist of approved facts in, draft out, no send action | Accepted |
 | 0022 | Observability = `agent_runs` + `audit_events` + job hardening; OTel optional | Accepted |
+| 0023 | Frontend design system: Tailwind v4 tokens + Radix/lucide; no CSS-in-JS | Accepted |
+| 0024 | Collection tracking: a recoverable per reinsurer, human facts on an audit trail | Accepted |
+| 0025 | Scope expansion: reinstatements + hours-clause grouping; each exception check stays concrete | Accepted |
+| 0026 | Team model: first-class membership, email invitations, admin / member (no owner) | Accepted |
 
 ---
 
@@ -633,3 +637,75 @@ structure. The import-linter "domain is pure" and "calc engine imports only Mone
 contracts still hold (the new pure modules are `app/domain/recoveries/` and
 `app/domain/losses/`, standard-library only). PRODUCT.md §1a, §2a, §5, §7 and
 ARCHITECTURE.md §9 updated; DATA_MODEL.md §4/§7 updated.
+
+---
+
+## ADR-0026 — Team model: first-class membership, email invitations, admin / member (no owner)
+
+**Context.** The schema was already `Organization ← Membership → User` (first-class
+`memberships`, `password_hash` nullable for SSO, sessions carrying `organization_id`,
+`authenticate()` re-checking membership every request). But the *team capability* was
+thin and partly a false promise: signup said "add colleagues once you're in", yet the
+only mechanism was an admin creating a user with an `initial_password` the admin chose
+and passed out of band. There was no invitation flow, no way to remove a member or
+change a role, and `require_role` was wired to exactly one endpoint (`POST /memberships`)
+— `viewer` was enforced nowhere and docs/SECURITY.md §2 ("approvals require ≥ member")
+was aspirational.
+
+**Decision.**
+
+1. **Roles collapse to `admin` / `member`; `owner` is removed.** `viewer` stays in the
+   enum, **reserved and unused** (a future auditor / executive persona), but every
+   consequential mutation is gated at `member` so the boundary is real now. Migration
+   0017 back-fills `owner → admin`. The single immutable owner is replaced by
+   **last-admin protection** in `MembershipService`: an organization always keeps ≥ 1
+   admin — the last admin cannot be demoted or removed until another is promoted. This
+   is a cleaner rule than a sacred owner and a better fit for SSO / SCIM deprovisioning
+   later.
+
+2. **Invitations are a first-class table** (`invitations`, migration 0017):
+   `organization_id`, `email`, `role`, `token_hash` (HMAC-SHA256 of a 32-byte urlsafe
+   token — never stored in plaintext), `status` (`pending` / `accepted` / `revoked`),
+   `invited_by_user_id`, `expires_at` (7 days), `accepted_at`. A **partial unique
+   index** allows one pending invitation per `(organization_id, email)`. An invitation
+   is **bound to its email** — accepting requires authenticating as that address
+   (a signed-in user with a different email gets 403). Accept is **single-use**
+   (`status → accepted`); resend rotates the token and the clock.
+
+3. **`POST /memberships` (add-with-password) is removed.** Adding people is
+   invite → accept. `PATCH /memberships/{user_id}` (role) and `DELETE
+   /memberships/{user_id}` (remove) are new, admin-only. Removing a member deletes the
+   membership only — the user, their uploaded treaties, their reviews, and every audit
+   row stay. `audit_events.actor_id` has no FK and attribution is snapshotted in the
+   `summary` text, so history survives.
+
+4. **Route-level write guard.** `require_write_role` is attached as a router
+   dependency to every router that carries domain mutations (treaties, documents,
+   losses, recoveries, statements, reference data); it lets safe methods through and
+   requires `member` for the rest. Reads stay open to any role.
+
+5. **Email is a seam, not a dependency.** `EmailSender` protocol +
+   `ConsoleEmailSender` (logs the message, never claims delivery), selected by
+   `CEDEON_EMAIL_SENDER` (`console` only, today). In console mode the invitation API
+   returns the `accept_url` so the flow is walkable without a mailbox. A hosted
+   provider (SES / Resend) slots in behind the protocol — not wired without
+   credentials.
+
+6. **Multi-organization membership is allowed structurally.** Accepting an invite as
+   an existing user adds a second membership; `login` already disambiguates by
+   `organization_id`. There is **no org-switcher UI** and the normal user has one org.
+   The accept flow for a signed-in user issues a fresh session on the newly-joined org.
+
+7. **UX.** The static "Team" card leaves Home; Home shows only an *actionable*
+   "N invitations awaiting a reply" nudge (admins, when > 0). A `Settings` area
+   (`Settings → Organization`, `Settings → Members`) holds member management, reached
+   from the top-bar gear. `/invite/{token}` is the public accept page. Signup copy:
+   *"You'll start as an admin. Invite your team once you're set up."*
+
+**Consequences.** Migration 0017 (invitations table + role back-fill; additive, and
+reversible in spirit — the downgrade cannot say which admin was the former owner, by
+design). No change to `users`, `sessions`, or the session mechanism. `Role` is now
+`admin` / `member` / `viewer` (`ASSIGNABLE_ROLES` = admin, member). SSO / SCIM,
+service accounts, custom roles, a permission-policy engine, and org-switching UI are
+**intentionally deferred** — the model does not block any of them (docs/SECURITY.md
+§2, §7).

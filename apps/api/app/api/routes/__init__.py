@@ -7,6 +7,7 @@ from app.api.routes import (
     auth,
     documents,
     health,
+    invitations,
     losses,
     memberships,
     organizations,
@@ -22,6 +23,8 @@ api_router.include_router(health.router)
 api_router.include_router(auth.router)
 api_router.include_router(organizations.router)
 api_router.include_router(memberships.router)
+api_router.include_router(invitations.manage_router)
+api_router.include_router(invitations.public_router)
 api_router.include_router(documents.router)
 api_router.include_router(reinsurance.router)
 api_router.include_router(treaties.router)

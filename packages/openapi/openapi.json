@@ -1,6 +1,37 @@
 {
   "components": {
     "schemas": {
+      "AcceptInvitationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "title": "AcceptInvitationRequest",
+        "type": "object"
+      },
       "ActivityToolCallOut": {
         "additionalProperties": false,
         "properties": {
@@ -47,39 +78,6 @@
           "latency_ms"
         ],
         "title": "ActivityToolCallOut",
-        "type": "object"
-      },
-      "AddMemberRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "email": {
-            "format": "email",
-            "title": "Email",
-            "type": "string"
-          },
-          "initial_password": {
-            "maxLength": 1024,
-            "minLength": 12,
-            "title": "Initial Password",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/Role",
-            "default": "member"
-          }
-        },
-        "required": [
-          "email",
-          "name",
-          "initial_password"
-        ],
-        "title": "AddMemberRequest",
         "type": "object"
       },
       "AgentRunDetail": {
@@ -721,6 +719,19 @@
           "name"
         ],
         "title": "CedentOut",
+        "type": "object"
+      },
+      "ChangeRoleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ChangeRoleRequest",
         "type": "object"
       },
       "ChunkList": {
@@ -1388,6 +1399,148 @@
         "title": "InvestigationStatus",
         "type": "string"
       },
+      "InvitationList": {
+        "additionalProperties": false,
+        "properties": {
+          "invitations": {
+            "items": {
+              "$ref": "#/components/schemas/InvitationOut"
+            },
+            "title": "Invitations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "invitations"
+        ],
+        "title": "InvitationList",
+        "type": "object"
+      },
+      "InvitationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accept Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invited_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "invited_by_name",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "InvitationOut",
+        "type": "object"
+      },
+      "InvitationPreviewOut": {
+        "additionalProperties": false,
+        "properties": {
+          "account_exists": {
+            "title": "Account Exists",
+            "type": "boolean"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "invited_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By Name"
+          },
+          "invited_email": {
+            "format": "email",
+            "title": "Invited Email",
+            "type": "string"
+          },
+          "organization_name": {
+            "title": "Organization Name",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "organization_name",
+          "invited_email",
+          "role",
+          "invited_by_name",
+          "expired",
+          "account_exists"
+        ],
+        "title": "InvitationPreviewOut",
+        "type": "object"
+      },
+      "InviteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "default": "member"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "InviteRequest",
+        "type": "object"
+      },
       "LayerOut": {
         "additionalProperties": false,
         "properties": {
@@ -2024,6 +2177,11 @@
             "format": "email",
             "title": "Email",
             "type": "string"
+          },
+          "is_self": {
+            "default": false,
+            "title": "Is Self",
+            "type": "boolean"
           },
           "joined_at": {
             "format": "date-time",
@@ -4668,6 +4826,22 @@
         "title": "ReinsurerOut",
         "type": "object"
       },
+      "RenameOrganizationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RenameOrganizationRequest",
+        "type": "object"
+      },
       "ReviewDecision": {
         "enum": [
           "confirm",
@@ -4755,7 +4929,6 @@
       },
       "Role": {
         "enum": [
-          "owner",
           "admin",
           "member",
           "viewer"
@@ -6818,6 +6991,100 @@
         ]
       }
     },
+    "/auth/invitation/{token}": {
+      "get": {
+        "operationId": "previewInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "What an invitation link offers \u2014 organization, role, inviter",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
+    "/auth/invitation/{token}/accept": {
+      "post": {
+        "operationId": "acceptInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Join the organization the invitation names",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "operationId": "login",
@@ -7242,6 +7509,145 @@
         "summary": "Liveness probe",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/invitations": {
+      "get": {
+        "operationId": "listInvitations",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pending invitations",
+        "tags": [
+          "invitations"
+        ]
+      },
+      "post": {
+        "operationId": "createInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite a teammate by email (admin only)",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
+    "/invitations/{invitation_id}/resend": {
+      "post": {
+        "operationId": "resendInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate the token and re-send (admin only)",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
+    "/invitations/{invitation_id}/revoke": {
+      "post": {
+        "operationId": "revokeInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel a pending invitation (admin only)",
+        "tags": [
+          "invitations"
         ]
       }
     },
@@ -7676,21 +8082,69 @@
         "tags": [
           "memberships"
         ]
+      }
+    },
+    "/memberships/{user_id}": {
+      "delete": {
+        "operationId": "removeMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove a member from the current organization (admin only)",
+        "tags": [
+          "memberships"
+        ]
       },
-      "post": {
-        "operationId": "addMember",
+      "patch": {
+        "operationId": "changeMemberRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddMemberRequest"
+                "$ref": "#/components/schemas/ChangeRoleRequest"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -7711,7 +8165,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Add a member to the current organization (admin/owner only)",
+        "summary": "Change a member's role (admin only)",
         "tags": [
           "memberships"
         ]
@@ -7733,6 +8187,45 @@
           }
         },
         "summary": "The caller's current organization",
+        "tags": [
+          "organizations"
+        ]
+      },
+      "patch": {
+        "operationId": "renameOrganization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameOrganizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rename the current organization (admin only)",
         "tags": [
           "organizations"
         ]

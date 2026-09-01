@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     cookie_domain: str | None = None
 
+    # Team invitations
+    invitation_ttl_days: int = 7
+    # Public origin the accept link points at (the single Next.js origin, ADR-0004).
+    public_base_url: str = "http://localhost:3000"
+    # "console" logs the accept link (dev / no provider configured). "smtp" and hosted
+    # providers are a documented seam — not wired without credentials.
+    email_sender: Literal["console"] = "console"
+    email_from: str = "Cedeon <no-reply@cedeon.app>"
+
     # Object storage
     object_store: Literal["filesystem", "s3"] = "filesystem"
     filesystem_store_root: str = ".data/objectstore"

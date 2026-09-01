@@ -19,6 +19,7 @@ from app.api.dependencies.context import (
     NoticeEnqueuer,
     get_investigate_enqueuer,
     get_notice_enqueuer,
+    require_write_role,
 )
 from app.api.schemas.recoveries import (
     AgentRunToolCalls,
@@ -94,10 +95,15 @@ from app.services.recoveries import (
 )
 from app.services.suggestions import SuggestionService
 
-router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
-packets_router = APIRouter(prefix="/recovery-packets", tags=["recovery-packets"])
-notices_router = APIRouter(prefix="/recovery-notices", tags=["recovery-notices"])
-recoverables_router = APIRouter(prefix="/recoverables", tags=["recoverables"])
+_write = [Depends(require_write_role)]
+router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"], dependencies=_write)
+packets_router = APIRouter(
+    prefix="/recovery-packets", tags=["recovery-packets"], dependencies=_write
+)
+notices_router = APIRouter(
+    prefix="/recovery-notices", tags=["recovery-notices"], dependencies=_write
+)
+recoverables_router = APIRouter(prefix="/recoverables", tags=["recoverables"], dependencies=_write)
 
 
 def _sibling_sort_key(ctx: CandidateContext | None) -> int:

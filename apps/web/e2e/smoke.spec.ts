@@ -16,7 +16,7 @@ test("a new organization can register and reach the dashboard", async ({ page })
   await page.getByLabel("Your name").fill("VP Ceded Reinsurance");
   await page.getByLabel("Work email").fill(email);
   await page.getByLabel("Password").fill("correct-horse-battery-staple");
-  await page.getByRole("button", { name: /create organization/i }).click();
+  await page.getByRole("button", { name: /create workspace/i }).click();
 
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();

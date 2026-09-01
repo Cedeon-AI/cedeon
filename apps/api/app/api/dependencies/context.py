@@ -13,9 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.db.session import get_sessionmaker
 from app.domain.organizations import Role
+from app.notifications import EmailSender, build_email_sender
 from app.services.auth import AuthenticatedContext, AuthService
 from app.services.documents import DocumentService, ParseEnqueuer
 from app.services.errors import AuthenticationError, PermissionDeniedError
+from app.services.invitations import InvitationService
 from app.services.losses import LossEventService, LossImportService
 from app.services.reinsurance import ExtractEnqueuer, TreatyService
 from app.storage import ObjectStore, build_object_store
@@ -45,19 +47,40 @@ def get_auth_service(session: DbSession, settings: AppSettings) -> AuthService:
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
 
-async def current_context(
+def get_email_sender(settings: AppSettings) -> EmailSender:
+    return build_email_sender(settings)
+
+
+def get_invitation_service(
+    session: DbSession,
+    settings: AppSettings,
+    email: Annotated[EmailSender, Depends(get_email_sender)],
+) -> InvitationService:
+    return InvitationService(session, settings, email=email)
+
+
+InvitationServiceDep = Annotated[InvitationService, Depends(get_invitation_service)]
+
+
+async def current_context_optional(
     request: Request,
     settings: AppSettings,
     auth: AuthServiceDep,
-) -> AuthenticatedContext:
+) -> AuthenticatedContext | None:
     token = request.cookies.get(settings.cookie_name, "")
-    context = await auth.authenticate(token)
+    return await auth.authenticate(token)
+
+
+async def current_context(
+    context: Annotated[AuthenticatedContext | None, Depends(current_context_optional)],
+) -> AuthenticatedContext:
     if context is None:
         raise AuthenticationError("authentication required")
     return context
 
 
 AuthedContext = Annotated[AuthenticatedContext, Depends(current_context)]
+OptionalContext = Annotated[AuthenticatedContext | None, Depends(current_context_optional)]
 
 
 def get_object_store(settings: AppSettings) -> ObjectStore:
@@ -160,3 +183,20 @@ def require_role(
         return context
 
     return _dependency
+
+
+# Consequential writes (upload, validate, review, approve, materialise) require at
+# least ``member``. Reserved-but-unused ``viewer`` is the only role this excludes
+# today — the boundary is real and tested (ADR-0026 / docs/SECURITY.md §2).
+MemberContext = Annotated[AuthenticatedContext, Depends(require_role(Role.MEMBER))]
+# Organization administration (rename, members, invitations).
+AdminContext = Annotated[AuthenticatedContext, Depends(require_role(Role.ADMIN))]
+
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+async def require_write_role(request: Request, context: AuthedContext) -> None:
+    """Router-level guard: any non-safe method needs at least ``member``. Attach to
+    routers that carry domain mutations so reads stay open to every role."""
+    if request.method not in _SAFE_METHODS and not context.role.can_write:
+        raise PermissionDeniedError("this action requires the member role or higher")

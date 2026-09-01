@@ -112,6 +112,15 @@ Likely buyers / users:
 The exact ICP is a discovery question. **Carrier size is not encoded anywhere in the
 architecture.**
 
+**A ceded-reinsurance function is a team, and Cedeon is multi-user from the start.**
+Several people at one carrier share one organization: the first person to register
+becomes an `admin`, invites colleagues by email, and assigns `admin` (can manage the
+team and org settings) or `member` (can do all reinsurance work). Every mutating
+action requires at least `member`; a `viewer` seat is reserved but not yet built.
+Membership is first-class — the organization is not owned by any one person, removing
+someone ends their access immediately, and the model is built to accept SSO/SAML and
+finer-grained permissions later without a redesign (ADR-0026, SECURITY §2).
+
 ## 4. The problem
 
 Reinsurance information is scattered across treaty PDFs, slips, endorsements,

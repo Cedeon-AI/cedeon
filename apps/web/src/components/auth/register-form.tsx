@@ -80,7 +80,7 @@ export function RegisterForm() {
         </p>
       ) : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Creating…" : "Create organization"}
+        {pending ? "Creating…" : "Create workspace"}
       </Button>
     </form>
   );

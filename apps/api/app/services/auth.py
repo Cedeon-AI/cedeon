@@ -22,12 +22,15 @@ from app.core.security import (
     verify_password,
 )
 from app.core.security.passwords import TIMING_GUARD_HASH, WeakPasswordError
+from app.core.security.sessions import tokens_equal
 from app.core.text import normalize_email, slugify
 from app.db.models.identity import Membership, Organization, User, UserSession
 from app.domain.audit import ActorType, AuditRecord
 from app.domain.organizations import Role
+from app.domain.organizations.invitations import InvitationStatus, is_live
 from app.repositories.audit import AuditRepository
 from app.repositories.identity import (
+    InvitationRepository,
     MembershipRepository,
     OrganizationRepository,
     SessionRepository,
@@ -36,6 +39,8 @@ from app.repositories.identity import (
 from app.services.errors import (
     AuthenticationError,
     ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
     ValidationError,
 )
 
@@ -70,6 +75,7 @@ class AuthService:
         self.organizations = OrganizationRepository(session)
         self.users = UserRepository(session)
         self.memberships = MembershipRepository(session)
+        self.invitations = InvitationRepository(session)
         self.sessions = SessionRepository(session)
         self.audit = AuditRepository(session)
 
@@ -110,7 +116,7 @@ class AuthService:
 
         await self._session.flush()  # assign ids
 
-        membership = Membership(organization_id=organization.id, user_id=user.id, role=Role.OWNER)
+        membership = Membership(organization_id=organization.id, user_id=user.id, role=Role.ADMIN)
         self.memberships.add(membership)
         await self._session.flush()
 
@@ -139,6 +145,90 @@ class AuthService:
         except IntegrityError as exc:  # pragma: no cover - race on unique email/slug
             await self._session.rollback()
             raise ConflictError("could not create organization, please retry") from exc
+        return issue
+
+    async def accept_invitation(
+        self,
+        *,
+        raw_token: str,
+        name: str | None = None,
+        password: str | None = None,
+        current: AuthenticatedContext | None = None,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> SessionIssue:
+        """Join the organization an invitation names. Signed in → the invited email
+        must match; signed out → a new account is created from ``name`` + ``password``
+        (or the caller is told to sign in first if that email already has an account)."""
+        token_hash = hash_session_token(raw_token, self._settings.session_secret)
+        invitation = await self.invitations.get_by_token_hash(token_hash)
+        now = dt.datetime.now(dt.UTC)
+        if invitation is None or not tokens_equal(invitation.token_hash, token_hash):
+            raise NotFoundError("this invitation link is not valid")
+        if not is_live(invitation.status, invitation.expires_at, now=now):
+            raise ConflictError("this invitation has expired or is no longer valid")
+
+        organization = invitation.organization
+        existing = await self.users.get_by_email(invitation.email)
+
+        if current is not None:
+            if normalize_email(current.user.email) != invitation.email:
+                raise PermissionDeniedError("this invitation was sent to a different email address")
+            user = current.user
+        elif existing is not None:
+            raise ConflictError(
+                "an account already exists for this email — sign in, then open the link again"
+            )
+        else:
+            if not (name and name.strip()):
+                raise ValidationError("your name is required")
+            if not password:
+                raise ValidationError("a password is required")
+            try:
+                password_hash = hash_password(password)
+            except WeakPasswordError as exc:
+                raise ValidationError(str(exc)) from exc
+            user = User(email=invitation.email, name=name.strip(), password_hash=password_hash)
+            self.users.add(user)
+            await self._session.flush()
+
+        if await self.memberships.get(organization.id, user.id) is not None:
+            raise ConflictError("you are already a member of this organization")
+
+        membership = Membership(
+            organization_id=organization.id, user_id=user.id, role=invitation.role
+        )
+        self.memberships.add(membership)
+        invitation.status = InvitationStatus.ACCEPTED
+        invitation.accepted_at = now
+        user.last_login_at = now
+        await self._session.flush()
+
+        self.audit.record(
+            AuditRecord(
+                organization_id=organization.id,
+                actor_type=ActorType.USER,
+                actor_id=user.id,
+                action="invitation.accepted",
+                entity_type="membership",
+                entity_id=membership.id,
+                summary=f"{user.email} joined {organization.name} as {invitation.role.value}",
+                payload={"role": invitation.role.value, "invitation_id": str(invitation.id)},
+                correlation_id=get_correlation_id(),
+            )
+        )
+        issue = await self._issue_session(
+            user=user,
+            organization=organization,
+            membership=membership,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+        try:
+            await self._session.commit()
+        except IntegrityError as exc:  # pragma: no cover - race
+            await self._session.rollback()
+            raise ConflictError("could not accept the invitation, please retry") from exc
         return issue
 
     # --- login / logout -------------------------------------------------

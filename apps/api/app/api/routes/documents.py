@@ -5,10 +5,14 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from app.api.dependencies.context import AuthedContext, DocumentServiceDep
+from app.api.dependencies.context import (
+    AuthedContext,
+    DocumentServiceDep,
+    require_write_role,
+)
 from app.api.schemas.documents import (
     ChunkList,
     ChunkOut,
@@ -22,7 +26,9 @@ from app.api.schemas.documents import (
 from app.db.models.documents import Document, DocumentParse
 from app.domain.documents import DocumentKind
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+router = APIRouter(
+    prefix="/documents", tags=["documents"], dependencies=[Depends(require_write_role)]
+)
 
 
 def _doc_out(document: Document) -> DocumentOut:

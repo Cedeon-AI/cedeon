@@ -1,21 +1,29 @@
-"""Membership management. A proper email invitation flow is deferred; for MVP an
-admin creates the member directly with an initial password."""
+"""Membership management: list members, change a member's role, remove a member.
+
+Adding people is the invitation flow (``app/services/invitations.py``). An
+organization always keeps at least one admin — that rule replaces a single
+immutable owner (ADR-0026).
+"""
 
 from __future__ import annotations
+
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_correlation_id
-from app.core.security import hash_password
-from app.core.security.passwords import WeakPasswordError
-from app.core.text import normalize_email
-from app.db.models.identity import Membership, User
+from app.db.models.identity import Membership
 from app.domain.audit import ActorType, AuditRecord
-from app.domain.organizations import Role
+from app.domain.organizations import ASSIGNABLE_ROLES, Role
 from app.repositories.audit import AuditRepository
 from app.repositories.identity import MembershipRepository, UserRepository
 from app.services.auth import AuthenticatedContext
-from app.services.errors import ConflictError, PermissionDeniedError, ValidationError
+from app.services.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 
 
 class MembershipService:
@@ -28,54 +36,84 @@ class MembershipService:
     async def list_members(self, context: AuthenticatedContext) -> list[Membership]:
         return await self.memberships.list_for_organization(context.organization.id)
 
-    async def add_member(
-        self,
-        context: AuthenticatedContext,
-        *,
-        email: str,
-        name: str,
-        role: Role,
-        initial_password: str,
+    async def change_role(
+        self, context: AuthenticatedContext, user_id: UUID, new_role: Role
     ) -> Membership:
-        if not context.role.can_manage_members:
-            raise PermissionDeniedError("only admins and owners can add members")
-        if role is Role.OWNER and context.role is not Role.OWNER:
-            raise PermissionDeniedError("only an owner can grant the owner role")
+        self._require_admin(context)
+        if new_role not in ASSIGNABLE_ROLES:
+            raise ValidationError(f"role must be one of {[r.value for r in ASSIGNABLE_ROLES]}")
 
-        email = normalize_email(email)
-        if not name.strip():
-            raise ValidationError("member name is required")
+        membership = await self._member(context, user_id)
+        if membership.role is new_role:
+            return membership
 
-        user = await self.users.get_by_email(email)
-        if user is None:
-            try:
-                password_hash = hash_password(initial_password)
-            except WeakPasswordError as exc:
-                raise ValidationError(str(exc)) from exc
-            user = User(email=email, name=name.strip(), password_hash=password_hash)
-            self.users.add(user)
-            await self._session.flush()
-        else:
-            existing = await self.memberships.get(context.organization.id, user.id)
-            if existing is not None:
-                raise ConflictError("that person is already a member of this organization")
+        # Demoting the last admin would lock the organization out of member management.
+        if membership.role is Role.ADMIN and new_role is not Role.ADMIN:
+            await self._guard_last_admin(context, "demote")
 
-        membership = Membership(organization_id=context.organization.id, user=user, role=role)
-        self.memberships.add(membership)
-        await self._session.flush()
-
+        old_role = membership.role
+        membership.role = new_role
         self.audit.record(
             AuditRecord(
                 organization_id=context.organization.id,
                 actor_type=ActorType.USER,
                 actor_id=context.user.id,
-                action="membership.added",
+                action="membership.role_changed",
                 entity_type="membership",
                 entity_id=membership.id,
-                summary=f"{context.user.email} added {email} as {role.value}",
-                payload={"role": role.value, "member_email": email},
+                summary=(
+                    f"{context.user.email} changed {membership.user.email} "
+                    f"from {old_role.value} to {new_role.value}"
+                ),
+                payload={"from": old_role.value, "to": new_role.value},
                 correlation_id=get_correlation_id(),
             )
         )
         await self._session.commit()
         return membership
+
+    async def remove_member(self, context: AuthenticatedContext, user_id: UUID) -> None:
+        self._require_admin(context)
+        membership = await self._member(context, user_id)
+        if membership.role is Role.ADMIN:
+            await self._guard_last_admin(context, "remove")
+
+        removed_email = membership.user.email
+        await self.memberships.delete(membership)
+        self.audit.record(
+            AuditRecord(
+                organization_id=context.organization.id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="membership.removed",
+                entity_type="user",
+                entity_id=user_id,
+                summary=(
+                    f"{context.user.email} removed {removed_email} from "
+                    f"{context.organization.name}"
+                    + (" (left the organization)" if user_id == context.user.id else "")
+                ),
+                payload={"member_email": removed_email},
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+
+    # --- helpers -----------------------------------------------------
+
+    @staticmethod
+    def _require_admin(context: AuthenticatedContext) -> None:
+        if not context.role.can_manage_members:
+            raise PermissionDeniedError("only admins can manage members")
+
+    async def _member(self, context: AuthenticatedContext, user_id: UUID) -> Membership:
+        membership = await self.memberships.get(context.organization.id, user_id)
+        if membership is None:
+            raise NotFoundError("that person is not a member of this organization")
+        return membership
+
+    async def _guard_last_admin(self, context: AuthenticatedContext, verb: str) -> None:
+        if await self.memberships.count_admins(context.organization.id) <= 1:
+            raise ConflictError(
+                f"cannot {verb} the last admin — promote another member to admin first"
+            )

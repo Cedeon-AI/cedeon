@@ -10,8 +10,8 @@ export default async function RegisterPage() {
   if (await getSession()) redirect("/dashboard");
   return (
     <AuthCard
-      title="Create your organization"
-      subtitle="You'll be the owner. Add colleagues once you're in."
+      title="Create your organization's workspace"
+      subtitle="You'll start as an admin. Invite your team once you're set up."
       footer={
         <>
           Already have an account?{" "}
