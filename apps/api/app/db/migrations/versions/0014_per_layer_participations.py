@@ -22,9 +22,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "treaty_participations", sa.Column("treaty_layer_id", sa.Uuid(), nullable=True)
-    )
+    op.add_column("treaty_participations", sa.Column("treaty_layer_id", sa.Uuid(), nullable=True))
     op.create_foreign_key(
         "fk_treaty_participations_treaty_layer_id_treaty_layers",
         "treaty_participations",
@@ -63,6 +61,8 @@ def downgrade() -> None:
         ["treaty_version_id", "reinsurer_id"],
     )
     op.drop_constraint(
-        "fk_treaty_participations_treaty_layer_id_treaty_layers", "treaty_participations", type_="foreignkey"
+        "fk_treaty_participations_treaty_layer_id_treaty_layers",
+        "treaty_participations",
+        type_="foreignkey",
     )
     op.drop_column("treaty_participations", "treaty_layer_id")

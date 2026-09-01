@@ -29,14 +29,18 @@ def upgrade() -> None:
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -51,27 +55,22 @@ def upgrade() -> None:
         sa.Column("their_agreed", sa.Numeric(precision=20, scale=2), nullable=True),
         sa.Column("their_paid", sa.Numeric(precision=20, scale=2), nullable=True),
         sa.Column("matched_recoverable_id", sa.Uuid(), nullable=True),
-        sa.Column(
-            "findings", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
+        sa.Column("findings", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("resolved", sa.Boolean(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"], ["organizations.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["statement_id"], ["reinsurer_statements.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["statement_id"], ["reinsurer_statements.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["matched_recoverable_id"], ["recoverables.id"], ondelete="SET NULL"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "statement_id", "row_number", name="uq_reinsurer_statement_lines_row"
-        ),
+        sa.UniqueConstraint("statement_id", "row_number", name="uq_reinsurer_statement_lines_row"),
     )
 
 

@@ -81,9 +81,7 @@ def compute_reinstatement_premium(
     total = prior + this
     n = len(rates)
     time_factor = (
-        _ONE
-        if basis is ReinstatementBasis.FLAT
-        else max(_ZERO, min(_ONE, unexpired_fraction))
+        _ONE if basis is ReinstatementBasis.FLAT else max(_ZERO, min(_ONE, unexpired_fraction))
     )
 
     trace: list[str] = [

@@ -34,9 +34,7 @@ class TestStatementReconciliation:
                 json={
                     "label": "Alpha Q3 account",
                     "currency": "USD",
-                    "lines": [
-                        {"reinsurer_name": "Reinsurer Alpha", "their_agreed": "4350000.00"}
-                    ],
+                    "lines": [{"reinsurer_name": "Reinsurer Alpha", "their_agreed": "4350000.00"}],
                 },
             )
         ).json()
@@ -56,9 +54,7 @@ class TestStatementReconciliation:
                 json={
                     "label": "Beta statement",
                     "currency": "USD",
-                    "lines": [
-                        {"reinsurer_name": "Reinsurer Beta", "their_agreed": "2000000.00"}
-                    ],
+                    "lines": [{"reinsurer_name": "Reinsurer Beta", "their_agreed": "2000000.00"}],
                 },
             )
         ).json()
@@ -75,9 +71,7 @@ class TestStatementReconciliation:
         assert disc[0]["amount"] == "610000.00"  # 2.61M expected less 2.00M stated
 
         # resolve it → clears from the queue
-        await client.post(
-            f"/reinsurer-statements/{statement['id']}/lines/1/resolve"
-        )
+        await client.post(f"/reinsurer-statements/{statement['id']}/lines/1/resolve")
         items = (await client.get("/worklist")).json()["items"]
         assert not [i for i in items if i["kind"] == "statement_discrepancy"]
 

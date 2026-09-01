@@ -39,9 +39,7 @@ async def _import_into(
             }
         },
     )
-    await client.post(
-        f"/loss-imports/{uploaded['id']}/commit", json={"loss_event_id": event_id}
-    )
+    await client.post(f"/loss-imports/{uploaded['id']}/commit", json={"loss_event_id": event_id})
 
 
 class TestOccurrenceProposal:
@@ -50,9 +48,7 @@ class TestOccurrenceProposal:
     ) -> None:
         await register(client)
         event_id = await committed_hurricane_event(client)
-        proposal = (
-            await client.get(f"/loss-events/{event_id}/occurrence-proposal")
-        ).json()
+        proposal = (await client.get(f"/loss-events/{event_id}/occurrence-proposal")).json()
         assert proposal["hours_source"] == "peril_default"
         assert proposal["hours"] == 168
         assert not proposal["splits_the_event"]
@@ -79,9 +75,7 @@ class TestOccurrenceProposal:
                 ("S-4", "2027-06-11", "5000000"),
             ],
         )
-        proposal = (
-            await client.get(f"/loss-events/{event['id']}/occurrence-proposal")
-        ).json()
+        proposal = (await client.get(f"/loss-events/{event['id']}/occurrence-proposal")).json()
         assert proposal["hours_source"] == "treaty"
         assert proposal["window_days"] == 3
         assert proposal["splits_the_event"]

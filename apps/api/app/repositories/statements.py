@@ -18,9 +18,7 @@ class ReinsurerStatementRepository:
     def add(self, obj: object) -> None:
         self._session.add(obj)
 
-    async def get(
-        self, organization_id: UUID, statement_id: UUID
-    ) -> ReinsurerStatement | None:
+    async def get(self, organization_id: UUID, statement_id: UUID) -> ReinsurerStatement | None:
         result = await self._session.execute(
             select(ReinsurerStatement)
             .where(

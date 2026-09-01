@@ -431,9 +431,7 @@ class WorklistService:
         """An unresolved reinsurer-statement line that didn't reconcile."""
         out: list[WorklistItem] = []
         for line in await self._statements.unresolved_discrepancy_lines(org_id):
-            discrepancies = [
-                f for f in line.findings if f.get("kind") not in ("clean", None)
-            ]
+            discrepancies = [f for f in line.findings if f.get("kind") not in ("clean", None)]
             if not discrepancies:
                 continue
             top = discrepancies[0]

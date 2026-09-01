@@ -41,9 +41,10 @@ class TestLayerPanel:
             "Reinsurer Gamma",
         }
         assert layers[0]["participations"] == []  # L1 uses the programme panel
-        assert {
-            (p["reinsurer_name"], p["placed_share"]) for p in layers[1]["participations"]
-        } == {("Reinsurer Delta", "0.600000"), ("Reinsurer Echo", "0.400000")}
+        assert {(p["reinsurer_name"], p["placed_share"]) for p in layers[1]["participations"]} == {
+            ("Reinsurer Delta", "0.600000"),
+            ("Reinsurer Echo", "0.400000"),
+        }
 
         event_id = await committed_hurricane_event(client)
         await client.post(
