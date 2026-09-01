@@ -264,8 +264,9 @@ math is deterministic, occurrence grouping is human-confirmed).
 **All six deferred items + the AI-path verification are done.** The marketing site and
 every doc (README, PRODUCT, ARCHITECTURE, DATA_MODEL, AI_ARCHITECTURE, DECISIONS
 ADR-0025, UX_STUDY, fixtures README) were brought to the current state in `c978181`.
-Nothing planned is outstanding — the "Still directional, not in scope" items in
-PRODUCT §1a/§7 are the next candidates only after customer discovery.
+The multi-user organization system (below) followed on 2026-09-01. The "Still
+directional, not in scope" items in PRODUCT §1a/§7 are the next product candidates
+only after customer discovery.
 - **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
   `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
   reinsurance" (keeps the "contract to recovery" line); the product mockup is now the

@@ -32,7 +32,7 @@ test("treaty → validate → recovery → workspace, with the $8.7M golden figu
   await page.getByLabel("Your name").fill("Ceded Re Analyst");
   await page.getByLabel("Work email").fill(`golden+${stamp}@carrier.example`);
   await page.getByLabel("Password").fill("correct-horse-battery-staple");
-  await page.getByRole("button", { name: /create organization/i }).click();
+  await page.getByRole("button", { name: /create workspace/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 
