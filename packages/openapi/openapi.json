@@ -1376,6 +1376,13 @@
             "title": "Limit",
             "type": "string"
           },
+          "participations": {
+            "items": {
+              "$ref": "#/components/schemas/ParticipationOut"
+            },
+            "title": "Participations",
+            "type": "array"
+          },
           "reinstatements": {
             "anyOf": [
               {
@@ -1394,9 +1401,41 @@
           "limit",
           "currency",
           "reinstatements",
-          "description"
+          "description",
+          "participations"
         ],
         "title": "LayerOut",
+        "type": "object"
+      },
+      "LayerParticipationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "placed_share_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Placed Share Percent"
+          },
+          "reinsurer_name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reinsurer Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reinsurer_name",
+          "placed_share_percent"
+        ],
+        "title": "LayerParticipationInput",
         "type": "object"
       },
       "LayerSpecIn": {
@@ -2670,6 +2709,18 @@
               }
             ],
             "title": "Signed Share"
+          },
+          "treaty_layer_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treaty Layer Id"
           }
         },
         "required": [
@@ -4352,6 +4403,21 @@
           }
         },
         "title": "SetKnowledgeDateRequest",
+        "type": "object"
+      },
+      "SetLayerParticipationsRequest": {
+        "additionalProperties": false,
+        "description": "The reinsurer panel for one layer. An empty list clears the override.",
+        "properties": {
+          "panel": {
+            "items": {
+              "$ref": "#/components/schemas/LayerParticipationInput"
+            },
+            "title": "Panel",
+            "type": "array"
+          }
+        },
+        "title": "SetLayerParticipationsRequest",
         "type": "object"
       },
       "SetLayersRequest": {
@@ -8228,6 +8294,78 @@
           }
         },
         "summary": "Set the full stack of executable XOL layers (before the version is validated)",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/layers/{layer_no}/participations": {
+      "put": {
+        "operationId": "setLayerParticipations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "layer_no",
+            "required": true,
+            "schema": {
+              "title": "Layer No",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLayerParticipationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Give one layer its own reinsurer panel (before the version is validated)",
         "tags": [
           "treaties"
         ]

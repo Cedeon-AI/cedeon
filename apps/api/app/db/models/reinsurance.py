@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -176,13 +177,35 @@ class TreatyLayer(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     treaty_version: Mapped[TreatyVersion] = relationship(back_populates="layers")
+    # A read-only view of this layer's own panel. The version owns every participation
+    # row (delete-orphan + DB CASCADE); the validation service writes them explicitly.
+    participations: Mapped[list[TreatyParticipation]] = relationship(
+        primaryjoin="TreatyLayer.id == foreign(TreatyParticipation.treaty_layer_id)",
+        viewonly=True,
+    )
 
 
 class TreatyParticipation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """A reinsurer's share. ``treaty_layer_id IS NULL`` is the programme-wide panel
+    (the common case). A row with a layer id overrides the panel for that one layer —
+    e.g. a top layer placed with a different market (see docs/DATA_MODEL.md §2)."""
+
     __tablename__ = "treaty_participations"
     __table_args__ = (
-        UniqueConstraint(
-            "treaty_version_id", "reinsurer_id", name="uq_treaty_participations_version_reinsurer"
+        Index(
+            "uq_treaty_participations_version_reinsurer",
+            "treaty_version_id",
+            "reinsurer_id",
+            unique=True,
+            postgresql_where=text("treaty_layer_id IS NULL"),
+        ),
+        Index(
+            "uq_treaty_participations_layer_reinsurer",
+            "treaty_version_id",
+            "treaty_layer_id",
+            "reinsurer_id",
+            unique=True,
+            postgresql_where=text("treaty_layer_id IS NOT NULL"),
         ),
     )
 
@@ -192,6 +215,9 @@ class TreatyParticipation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     treaty_version_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("treaty_versions.id", ondelete="CASCADE"), nullable=False
     )
+    treaty_layer_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("treaty_layers.id", ondelete="CASCADE"), nullable=True
+    )
     reinsurer_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("reinsurers.id", ondelete="RESTRICT"), nullable=False
     )
@@ -200,6 +226,7 @@ class TreatyParticipation(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     broker_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
     treaty_version: Mapped[TreatyVersion] = relationship(back_populates="participations")
+    layer: Mapped[TreatyLayer | None] = relationship(foreign_keys=[treaty_layer_id])
     reinsurer: Mapped[Reinsurer] = relationship()
 
 

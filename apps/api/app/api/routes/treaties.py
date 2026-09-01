@@ -18,6 +18,7 @@ from app.api.schemas.reinsurance import (
     LayerOut,
     NewTreatyVersionRequest,
     ParticipationOut,
+    SetLayerParticipationsRequest,
     TermOut,
     TreatyCreate,
     TreatyDetail,
@@ -36,7 +37,7 @@ from app.api.schemas.validation import (
     TermCandidatesResponse,
 )
 from app.db.models.extraction import TreatyTermCandidate
-from app.db.models.reinsurance import Treaty, TreatyVersion
+from app.db.models.reinsurance import Treaty, TreatyParticipation, TreatyVersion
 from app.domain.recoveries import NoticeTermSpec, NoticeTrigger
 from app.services.errors import ValidationError
 from app.services.obligations import ObligationService
@@ -69,6 +70,17 @@ def _treaty_out(treaty: Treaty) -> TreatyOut:
     )
 
 
+def _participation_out(p: TreatyParticipation) -> ParticipationOut:
+    return ParticipationOut(
+        reinsurer_id=p.reinsurer_id,
+        reinsurer_name=p.reinsurer.name,
+        placed_share=p.placed_share,
+        signed_share=p.signed_share,
+        broker_name=p.broker_name,
+        treaty_layer_id=p.treaty_layer_id,
+    )
+
+
 def _version_out(version: TreatyVersion) -> TreatyVersionOut:
     return TreatyVersionOut(
         id=version.id,
@@ -87,18 +99,16 @@ def _version_out(version: TreatyVersion) -> TreatyVersionOut:
                 currency=layer.currency,
                 reinstatements=layer.reinstatements,
                 description=layer.description,
+                participations=[
+                    _participation_out(p)
+                    for p in version.participations
+                    if p.treaty_layer_id == layer.id
+                ],
             )
             for layer in sorted(version.layers, key=lambda x: x.layer_no)
         ],
         participations=[
-            ParticipationOut(
-                reinsurer_id=p.reinsurer_id,
-                reinsurer_name=p.reinsurer.name,
-                placed_share=p.placed_share,
-                signed_share=p.signed_share,
-                broker_name=p.broker_name,
-            )
-            for p in version.participations
+            _participation_out(p) for p in version.participations if p.treaty_layer_id is None
         ],
         terms=[TermOut(key=t.key, value=t.value, status=t.status.value) for t in version.terms],
     )
@@ -296,6 +306,39 @@ async def set_treaty_layers(
     return TreatyDetail(
         treaty=_treaty_out(treaty),
         current_version=_version_out(current) if current else None,
+    )
+
+
+@router.put(
+    "/{treaty_id}/versions/{version_id}/layers/{layer_no}/participations",
+    response_model=TreatyDetail,
+    summary="Give one layer its own reinsurer panel (before the version is validated)",
+    operation_id="setLayerParticipations",
+)
+async def set_layer_participations(
+    treaty_id: UUID,
+    version_id: UUID,
+    layer_no: int,
+    payload: SetLayerParticipationsRequest,
+    context: AuthedContext,
+    session: DbSession,
+    treaty_service: TreatyServiceDep,
+) -> TreatyDetail:
+    await ValidationService(session).set_layer_participations(
+        context,
+        version_id,
+        layer_no,
+        [(row.reinsurer_name, row.placed_share_percent) for row in payload.panel],
+    )
+    treaty = await treaty_service.get_treaty(context, treaty_id)
+    current = await treaty_service.get_current_version(context, treaty)
+    return TreatyDetail(
+        treaty=_treaty_out(treaty),
+        current_version=_version_out(current) if current else None,
+        versions=[
+            _version_summary(v)
+            for v in sorted(treaty.versions, key=lambda x: x.version_no, reverse=True)
+        ],
     )
 
 

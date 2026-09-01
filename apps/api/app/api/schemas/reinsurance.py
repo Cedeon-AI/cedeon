@@ -57,6 +57,15 @@ class ProgramList(ApiModel):
     programs: list[ProgramOut]
 
 
+class ParticipationOut(ApiModel):
+    reinsurer_id: UUID
+    reinsurer_name: str
+    placed_share: Decimal
+    signed_share: Decimal | None
+    broker_name: str | None
+    treaty_layer_id: UUID | None = None
+
+
 class LayerOut(ApiModel):
     layer_no: int
     attachment: Decimal
@@ -64,14 +73,19 @@ class LayerOut(ApiModel):
     currency: str
     reinstatements: int | None
     description: str | None
+    # This layer's own reinsurer panel; empty means it uses the programme panel.
+    participations: list[ParticipationOut]
 
 
-class ParticipationOut(ApiModel):
-    reinsurer_id: UUID
-    reinsurer_name: str
-    placed_share: Decimal
-    signed_share: Decimal | None
-    broker_name: str | None
+class LayerParticipationInput(ApiModel):
+    reinsurer_name: str = Field(min_length=1, max_length=300)
+    placed_share_percent: Decimal = Field(ge=0, le=100)
+
+
+class SetLayerParticipationsRequest(ApiModel):
+    """The reinsurer panel for one layer. An empty list clears the override."""
+
+    panel: list[LayerParticipationInput] = Field(default_factory=list)
 
 
 class TermOut(ApiModel):

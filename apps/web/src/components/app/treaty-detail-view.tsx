@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { NoticeProvisionEditor } from "@/components/app/notice-provision-editor";
 import { RecoveryPreview } from "@/components/app/recovery-preview";
+import { TreatyLayerPanelsEditor } from "@/components/app/treaty-layer-panels-editor";
 import { TreatyLayersEditor } from "@/components/app/treaty-layers-editor";
 import { TreatyVersionsCard } from "@/components/app/treaty-versions-card";
 import { Badge } from "@/components/ui/badge";
@@ -71,18 +72,32 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
             {layers.length > 0 ? (
               <ul className="space-y-2">
                 {layers.map((l) => (
-                  <li key={l.layer_no} className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm">
-                      {layers.length > 1 ? (
-                        <span className="mr-2 font-mono text-xs text-muted-foreground">
-                          L{l.layer_no}
+                  <li key={l.layer_no} className="flex flex-col gap-0.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm">
+                        {layers.length > 1 ? (
+                          <span className="mr-2 font-mono text-xs text-muted-foreground">
+                            L{l.layer_no}
+                          </span>
+                        ) : null}
+                        <span className="font-semibold">{formatMoney(l.limit, l.currency)}</span>{" "}
+                        <span className="text-muted-foreground">xs</span>{" "}
+                        <span className="font-semibold">
+                          {formatMoney(l.attachment, l.currency)}
                         </span>
-                      ) : null}
-                      <span className="font-semibold">{formatMoney(l.limit, l.currency)}</span>{" "}
-                      <span className="text-muted-foreground">xs</span>{" "}
-                      <span className="font-semibold">{formatMoney(l.attachment, l.currency)}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">{l.currency}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{l.currency}</span>
+                    </div>
+                    {l.participations.length > 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        own panel:{" "}
+                        {l.participations
+                          .map((p) => `${p.reinsurer_name} ${Number(p.placed_share) * 100}%`)
+                          .join(" · ")}
+                      </span>
+                    ) : layers.length > 1 ? (
+                      <span className="text-xs text-muted-foreground/70">programme panel</span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -150,12 +165,19 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
       version.status !== "validated" &&
       version.status !== "active" &&
       version.status !== "parsing" ? (
-        <TreatyLayersEditor
-          treatyId={treatyId}
-          versionId={version.id}
-          currency={version.currency}
-          existing={version.layers}
-        />
+        <>
+          <TreatyLayersEditor
+            treatyId={treatyId}
+            versionId={version.id}
+            currency={version.currency}
+            existing={version.layers}
+          />
+          <TreatyLayerPanelsEditor
+            treatyId={treatyId}
+            versionId={version.id}
+            layers={version.layers}
+          />
+        </>
       ) : null}
 
       {version && version.status !== "draft" && version.status !== "parsing" ? (

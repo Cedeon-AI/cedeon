@@ -32,6 +32,7 @@ async def validated_golden_treaty(
     email: str = "ops@carrier.example",
     org: str = "Carrier Ops",
     layers: list[tuple[str, str]] | None = None,
+    layer_panels: dict[int, list[tuple[str, str]]] | None = None,
     treaty_pdf: bytes | None = None,
 ) -> GoldenTreaty:
     from tests.support.auth import register
@@ -78,6 +79,15 @@ async def validated_golden_treaty(
         await client.put(
             f"/treaties/{treaty['id']}/versions/{version_id}/layers",
             json={"currency": "USD", "layers": [{"attachment": a, "limit": x} for a, x in layers]},
+        )
+    for layer_no, panel in (layer_panels or {}).items():
+        await client.put(
+            f"/treaties/{treaty['id']}/versions/{version_id}/layers/{layer_no}/participations",
+            json={
+                "panel": [
+                    {"reinsurer_name": name, "placed_share_percent": pct} for name, pct in panel
+                ]
+            },
         )
     await client.post(f"/treaties/{treaty['id']}/versions/{version_id}/validate")
 

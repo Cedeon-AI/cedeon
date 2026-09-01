@@ -338,28 +338,32 @@ class TreatyService:
             currency=current.currency,
         )
         new_version.treaty = treaty  # back-populates treaty.versions in memory
+        new_layer_by_no: dict[int, TreatyLayer] = {}
+        old_layer_no_by_id = {x.id: x.layer_no for x in current.layers}
         for layer in current.layers:
-            new_version.layers.append(
-                TreatyLayer(
-                    organization_id=org_id,
-                    layer_no=layer.layer_no,
-                    attachment=layer.attachment,
-                    limit=layer.limit,
-                    currency=layer.currency,
-                    reinstatements=layer.reinstatements,
-                    description=layer.description,
-                )
+            new_layer = TreatyLayer(
+                organization_id=org_id,
+                layer_no=layer.layer_no,
+                attachment=layer.attachment,
+                limit=layer.limit,
+                currency=layer.currency,
+                reinstatements=layer.reinstatements,
+                description=layer.description,
             )
+            new_version.layers.append(new_layer)
+            new_layer_by_no[layer.layer_no] = new_layer
         for part in current.participations:
-            new_version.participations.append(
-                TreatyParticipation(
-                    organization_id=org_id,
-                    reinsurer_id=part.reinsurer_id,
-                    placed_share=part.placed_share,
-                    signed_share=part.signed_share,
-                    broker_name=part.broker_name,
-                )
+            new_part = TreatyParticipation(
+                organization_id=org_id,
+                reinsurer_id=part.reinsurer_id,
+                placed_share=part.placed_share,
+                signed_share=part.signed_share,
+                broker_name=part.broker_name,
             )
+            if part.treaty_layer_id is not None:
+                # re-point a per-layer panel at the copied layer of the same number
+                new_part.layer = new_layer_by_no[old_layer_no_by_id[part.treaty_layer_id]]
+            new_version.participations.append(new_part)
         for term in current.terms:
             new_version.terms.append(
                 TreatyTerm(

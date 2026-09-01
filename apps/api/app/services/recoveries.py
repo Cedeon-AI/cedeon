@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import get_correlation_id
 from app.db.models.extraction import Review
 from app.db.models.recoveries import RecoveryAllocation, RecoveryCalculation, RecoveryCandidate
-from app.db.models.reinsurance import TreatyLayer, TreatyVersion
+from app.db.models.reinsurance import TreatyLayer, TreatyParticipation, TreatyVersion
 from app.domain.audit import ActorType, AuditRecord
 from app.domain.money import Money, MoneyError
 from app.domain.recoveries import (
@@ -79,7 +79,7 @@ class RecoveryPreviewService:
             gross_loss=gross_loss,
             attachment=Money(Decimal(layer.attachment), currency),
             limit=Money(Decimal(layer.limit), currency),
-            participations=_participations(version),
+            participations=_participations(version, layer),
         )
 
 
@@ -437,7 +437,7 @@ class RecoveryCandidateService:
         gross_loss: Money,
     ) -> RecoveryCalculation:
         currency = layer.currency
-        participations = _participations(version)
+        participations = _participations(version, layer)
         result = calculate_recovery(
             gross_loss=gross_loss,
             attachment=Money(Decimal(layer.attachment), currency),
@@ -505,17 +505,32 @@ class RecoveryCandidateService:
             attachment=Decimal(layer.attachment),
             limit=Decimal(layer.limit),
             participations=[
-                (str(p.reinsurer_id), Decimal(p.placed_share)) for p in version.participations
+                (str(p.reinsurer_id), Decimal(p.placed_share))
+                for p in _participation_rows(version, layer)
             ],
         )
 
 
-def _participations(version: TreatyVersion) -> list[Participation]:
+def _participation_rows(
+    version: TreatyVersion, layer: TreatyLayer | None
+) -> list[TreatyParticipation]:
+    """The panel that applies to ``layer``: its own rows if it has any, otherwise the
+    programme-wide panel (``treaty_layer_id IS NULL``)."""
+    if layer is not None:
+        own = [p for p in version.participations if p.treaty_layer_id == layer.id]
+        if own:
+            return own
+    return [p for p in version.participations if p.treaty_layer_id is None]
+
+
+def _participations(
+    version: TreatyVersion, layer: TreatyLayer | None = None
+) -> list[Participation]:
     return [
         Participation(
             key=str(p.reinsurer_id),
             label=p.reinsurer.name,
             share=Decimal(p.placed_share),
         )
-        for p in version.participations
+        for p in _participation_rows(version, layer)
     ]

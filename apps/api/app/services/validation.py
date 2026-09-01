@@ -14,6 +14,7 @@ from app.core.logging import get_correlation_id
 from app.db.models.documents import DocumentPage
 from app.db.models.extraction import Review, TreatyTermCandidate
 from app.db.models.reinsurance import (
+    Reinsurer,
     TreatyLayer,
     TreatyParticipation,
     TreatyTerm,
@@ -175,6 +176,10 @@ class ValidationService:
             if limit <= 0:
                 raise ValidationError(f"layer {i} limit must be greater than zero")
 
+        # Per-layer panels are keyed to layer ids that are about to disappear.
+        for p in list(version.participations):
+            if p.treaty_layer_id is not None:
+                await self._session.delete(p)
         for existing in list(version.layers):
             await self._session.delete(existing)
         version.layers.clear()
@@ -205,6 +210,84 @@ class ValidationService:
                     + " / ".join(f"{lim} xs {att}" for att, lim in ordered)
                 ),
                 payload={"layers": [{"attachment": str(a), "limit": str(x)} for a, x in ordered]},
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        result = await self._versions.get(context.organization.id, version.id)
+        assert result is not None
+        return result
+
+    async def set_layer_participations(
+        self,
+        context: AuthenticatedContext,
+        treaty_version_id: UUID,
+        layer_no: int,
+        panel: list[tuple[str, Decimal]],
+    ) -> TreatyVersion:
+        """Give one layer its own reinsurer panel, overriding the programme panel for
+        that layer only. ``panel`` is ``(reinsurer name, placed share percent)`` pairs;
+        an empty list clears the override and the layer falls back to the programme
+        panel. Editable until the version is frozen."""
+        version = await self._require_version(context, treaty_version_id)
+        if version.status.is_frozen:
+            raise ConflictError("this treaty version is already validated — its panel is frozen")
+        layer = next((x for x in version.layers if x.layer_no == layer_no), None)
+        if layer is None:
+            raise NotFoundError(f"treaty version has no layer {layer_no}")
+
+        resolved: list[tuple[str, Decimal]] = []
+        for raw_name, percent in panel:
+            name = raw_name.strip()
+            if not name:
+                raise ValidationError("a reinsurer name is required")
+            share = (percent / Decimal("100")).quantize(Decimal("0.000001"))
+            if not (Decimal("0") <= share <= Decimal("1")):
+                raise ValidationError(f"{name}: share must be between 0 and 100 percent")
+            resolved.append((name, share))
+        if len({n.lower() for n, _ in resolved}) != len(resolved):
+            raise ValidationError("a reinsurer appears twice in the panel")
+
+        for existing in [p for p in version.participations if p.treaty_layer_id == layer.id]:
+            version.participations.remove(existing)
+            await self._session.delete(existing)
+        await self._session.flush()
+
+        for name, share in resolved:
+            reinsurer = await self._reinsurers.get_by_name(context.organization.id, name)
+            if reinsurer is None:
+                reinsurer = Reinsurer(organization_id=context.organization.id, name=name)
+                self._reinsurers.add(reinsurer)
+            version.participations.append(
+                TreatyParticipation(
+                    organization_id=context.organization.id,
+                    treaty_version_id=version.id,
+                    treaty_layer_id=layer.id,
+                    reinsurer=reinsurer,
+                    placed_share=share,
+                )
+            )
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=context.organization.id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="treaty_version.layer_panel_set",
+                entity_type="treaty_version",
+                entity_id=version.id,
+                summary=(
+                    f"{context.user.email} "
+                    + (
+                        f"set a {len(resolved)}-reinsurer panel on layer {layer_no}"
+                        if resolved
+                        else f"cleared the layer {layer_no} panel (back to the programme panel)"
+                    )
+                ),
+                payload={
+                    "layer_no": layer_no,
+                    "panel": [{"reinsurer": n, "placed_share": str(s)} for n, s in resolved],
+                },
                 correlation_id=get_correlation_id(),
             )
         )
@@ -281,12 +364,31 @@ class ValidationService:
 
         if not version.participations:
             raise ValidationError("confirm at least one reinsurer participation before validating")
-        share_sum = sum((p.placed_share for p in version.participations), Decimal("0"))
-        if share_sum > Decimal("1") + _SHARE_EPSILON:
-            raise ValidationError(
-                f"placed shares sum to {share_sum} (> 100%)",
-                detail={"share_sum": str(share_sum)},
+        # The programme panel and each layer's own panel are checked separately.
+        programme = [p for p in version.participations if p.treaty_layer_id is None]
+        for layer in version.layers:
+            own = [p for p in version.participations if p.treaty_layer_id == layer.id]
+            panel = own or programme
+            if not panel:
+                raise ValidationError(
+                    f"layer {layer.layer_no} has no reinsurer panel — set one, "
+                    "or confirm a programme-wide panel"
+                )
+        panels: list[tuple[str, list[TreatyParticipation]]] = [("programme", programme)]
+        for x in version.layers:
+            panels.append(
+                (
+                    f"layer {x.layer_no}",
+                    [p for p in version.participations if p.treaty_layer_id == x.id],
+                )
             )
+        for label, panel in panels:
+            share_sum = sum((p.placed_share for p in panel), Decimal("0"))
+            if share_sum > Decimal("1") + _SHARE_EPSILON:
+                raise ValidationError(
+                    f"{label} placed shares sum to {share_sum} (> 100%)",
+                    detail={"panel": label, "share_sum": str(share_sum)},
+                )
 
         version.currency = currency
         version.status = TreatyVersionStatus.VALIDATED
@@ -371,7 +473,9 @@ class ValidationService:
         if candidate.key == "participation":
             name = (candidate.normalized_value or {}).get("reinsurer_name")
             version.participations[:] = [
-                p for p in version.participations if p.reinsurer.name != name
+                p
+                for p in version.participations
+                if p.treaty_layer_id is not None or p.reinsurer.name != name
             ]
             return
         version.terms[:] = [t for t in version.terms if t.key != candidate.key]
@@ -393,12 +497,17 @@ class ValidationService:
         if not (Decimal("0") <= share <= Decimal("1")):
             raise ValidationError("participation share must be between 0 and 100 percent")
 
-        existing = next((p for p in version.participations if p.reinsurer.name == name), None)
+        existing = next(
+            (
+                p
+                for p in version.participations
+                if p.treaty_layer_id is None and p.reinsurer.name == name
+            ),
+            None,
+        )
         if existing is not None:
             existing.placed_share = share
             return
-
-        from app.db.models.reinsurance import Reinsurer
 
         reinsurer = Reinsurer(organization_id=version.organization_id, name=name)
         self._session.add(reinsurer)

@@ -183,12 +183,15 @@ async def get_participants(deps: InvestigatorDeps) -> list[ParticipantView] | To
     )
     if version is None:
         return ToolError(error="treaty version not found")
+    # The panel that applies to this candidate's layer: its own rows, else the programme panel.
+    own = [p for p in version.participations if p.treaty_layer_id == candidate.treaty_layer_id]
+    panel = own or [p for p in version.participations if p.treaty_layer_id is None]
     return [
         ParticipantView(
             reinsurer_name=p.reinsurer.name,
             placed_share_percent=str((Decimal(p.placed_share) * 100).normalize()),
         )
-        for p in version.participations
+        for p in panel
     ]
 
 
