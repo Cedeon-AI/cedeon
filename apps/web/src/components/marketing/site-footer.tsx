@@ -6,9 +6,10 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Product",
     links: [
+      { label: "The queue", href: "/#queue" },
+      { label: "What it watches", href: "/#watches" },
       { label: "How it works", href: "/#how-it-works" },
       { label: "Platform", href: "/#platform" },
-      { label: "Who it's for", href: "/#who" },
       { label: "Worked example", href: "/#example" },
       { label: "FAQ", href: "/#faq" },
     ],
@@ -36,8 +37,8 @@ export function SiteFooter() {
         <div className="space-y-3">
           <Logo className="text-foreground" />
           <p className="max-w-xs text-sm text-muted-foreground">
-            An independent reinsurance financial-intelligence layer. From validated contract to
-            evidence-backed recovery — every figure traced to a source.
+            The intelligence system for ceded reinsurance. From validated contract to collected
+            recovery — one queue of what needs a person, every figure traced to a source.
           </p>
         </div>
         {COLUMNS.map((col) => (

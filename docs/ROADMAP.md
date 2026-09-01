@@ -212,12 +212,15 @@ build ①–⑧ already delivered the "continuous intelligence" pivot; minimal c
 - **Later — ⑩ reinstatement premium math · ⑫ CAT/event intelligence · reinsurer-statement
   reconciliation · per-layer participations + a grouped programme view (⑥ follow-ups) ·
   ⑨ endorsement re-extraction + term diff.**
-- **Before any external demo — update the marketing / public site
-  (`apps/web/src/app/(marketing)/`, `components/marketing/`) so the landing page, feature
-  sections, comparison table, and copy reflect the intelligence-system positioning and
-  everything built since (attention queue, notice deadlines, drift, suggestions,
-  multi-layer, aged recoverables, endorsements, reconciliation). Currently stale — it
-  still describes the narrower contract-to-recovery product.**
+- **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
+  `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
+  reinsurance" (keeps the "contract to recovery" line); the product mockup is now the
+  attention queue; new sections — **the queue** (the four categories), **what Cedeon
+  watches** (notice deadlines · recalc & drift · suggested recoveries · aged recoverables ·
+  contract changes · reconciliation), **recovery is module one** (the layer arc with honest
+  build status). Platform grid gains multi-layer programmes; comparison table + FAQ + about
+  page + metadata + nav updated. Scope stays honest per §39 (per-occurrence XOL + a stack of
+  layers; no aggregate/QS/reinstatement/hours-clause claims; reconciliation is internal-only).
 
 ---
 

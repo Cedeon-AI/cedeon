@@ -1,46 +1,87 @@
-import { ArrowRight, Check, ShieldCheck } from "lucide-react";
+import { AlarmClock, ArrowRight, FileWarning, Hourglass, Scale, TrendingUp } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-type Kind = "fact" | "calculation" | "ai" | "human";
+type Tone = "danger" | "warning" | "calc";
 
-const KIND_META: Record<Kind, { label: string; bar: string; chip: string }> = {
-  fact: { label: "Fact", bar: "border-l-fact", chip: "bg-fact/10 text-fact" },
-  calculation: {
-    label: "Calculation",
-    bar: "border-l-calculation",
-    chip: "bg-calculation/10 text-calculation",
-  },
-  ai: { label: "AI interpretation", bar: "border-l-ai", chip: "bg-ai/10 text-ai" },
-  human: { label: "Human decision", bar: "border-l-human", chip: "bg-human/10 text-human" },
+const TONE: Record<Tone, string> = {
+  danger: "bg-danger/10 text-danger",
+  warning: "bg-warning/15 text-warning",
+  calc: "bg-calculation/10 text-calculation",
 };
 
-const STATEMENTS: { kind: Kind; text: string; meta: string }[] = [
-  {
-    kind: "fact",
-    text: "Layer: USD 20,000,000 excess of USD 50,000,000, 3 reinsurers.",
-    meta: "Property Cat XOL 2024 · p.4 §3.1 — validated",
-  },
-  {
-    kind: "fact",
-    text: "Event incurred: USD 58,700,000 across 10 underlying claims.",
-    meta: "Loss import LI-2481 · committed",
-  },
-  {
-    kind: "calculation",
-    text: "Layer recovery: USD 8,700,000.00",
-    meta: "XOL engine v1.0.0 · min(58.7M − 50M, 20M)",
-  },
-  {
-    kind: "ai",
-    text: "Treaty responds. Hours clause satisfied; no exclusion applies.",
-    meta: "Investigator · 4 citations · read-only",
-  },
-];
+type Row = {
+  icon: ReactNode;
+  tone: Tone;
+  title: string;
+  detail: string;
+  amount?: string;
+  clock?: string;
+  overdue?: boolean;
+};
 
-const ALLOCATION = [
-  { name: "Reinsurer A", pct: 50, amount: "4,350,000.00" },
-  { name: "Reinsurer B", pct: 30, amount: "2,610,000.00" },
-  { name: "Reinsurer C", pct: 20, amount: "1,740,000.00" },
+const GROUPS: { label: string; count: number; rows: Row[] }[] = [
+  {
+    label: "Obligations",
+    count: 1,
+    rows: [
+      {
+        icon: <AlarmClock />,
+        tone: "warning",
+        title: "Notice due",
+        detail: "Hurricane Béatrice — first advice to reinsurers",
+        clock: "in 4 days",
+        overdue: false,
+      },
+    ],
+  },
+  {
+    label: "Recovery",
+    count: 2,
+    rows: [
+      {
+        icon: <TrendingUp />,
+        tone: "warning",
+        title: "Number moved",
+        detail: "Property Cat XOL — $8.70M → $10.20M after a late claim",
+        amount: "$10.20M",
+      },
+      {
+        icon: <Hourglass />,
+        tone: "danger",
+        title: "Overdue 32 days",
+        detail: "Reinsurer B — bill issued, no payment. Chase.",
+        amount: "$2.61M",
+        clock: "32d overdue",
+        overdue: true,
+      },
+    ],
+  },
+  {
+    label: "Contract",
+    count: 1,
+    rows: [
+      {
+        icon: <FileWarning />,
+        tone: "warning",
+        title: "Treaty updated",
+        detail: "Property Cat XOL v3 endorsed — 1 recovery to recheck",
+      },
+    ],
+  },
+  {
+    label: "Exceptions",
+    count: 1,
+    rows: [
+      {
+        icon: <Scale />,
+        tone: "danger",
+        title: "Doesn't reconcile",
+        detail: "Reinsurer C — billed $1.80M vs agreed $1.74M",
+        amount: "$60,000",
+      },
+    ],
+  },
 ];
 
 export function ProductMockup({ className }: { className?: string }) {
@@ -58,101 +99,72 @@ export function ProductMockup({ className }: { className?: string }) {
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
         </div>
-        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-          cedeon.app / recovery-candidates / rc_2f9c
-        </span>
+        <span className="ml-2 font-mono text-[11px] text-muted-foreground">cedeon.app / home</span>
       </div>
 
-      <div className="grid gap-0 md:grid-cols-[1.55fr_1fr]">
-        {/* left: classified statements */}
-        <div className="border-b border-border/70 p-5 md:border-b-0 md:border-r">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[13px] font-semibold tracking-tight">Recovery packet</p>
-              <p className="text-xs text-muted-foreground">Hurricane Béatrice · draft v3</p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium text-warning">
-              Pending human review
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            {STATEMENTS.map((s) => {
-              const m = KIND_META[s.kind];
-              return (
-                <div
-                  key={s.text}
-                  className={cn(
-                    "rounded-r-md border border-l-2 border-border/70 bg-background/60 px-3 py-2",
-                    m.bar,
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                        m.chip,
-                      )}
-                    >
-                      {m.label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[13px] leading-snug text-foreground">{s.text}</p>
-                  <p className="mt-0.5 font-mono text-[10.5px] text-muted-foreground">{s.meta}</p>
-                </div>
-              );
-            })}
-          </div>
+      <div className="p-5">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[13px] font-semibold tracking-tight">Needs you</p>
+          <span className="text-[11px] text-muted-foreground">5 open</span>
         </div>
 
-        {/* right: figure + allocation */}
-        <div className="flex flex-col gap-4 p-5">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Layer recovery
-            </p>
-            <p className="mt-1 font-mono text-2xl font-semibold tracking-tight text-calculation">
-              $8,700,000.00
-            </p>
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <ShieldCheck className="size-3" /> Deterministic · unit-tested engine
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Per-reinsurer share
-            </p>
-            {ALLOCATION.map((a) => (
-              <div key={a.name} className="space-y-1">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">{a.name}</span>
-                  <span className="font-mono text-foreground">${a.amount}</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-calculation/70"
-                    style={{ width: `${a.pct}%` }}
-                  />
-                </div>
+        <div className="mt-3 space-y-3">
+          {GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1.5">
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+                  {group.label}
+                </span>
+                <span className="text-[10px] text-muted-foreground/50">{group.count}</span>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-auto flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md bg-human/10 px-2.5 py-1.5 text-[11px] font-medium text-human"
-            >
-              <Check className="size-3" /> Confirm
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground"
-            >
-              Draft notice <ArrowRight className="size-3" />
-            </button>
-          </div>
+              <div className="overflow-hidden rounded-lg border border-border/70">
+                {group.rows.map((row, i) => (
+                  <div
+                    key={row.title}
+                    className={cn(
+                      "flex items-center gap-3 bg-background/60 px-3 py-2.5",
+                      i > 0 && "border-t border-border/70",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
+                        TONE[row.tone],
+                      )}
+                    >
+                      {row.icon}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-medium text-foreground">
+                        {row.title}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {row.detail}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+                      {row.amount ? (
+                        <span className="font-mono text-[11px] tabular-nums text-foreground">
+                          {row.amount}
+                        </span>
+                      ) : null}
+                      {row.clock ? (
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            row.overdue ? "font-medium text-danger" : "text-muted-foreground",
+                          )}
+                        >
+                          {row.clock}
+                        </span>
+                      ) : null}
+                    </span>
+                    <ArrowRight className="size-3.5 shrink-0 text-muted-foreground/40" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

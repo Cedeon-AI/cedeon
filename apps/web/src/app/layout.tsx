@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s · Cedeon",
   },
   description:
-    "Upload your reinsurance treaties and loss data. Cedeon understands the contracts, monitors the losses, identifies potential recoveries, and prepares an evidence-backed recovery package for human review.",
+    "The intelligence system for ceded reinsurance. Cedeon turns treaties into executable terms, watches losses against them, and opens the desk on one ranked queue — recoveries to review, notices coming due, contract changes, what doesn't reconcile — each backed by a citation, a deterministic calculation and a human decision.",
 };
 
 /**

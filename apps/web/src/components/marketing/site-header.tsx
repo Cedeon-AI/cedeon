@@ -8,9 +8,9 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 
 const LINKS = [
+  { label: "The queue", href: "/#queue" },
+  { label: "What it watches", href: "/#watches" },
   { label: "How it works", href: "/#how-it-works" },
-  { label: "Platform", href: "/#platform" },
-  { label: "Worked example", href: "/#example" },
   { label: "Security", href: "/security" },
   { label: "About", href: "/about" },
 ];

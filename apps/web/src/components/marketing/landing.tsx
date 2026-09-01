@@ -1,4 +1,5 @@
 import {
+  AlarmClock,
   ArrowRight,
   Boxes,
   Check,
@@ -6,14 +7,20 @@ import {
   Coins,
   FileSearch,
   FileText,
+  FileWarning,
   GitBranch,
   Landmark,
+  Layers,
   LineChart,
   Minus,
+  Scale,
   ScrollText,
   ShieldCheck,
   Sigma,
+  Sparkles,
+  TrendingUp,
   UserCheck,
+  Wallet,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -54,6 +61,68 @@ const SYSTEMS = [
   "Document stores",
 ];
 
+// The categories the queue groups by today — the four ways work lands on the desk.
+const CATEGORIES: { name: string; body: string; icon: ReactNode; tone: string }[] = [
+  {
+    name: "Recovery",
+    body: "A treaty responds to a loss and no one has opened the recovery — or a confirmed figure moved and needs a fresh look.",
+    icon: <Sigma />,
+    tone: "text-calculation bg-calculation/10",
+  },
+  {
+    name: "Obligations",
+    body: "A claim has triggered a notice you owe. Cedeon computes the deadline from the validated provision and counts it down.",
+    icon: <AlarmClock />,
+    tone: "text-warning bg-warning/15",
+  },
+  {
+    name: "Contract",
+    body: "An endorsement changed the wording. The terms carry forward for re-validation and every recovery on the old version is flagged.",
+    icon: <FileWarning />,
+    tone: "text-warning bg-warning/15",
+  },
+  {
+    name: "Exceptions",
+    body: "What Cedeon calculated and what was agreed, billed or collected don't line up — surfaced with the gap and the evidence.",
+    icon: <Scale />,
+    tone: "text-danger bg-danger/10",
+  },
+];
+
+// Continuous checks that put an item on the queue — everything built since the first release.
+const WATCHES: { title: string; body: string; icon: ReactNode }[] = [
+  {
+    title: "Notice deadlines",
+    body: "From a validated, structured notice provision, Cedeon derives the reference date, computes the deadline in calendar or business days, and counts it down on the queue. The model never sets a date.",
+    icon: <AlarmClock />,
+  },
+  {
+    title: "Recalculation & drift",
+    body: "Every committed loss re-runs the affected recoveries. A figure that moves without a person is drift: the confirmed recovery reverts to review and the before → after is shown.",
+    icon: <TrendingUp />,
+  },
+  {
+    title: "Suggested recoveries",
+    body: "Cedeon screens each validated treaty layer against each loss event — currency, the treaty window, gross above the attachment — and proposes opening a recovery where none exists.",
+    icon: <Sparkles />,
+  },
+  {
+    title: "Aged recoverables",
+    body: "Each reinsurer's leg is tracked notified → agreed → billed → collected. Aging is derived, and a deterministic next action — chase an acknowledgement, issue the bill, chase payment — sits on every open leg.",
+    icon: <Wallet />,
+  },
+  {
+    title: "Contract changes",
+    body: "An endorsement opens a new treaty version with terms, layers and participations copied forward for re-validation. Recoveries calculated against the superseded version are flagged for re-review.",
+    icon: <GitBranch />,
+  },
+  {
+    title: "Reconciliation mismatches",
+    body: "Cedeon compares its own expected figure with the agreed, billed and collected amounts on the record and flags what doesn't reconcile — agreed below expected, billed without agreement, collected short.",
+    icon: <Scale />,
+  },
+];
+
 const PIPELINE: { title: string; body: string; kind: Kind; icon: ReactNode }[] = [
   {
     title: "Treaty document",
@@ -69,7 +138,7 @@ const PIPELINE: { title: string; body: string; kind: Kind; icon: ReactNode }[] =
   },
   {
     title: "Deterministic recovery",
-    body: "A versioned, unit-tested engine computes attachment, layer recovery and each reinsurer's share. No LLM touches the math.",
+    body: "A versioned, unit-tested engine computes attachment, layer recovery and each reinsurer's share — on every layer a loss pierces. No LLM touches the math.",
     kind: "calculation",
     icon: <Sigma />,
   },
@@ -86,8 +155,8 @@ const PIPELINE: { title: string; body: string; kind: Kind; icon: ReactNode }[] =
     icon: <ScrollText />,
   },
   {
-    title: "Human review",
-    body: "Confirm, edit, reject or request more information. Every decision is attributed and audited.",
+    title: "Review, notice & collection",
+    body: "Confirm, edit or reject. Draft the loss advice. Then track the recoverable to cash. Every decision is attributed and audited.",
     kind: "human",
     icon: <Check />,
   },
@@ -105,6 +174,11 @@ const CAPABILITIES: { title: string; body: string; icon: ReactNode }[] = [
     icon: <Sigma />,
   },
   {
+    title: "Multi-layer programmes",
+    body: "A treaty version carries a stack of excess-of-loss layers. A loss opens a deterministic recovery on every layer it reaches, each with its own calculation.",
+    icon: <Layers />,
+  },
+  {
     title: "Bounded AI investigator",
     body: "A read-only agent with a fixed tool allowlist and usage limits. It explains why a treaty responds — it never emits a rival number.",
     icon: <FileSearch />,
@@ -119,32 +193,66 @@ const CAPABILITIES: { title: string; body: string; icon: ReactNode }[] = [
     body: "Drafts an initial loss advice from approved facts only. It stops at draft. A person sends it, from their own system.",
     icon: <GitBranch />,
   },
+];
+
+type LayerState = "built" | "foundation" | "started" | "later";
+const LAYER_META: Record<LayerState, { label: string; class: string }> = {
+  built: { label: "Built", class: "text-human border-human/30 bg-human/10" },
+  foundation: {
+    label: "Foundation built",
+    class: "text-calculation border-calculation/30 bg-calculation/10",
+  },
+  started: { label: "Started", class: "text-warning border-warning/40 bg-warning/15" },
+  later: { label: "Later", class: "text-muted-foreground border-border bg-muted" },
+};
+
+const LAYERS: { name: string; question: string; state: LayerState }[] = [
   {
-    title: "Audit & observability",
-    body: "An append-only trail of every agent run, tool call, token and human decision. Per-agent and per-day spend roll-ups.",
-    icon: <ShieldCheck />,
+    name: "Contract intelligence",
+    question: "What does this treaty mean, as executable terms?",
+    state: "built",
+  },
+  {
+    name: "Recovery intelligence",
+    question: "What does the contract mean for these losses?",
+    state: "built",
+  },
+  {
+    name: "Obligation intelligence",
+    question: "What has a claim triggered that I owe?",
+    state: "foundation",
+  },
+  {
+    name: "Exception / reconciliation",
+    question: "What doesn't line up — expected vs agreed vs billed vs collected?",
+    state: "started",
+  },
+  {
+    name: "Portfolio / renewal",
+    question: "What patterns should I act on across the book?",
+    state: "later",
   },
 ];
 
 const AUDIENCES: { role: string; body: string; icon: ReactNode }[] = [
   {
-    role: "Ceded reinsurance managers",
-    body: "See which treaties respond to a loss, why, and what each reinsurer owes — with the clauses to back it up.",
+    role: "Head of ceded reinsurance",
+    body: "Open the desk on one ranked list — recoveries to review, notices coming due, treaty changes, what doesn't reconcile — with the clauses to back each one.",
     icon: <ScrollText />,
   },
   {
     role: "Reinsurance accounting",
-    body: "Turn a validated contract and committed losses into a recoverable you can book, traced to its inputs.",
+    body: "Turn a validated contract and committed losses into a recoverable you can book, then track it notified → agreed → billed → collected.",
     icon: <Coins />,
   },
   {
     role: "Finance & capital teams",
-    body: "A defensible view of expected recoveries, separate from the claims system's estimates.",
+    body: "A defensible view of expected recoveries and their aging, separate from the claims system's estimates.",
     icon: <LineChart />,
   },
   {
     role: "Claims & recovery leads",
-    body: "Catch notice obligations and missing evidence early, before they cost a recovery.",
+    body: "Catch notice obligations and missing evidence early, and see the moment a recovery figure moves.",
     icon: <ClipboardCheck />,
   },
 ];
@@ -152,12 +260,19 @@ const AUDIENCES: { role: string; body: string; icon: ReactNode }[] = [
 const NOT_LIST: string[] = [
   "A system of record. Cedeon reads from your systems; it does not replace claims, reinsurance administration or the general ledger.",
   "An autonomous agent. Nothing is sent, filed or booked without a person deciding.",
-  "A generic AI assistant. It does one thing — reinsurance recovery — end to end, with provenance.",
+  "A generic AI assistant. It does one thing — ceded reinsurance, contract to cash — with provenance.",
   "A model that guesses at money. Every figure is deterministic code over validated inputs.",
+  "A pricing, placement or cat model. It works the recoveries your existing programme creates.",
 ];
 
 type Cell = boolean | "partial" | string;
 const COMPARE: { row: string; cedeon: Cell; manual: Cell; assistant: Cell }[] = [
+  {
+    row: "One ranked queue of what needs a person today",
+    cedeon: true,
+    manual: false,
+    assistant: false,
+  },
   {
     row: "Exact treaty citations on every term",
     cedeon: true,
@@ -167,28 +282,46 @@ const COMPARE: { row: string; cedeon: Cell; manual: Cell; assistant: Cell }[] = 
   { row: "Deterministic, unit-tested math", cedeon: true, manual: "partial", assistant: false },
   { row: "No financial figure authored by an LLM", cedeon: true, manual: true, assistant: false },
   {
-    row: "Human sign-off gate before values are trusted",
+    row: "Recovery figures re-checked on every new loss",
+    cedeon: true,
+    manual: false,
+    assistant: false,
+  },
+  {
+    row: "Notice deadlines computed and counted down",
     cedeon: true,
     manual: "partial",
     assistant: false,
   },
-  { row: "Per-reinsurer allocation", cedeon: true, manual: "partial", assistant: false },
+  {
+    row: "Recoverables tracked to cash, with aging",
+    cedeon: true,
+    manual: "partial",
+    assistant: false,
+  },
   { row: "Immutable audit trail of every decision", cedeon: true, manual: false, assistant: false },
-  { row: "Scales past a handful of treaties", cedeon: true, manual: false, assistant: "partial" },
 ];
 
 const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Is this a recovery calculator?",
+    a: "Recovery is the first module, but the product you open is the ceded-reinsurance desk's queue — what needs you today. It watches: notices coming due, recovery figures that moved, treaty endorsements, recoverables aging past their date, amounts that don't reconcile. The deterministic recovery calculation sits underneath that.",
+  },
   {
     q: "Does an LLM ever calculate the recovery figure?",
     a: "No. Extraction and drafting use language models; every financial calculation runs in a versioned, unit-tested engine using exact decimal arithmetic. The investigator agent is handed the deterministic figure as a fact and cannot overwrite it.",
   },
   {
-    q: "Where does the recovery number come from, then?",
-    a: "From validated treaty terms and committed loss data, run through the XOL engine. Attachment, exhaustion, layer recovery and each reinsurer's share are computed in code and traceable to their inputs.",
+    q: "What treaty structures does the engine support today?",
+    a: "Per-occurrence excess of loss — $X limit excess of $Y attachment — including a stack of such layers in one programme. Quota share, aggregate covers, reinstatements, hours-clause event clustering and index clauses are deliberately out of scope for now; the data model is built so they can be added without a rewrite.",
   },
   {
     q: "What does a person actually have to approve?",
-    a: "Material interpretations. A human validates each extracted term before it can feed a calculation, and reviews the recovery packet before it is considered final. Confirm, edit, reject or request more information — every action is attributed and audited.",
+    a: "Material interpretations. A human validates each extracted term before it can feed a calculation, reviews the recovery packet before it is final, and approves any notice draft. Confirm, edit, reject or request more information — every action is attributed and audited.",
+  },
+  {
+    q: "How does the reconciliation check work?",
+    a: "It is internal: Cedeon compares its own expected recovery for a reinsurer's leg with the agreed, billed and collected amounts entered on the record, and flags the material gaps. Ingesting reinsurer statements or an accounting feed is a larger module that is not built yet.",
   },
   {
     q: "Does Cedeon send notices to reinsurers or brokers?",
@@ -196,11 +329,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How does Cedeon fit with our existing claims and reinsurance systems?",
-    a: "It sits beside them as a financial-intelligence layer. Cedeon reads treaties and loss data, identifies and explains potential recoveries, and hands back an evidence-backed packet. It does not replace your system of record.",
-  },
-  {
-    q: "How are uploaded documents handled?",
-    a: "Every uploaded document is treated as untrusted input. Document text is data, never instruction. Tenancy is enforced server-side and treaty text is kept out of ordinary logs.",
+    a: "It sits beside them as a financial-intelligence layer. Cedeon reads treaties and loss data, surfaces what needs attention, and hands back evidence-backed work. It does not replace your system of record.",
   },
   {
     q: "Is Cedeon generally available?",
@@ -228,16 +357,17 @@ export function Landing() {
           <div className="mx-auto max-w-3xl text-center">
             <Eyebrow>
               <span className="size-1.5 rounded-full bg-accent" />
-              Reinsurance recovery intelligence
+              The intelligence system for ceded reinsurance
             </Eyebrow>
             <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
               Reinsurance intelligence from{" "}
               <span className="text-gradient">contract to recovery</span>.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground">
-              Upload your reinsurance treaties and loss data. Cedeon understands the contracts,
-              monitors the losses, identifies potential recoveries, explains why the treaty
-              responds, and prepares an evidence-backed recovery package for human review.
+              Cedeon turns your treaties into executable terms, watches your losses against them,
+              and opens the ceded-reinsurance desk on one ranked list — recoveries to review,
+              notices coming due, contract changes, what doesn't reconcile — each backed by a
+              citation, a deterministic calculation and a human decision.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button asChild size="lg">
@@ -255,7 +385,7 @@ export function Landing() {
           </div>
 
           <Reveal delay={0.15} className="mt-14 sm:mt-16">
-            <ProductMockup className="mx-auto max-w-4xl" />
+            <ProductMockup className="mx-auto max-w-2xl" />
           </Reveal>
         </Container>
       </div>
@@ -281,8 +411,45 @@ export function Landing() {
         </Container>
       </Section>
 
+      {/* -------------------------------------------------------- Attention queue */}
+      <Section id="queue">
+        <Container>
+          <Reveal>
+            <SectionHeading
+              eyebrow="What needs me today"
+              title="The desk opens on a queue, not a blank search box"
+              description="Cedeon holds the validated contract, the committed losses and every recovery in flight — and turns that into one ranked list of what a person has to act on, grouped the way the work actually divides."
+            />
+          </Reveal>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2">
+            {CATEGORIES.map((c, i) => (
+              <Reveal key={c.name} delay={0.04 * i}>
+                <div className="flex h-full gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
+                  <span
+                    className={cn(
+                      "inline-flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-5",
+                      c.tone,
+                    )}
+                  >
+                    {c.icon}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold tracking-tight">{c.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{c.body}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            The queue is a derived view over concrete records — not a pile of generic alerts. Every
+            item links straight to the treaty, the calculation or the recoverable behind it.
+          </p>
+        </Container>
+      </Section>
+
       {/* ------------------------------------------------------------ Principle */}
-      <Section>
+      <Section tint="muted" bordered>
         <Container className="grid gap-10 md:grid-cols-[1.1fr_1fr] md:items-center">
           <Reveal>
             <SectionHeading
@@ -310,6 +477,32 @@ export function Landing() {
         </Container>
       </Section>
 
+      {/* -------------------------------------------------------- What Cedeon watches */}
+      <Section id="watches">
+        <Container>
+          <Reveal>
+            <SectionHeading
+              eyebrow="What Cedeon watches"
+              title="The checks that put something on your queue"
+              description="Each one is deterministic and explainable. Cedeon proposes; a person decides and the decision is recorded."
+            />
+          </Reveal>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {WATCHES.map((w, i) => (
+              <Reveal key={w.title} delay={0.04 * i}>
+                <div className="h-full rounded-xl border border-border bg-card p-5 shadow-sm">
+                  <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-5">
+                    {w.icon}
+                  </span>
+                  <h3 className="mt-4 font-semibold tracking-tight">{w.title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{w.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Container>
+      </Section>
+
       {/* --------------------------------------------------------- How it works */}
       <Section id="how-it-works" tint="muted" bordered>
         <Container>
@@ -317,7 +510,7 @@ export function Landing() {
             <SectionHeading
               eyebrow="How it works"
               title="One vertical thread, done properly"
-              description="From a real-shaped excess-of-loss treaty and a loss dataset to a potential recovery — explained with exact treaty citations and deterministic calculations."
+              description="From a real-shaped excess-of-loss treaty and a loss dataset to a potential recovery — explained with exact treaty citations and deterministic calculations, then tracked to cash. Every step feeds the queue."
             />
           </Reveal>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -361,7 +554,7 @@ export function Landing() {
             <SectionHeading
               eyebrow="Platform"
               title="The building blocks of a defensible recovery"
-              description="Six components, each with a single responsibility and a clear boundary between what a model may do and what only code and people may do."
+              description="Each with a single responsibility and a clear boundary between what a model may do and what only code and people may do."
             />
           </Reveal>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -380,14 +573,55 @@ export function Landing() {
         </Container>
       </Section>
 
+      {/* ----------------------------------------------------- Recovery is module one */}
+      <Section id="layers" tint="muted" bordered>
+        <Container>
+          <Reveal>
+            <SectionHeading
+              eyebrow="The arc"
+              title="Recovery is module one of an intelligence system"
+              description="Each layer answers a harder question than the one below it, and feeds the ones above. We are building them in order — recovery first, because its ROI is provable — and the data model stays honest to the whole arc."
+            />
+          </Reveal>
+          <Reveal delay={0.1} className="mt-10 space-y-2.5">
+            {LAYERS.map((layer) => {
+              const m = LAYER_META[layer.state];
+              return (
+                <div
+                  key={layer.name}
+                  className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-xs sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <span className="w-full shrink-0 font-semibold tracking-tight sm:w-56">
+                    {layer.name}
+                  </span>
+                  <span className="flex-1 text-sm text-muted-foreground">{layer.question}</span>
+                  <span
+                    className={cn(
+                      "inline-block shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                      m.class,
+                    )}
+                  >
+                    {m.label}
+                  </span>
+                </div>
+              );
+            })}
+          </Reveal>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Not on the roadmap for now: pricing, placement, cat modelling, ceded accounting or a
+            generic assistant. Cedeon works the recoveries your programme already creates.
+          </p>
+        </Container>
+      </Section>
+
       {/* -------------------------------------------------------- Who it's for */}
-      <Section id="who" tint="muted" bordered>
+      <Section id="who">
         <Container>
           <Reveal>
             <SectionHeading
               eyebrow="Who it's for"
-              title="One recovery, seen the way each team needs to see it"
-              description="Cedeon produces a single, cited recovery — and presents the parts of it that matter to the people who have to sign, book and defend the number."
+              title="One desk, seen the way each team needs to see it"
+              description="Cedeon produces a single, cited recovery — and surfaces the parts of it that matter to the people who have to sign, book, chase and defend the number."
             />
           </Reveal>
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
@@ -409,13 +643,13 @@ export function Landing() {
       </Section>
 
       {/* ---------------------------------------------------------- Comparison */}
-      <Section bordered>
+      <Section bordered tint="muted">
         <Container>
           <Reveal>
             <SectionHeading
               eyebrow="Where it fits"
               title="Not a spreadsheet macro. Not a chatbot."
-              description="Cedeon is the layer between your contracts and your ledger — auditable by construction."
+              description="Cedeon is the layer between your contracts and your ledger — auditable by construction, and always working."
             />
           </Reveal>
           <Reveal delay={0.1} className="mt-10 overflow-x-auto">
@@ -461,13 +695,13 @@ export function Landing() {
       </Section>
 
       {/* ------------------------------------------------------- Worked example */}
-      <Section id="example" tint="muted" bordered>
+      <Section id="example">
         <Container className="grid gap-10 lg:grid-cols-[1fr_1.05fr] lg:items-center">
           <Reveal>
             <SectionHeading
               eyebrow="Worked example"
               title="A $58.7M event. An $8.7M recovery. Every number traced."
-              description="A property-catastrophe layer of $20M excess of $50M, three reinsurers, one hurricane event of $58.7M across ten claims."
+              description="A property-catastrophe layer of $20M excess of $50M, three reinsurers, one hurricane event of $58.7M across ten claims — through the calculation, then tracked to collection."
             />
             <dl className="mt-8 grid grid-cols-2 gap-4">
               {[
@@ -531,13 +765,17 @@ export function Landing() {
                   </div>
                 ))}
               </div>
+              <p className="mt-5 border-t border-border pt-3 text-xs text-muted-foreground">
+                Each share becomes a tracked recoverable — notified → agreed → billed → collected,
+                with a chase action once it ages past its date.
+              </p>
             </div>
           </Reveal>
         </Container>
       </Section>
 
       {/* ------------------------------------------------------------ Security */}
-      <Section id="security" bordered>
+      <Section id="security" bordered tint="muted">
         <Container className="grid gap-10 md:grid-cols-[1fr_1.1fr] md:items-center">
           <Reveal>
             <SectionHeading
@@ -587,7 +825,7 @@ export function Landing() {
       </Section>
 
       {/* ------------------------------------------------------- What it is not */}
-      <Section tint="muted" bordered>
+      <Section>
         <Container className="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-start">
           <Reveal>
             <SectionHeading
@@ -615,7 +853,7 @@ export function Landing() {
       </Section>
 
       {/* ---------------------------------------------------------------- FAQ */}
-      <Section id="faq">
+      <Section id="faq" tint="muted" bordered>
         <Container className="grid gap-10 md:grid-cols-[0.8fr_1.2fr]">
           <Reveal>
             <SectionHeading eyebrow="FAQ" title="Questions, answered" />
@@ -646,7 +884,7 @@ export function Landing() {
             </h2>
             <p className="mt-2 max-w-xl text-muted-foreground">
               A $20M xs $50M property-cat layer, a $58.7M event, an $8.7M recovery — every number
-              traced to the treaty.
+              traced to the treaty, then tracked to cash.
             </p>
           </div>
           <Button asChild size="lg">

@@ -20,12 +20,20 @@ const BELIEFS = [
     body: "LLMs are very good at reading contracts and drafting prose, and unfit to be the source of truth for a number. We draw that line hard and keep it visible in the product.",
   },
   {
+    title: "The work is continuous, so the product watches",
+    body: "Losses land, figures move, treaties get endorsed, recoverables age. Cedeon re-checks against the validated contract and puts what changed on one queue — the desk opens on what needs a person today.",
+  },
+  {
     title: "A financial finding needs a paper trail",
     body: "Every figure Cedeon surfaces can be traced to a validated term, a committed loss and a versioned calculation — and every human decision along the way is on the record.",
   },
   {
     title: "Sit beside the system of record, not on top of it",
     body: "Cedeon reads from claims, reinsurance administration, accounting, broker and document systems. It is a financial-intelligence layer, not a replacement for any of them.",
+  },
+  {
+    title: "Recovery first, because its ROI is provable",
+    body: "Recovery identification is the wedge. The broader arc — obligations, reconciliation, portfolio — is why the data model is built the way it is, not a reason to widen scope now.",
   },
 ];
 
@@ -50,7 +58,7 @@ export default function AboutPage() {
           <Reveal>
             <SectionHeading
               eyebrow="What we believe"
-              title="Four principles the product is built on"
+              title="The principles the product is built on"
             />
           </Reveal>
           <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -69,7 +77,7 @@ export default function AboutPage() {
       <Section tint="muted" bordered>
         <Container className="grid gap-8 md:grid-cols-3">
           {[
-            { k: "Focus", v: "Ceded reinsurance recovery" },
+            { k: "Focus", v: "Ceded reinsurance — contract to cash" },
             { k: "Model", v: "LLMs interpret · code calculates · humans approve" },
             { k: "Stage", v: "Early — access by request" },
           ].map((s) => (
