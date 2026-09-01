@@ -69,6 +69,30 @@ findings + evidence + human decisions + workflow**. Recovery is the first findin
 type; the long-term thesis (see §1, §1a) is a broader financial-exception layer,
 but that is future positioning only and changes nothing about what is built now.
 
+### 2a. Recovery is module one of an intelligence system
+
+The product the customer opens is **the ceded-reinsurance desk's attention queue** —
+*what needs me today* — over a stack of intelligence layers. Recovery is the wedge
+because it has direct, provable ROI; the layers below it feed the ones above.
+
+| Layer | Question it answers | Status |
+| --- | --- | --- |
+| **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack, endorsement re-versioning still Later) |
+| **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, candidates, investigator, packet, notice draft) |
+| **Obligation intelligence** | What has a claim triggered that I owe? | Foundation built (structured notice terms → computed deadlines on the queue); other obligation types Later |
+| **Exception / reconciliation intelligence** | What does not line up — expected vs billed vs collected? | Not built. Aged-recoverable chasing is the nearest live piece. |
+| **Portfolio / renewal intelligence** | What patterns should I act on across the book? | Not built — needs trustworthy accumulated history first. |
+
+The **attention queue** (`app/domain/worklist.py` — a read-model, deliberately not a
+stored `Finding` object, see §1a) already carries an `AttentionCategory` so Recovery,
+Obligation and Contract items group on Home today and Exception items slot in when
+that module lands. This is the only generalisation made for the broader vision;
+everything else stays a concrete domain object.
+
+**Guardrail unchanged:** do not build the Exception, Portfolio, or Renewal layers,
+a chat product, integrations, or a generalised finding model this phase. The layer
+table is here to keep the architecture honest, not to expand the backlog.
+
 ## 3. Who it is for (MVP)
 
 A P&C carrier with ceded reinsurance and enough treaty / claim complexity that

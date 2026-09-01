@@ -418,6 +418,17 @@
         "title": "ApplicabilityAssessment",
         "type": "string"
       },
+      "AttentionCategory": {
+        "description": "The intelligence area an item belongs to. Recovery is the wedge;\nObligation and Contract are live today; Exception / Reconciliation are the\nnext modules and get their own values when they land.",
+        "enum": [
+          "recovery",
+          "obligation",
+          "contract",
+          "exception"
+        ],
+        "title": "AttentionCategory",
+        "type": "string"
+      },
       "AuditEventOut": {
         "additionalProperties": false,
         "properties": {
@@ -5333,6 +5344,9 @@
             ],
             "title": "Amount"
           },
+          "category": {
+            "$ref": "#/components/schemas/AttentionCategory"
+          },
           "currency": {
             "anyOf": [
               {
@@ -5388,6 +5402,7 @@
         },
         "required": [
           "kind",
+          "category",
           "key",
           "title",
           "detail",

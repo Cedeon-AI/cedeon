@@ -20,10 +20,10 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader, Stat } from "@/components/ui/page-header";
-import type { WorklistItemOut, WorklistKind } from "@/lib/api";
+import type { AttentionCategory, WorklistItemOut, WorklistKind } from "@/lib/api";
 import { getCurrentUser, getWorklist, listMembers } from "@/lib/api";
 import { cn, formatMoneyCompact } from "@/lib/utils";
-import { worklistClock, worklistKind } from "@/lib/worklist";
+import { CATEGORY_LABEL, CATEGORY_ORDER, worklistClock, worklistKind } from "@/lib/worklist";
 
 const ICON: Record<WorklistKind, LucideIcon> = {
   notice_due: AlarmClock,
@@ -53,6 +53,12 @@ export function DashboardView() {
   const items = worklist.data?.items ?? [];
   const s = worklist.data?.summary;
 
+  const byCategory = CATEGORY_ORDER.map((cat) => ({
+    cat,
+    rows: items.filter((i) => i.category === cat),
+  })).filter((g) => g.rows.length > 0);
+  const showCategoryHeaders = byCategory.length > 1;
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -80,8 +86,23 @@ export function DashboardView() {
           <EmptyState
             icon={<Check />}
             title="You're all caught up"
-            description="Nothing is waiting on you. New recoveries, deadlines, and discrepancies land here."
+            description="Nothing is waiting on you. Recoveries, obligations, and contract changes land here as Cedeon spots them."
           />
+        ) : showCategoryHeaders ? (
+          <div className="space-y-4">
+            {byCategory.map((group) => (
+              <div key={group.cat} className="space-y-1.5">
+                <CategoryHeader cat={group.cat} count={group.rows.length} />
+                <Card>
+                  <ul className="divide-y divide-border/70">
+                    {group.rows.map((item) => (
+                      <WorklistRow key={item.key} item={item} />
+                    ))}
+                  </ul>
+                </Card>
+              </div>
+            ))}
+          </div>
         ) : (
           <Card>
             <ul className="divide-y divide-border/70">
@@ -175,6 +196,17 @@ export function DashboardView() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function CategoryHeader({ cat, count }: { cat: AttentionCategory; count: number }) {
+  return (
+    <div className="flex items-center gap-2 px-1">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+        {CATEGORY_LABEL[cat] ?? cat}
+      </span>
+      <span className="text-[11px] text-muted-foreground/50">{count}</span>
     </div>
   );
 }

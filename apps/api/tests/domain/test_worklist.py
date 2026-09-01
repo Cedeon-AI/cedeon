@@ -5,8 +5,10 @@ from __future__ import annotations
 from decimal import Decimal
 
 from app.domain.worklist import (
+    AttentionCategory,
     WorklistItem,
     WorklistKind,
+    category_for,
     rank,
     score_urgency,
 )
@@ -14,6 +16,23 @@ from app.domain.worklist import (
 
 def _item(kind: WorklistKind, key: str, **kw: object) -> WorklistItem:
     return WorklistItem(kind=kind, key=key, title=key, detail="", href="/", **kw)  # type: ignore[arg-type]
+
+
+class TestCategory:
+    def test_every_kind_maps_to_a_category(self) -> None:
+        for kind in WorklistKind:
+            assert isinstance(category_for(kind), AttentionCategory)
+
+    def test_the_wedge_categories_are_populated(self) -> None:
+        assert category_for(WorklistKind.NOTICE_DUE) is AttentionCategory.OBLIGATION
+        assert category_for(WorklistKind.TERM_VALIDATION) is AttentionCategory.CONTRACT
+        assert category_for(WorklistKind.RECOVERY_DRIFT) is AttentionCategory.RECOVERY
+
+    def test_item_exposes_its_category(self) -> None:
+        item = WorklistItem(
+            kind=WorklistKind.RECOVERABLE_OVERDUE, key="k", title="t", detail="", href="/"
+        )
+        assert item.category is AttentionCategory.RECOVERY
 
 
 class TestScoreUrgency:

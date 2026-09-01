@@ -1,6 +1,22 @@
-import type { WorklistItemOut, WorklistKind } from "@/lib/api";
+import type { AttentionCategory, WorklistItemOut, WorklistKind } from "@/lib/api";
 
 type Tone = "neutral" | "info" | "success" | "warning" | "danger";
+
+/** The intelligence areas, in the order they appear on Home. Recovery is the
+ * wedge; Obligation and Contract are live; Exception lands with that module. */
+export const CATEGORY_ORDER: AttentionCategory[] = [
+  "obligation",
+  "recovery",
+  "contract",
+  "exception",
+];
+
+export const CATEGORY_LABEL: Record<AttentionCategory, string> = {
+  recovery: "Recovery",
+  obligation: "Obligations",
+  contract: "Contract",
+  exception: "Exceptions",
+};
 
 const KIND: Record<WorklistKind, { label: string; tone: Tone }> = {
   notice_due: { label: "Notice", tone: "danger" },

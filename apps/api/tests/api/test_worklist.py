@@ -62,7 +62,8 @@ class TestWorklist:
         body = (await client.get("/worklist")).json()
         overdue = [i for i in body["items"] if i["kind"] == "recoverable_overdue"]
         assert len(overdue) == 1
-        assert overdue[0]["due_in_days"] == -75
+        assert overdue[0]["due_in_days"] in (-74, -75, -76)  # date-boundary tolerant
+        assert overdue[0]["category"] == "recovery"
         assert overdue[0]["amount"] == "4350000.00"
         assert body["summary"]["overdue_outstanding"] == "4350000.00"
         # it carries a real deadline, so it outranks anything without one

@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from app.api.schemas import ApiModel
-from app.domain.worklist import WorklistKind
+from app.domain.worklist import AttentionCategory, WorklistKind
 
 
 class UrgencyTermOut(ApiModel):
@@ -13,6 +13,7 @@ class UrgencyTermOut(ApiModel):
 
 class WorklistItemOut(ApiModel):
     kind: WorklistKind
+    category: AttentionCategory
     key: str
     title: str
     detail: str

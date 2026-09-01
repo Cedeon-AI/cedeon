@@ -1,5 +1,12 @@
-"""The recovery desk's worklist: one prioritised list of everything that needs a
-human, across every stage of the pipeline.
+"""The ceded-reinsurance desk's attention queue: one prioritised list of
+everything that needs a human, across every stage of the pipeline.
+
+Each item is *derived* from concrete domain state (a recovery, a notice
+obligation, a treaty version) — this is a read-model, not a stored object, so it
+does not force a generalised "finding" abstraction onto the domain. It carries an
+``AttentionCategory`` so the product can group Recovery, Obligation and Contract
+work today and add Exception / Reconciliation intelligence later without a
+rewrite.
 
 Pure — standard library only, no AI, no I/O. The service layer gathers the raw
 signals; this module turns them into typed items and ranks them. The ranking is
@@ -17,6 +24,17 @@ from enum import StrEnum
 _ZERO = Decimal("0")
 
 
+class AttentionCategory(StrEnum):
+    """The intelligence area an item belongs to. Recovery is the wedge;
+    Obligation and Contract are live today; Exception / Reconciliation are the
+    next modules and get their own values when they land."""
+
+    RECOVERY = "recovery"
+    OBLIGATION = "obligation"
+    CONTRACT = "contract"
+    EXCEPTION = "exception"
+
+
 class WorklistKind(StrEnum):
     """What kind of attention an item needs. Ordered roughly by how much a missed
     one costs — the base weight in ``_KIND_WEIGHT`` follows the same order."""
@@ -28,6 +46,21 @@ class WorklistKind(StrEnum):
     PACKET_APPROVAL = "packet_approval"
     TERM_VALIDATION = "term_validation"
     RECOVERABLE_OVERDUE = "recoverable_overdue"
+
+
+_KIND_CATEGORY: dict[WorklistKind, AttentionCategory] = {
+    WorklistKind.NOTICE_DUE: AttentionCategory.OBLIGATION,
+    WorklistKind.RECOVERY_DRIFT: AttentionCategory.RECOVERY,
+    WorklistKind.RECOVERY_REVIEW: AttentionCategory.RECOVERY,
+    WorklistKind.SUGGESTED_RECOVERY: AttentionCategory.RECOVERY,
+    WorklistKind.PACKET_APPROVAL: AttentionCategory.RECOVERY,
+    WorklistKind.TERM_VALIDATION: AttentionCategory.CONTRACT,
+    WorklistKind.RECOVERABLE_OVERDUE: AttentionCategory.RECOVERY,
+}
+
+
+def category_for(kind: WorklistKind) -> AttentionCategory:
+    return _KIND_CATEGORY[kind]
 
 
 # A missed notice contests a recovery; a stale number mis-books an asset; a
@@ -75,6 +108,10 @@ class WorklistItem:
     """How long this has been waiting."""
     urgency: int = 0
     urgency_terms: tuple[UrgencyTerm, ...] = field(default_factory=tuple)
+
+    @property
+    def category(self) -> AttentionCategory:
+        return _KIND_CATEGORY[self.kind]
 
 
 def score_urgency(

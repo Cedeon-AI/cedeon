@@ -21,6 +21,7 @@ router = APIRouter(prefix="/worklist", tags=["worklist"])
 def _item_out(item: WorklistItem) -> WorklistItemOut:
     return WorklistItemOut(
         kind=item.kind,
+        category=item.category,
         key=item.key,
         title=item.title,
         detail=item.detail,
