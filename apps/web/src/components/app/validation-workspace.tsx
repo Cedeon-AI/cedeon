@@ -19,6 +19,20 @@ import {
   validateTreatyVersion,
 } from "@/lib/api";
 import { candidateTone, termLabel } from "@/lib/treaties";
+import { cn } from "@/lib/utils";
+
+const RESOLUTION_LABEL: Record<string, string> = {
+  confirmed: "Confirmed",
+  rejected: "Rejected",
+  ambiguous: "Ambiguous",
+  info_requested: "Info requested",
+};
+
+function resolutionTone(resolution: string | null | undefined) {
+  if (resolution === "confirmed") return "human" as const;
+  if (resolution === "rejected") return "neutral" as const;
+  return "warning" as const;
+}
 
 export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
   const queryClient = useQueryClient();
@@ -56,22 +70,25 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
     },
   });
 
-  const review = useMutation({
-    mutationFn: async (args: { candidateId: string; decision: ReviewDecision; value?: string }) => {
-      await reviewTermCandidate({
-        path: {
-          treaty_id: treatyId,
-          version_id: versionId as string,
-          candidate_id: args.candidateId,
-        },
-        body: { decision: args.decision, value: args.value ?? null },
-        throwOnError: true,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["term-candidates", versionId] });
-    },
-  });
+  const invalidateCandidates = () =>
+    queryClient.invalidateQueries({ queryKey: ["term-candidates", versionId] });
+
+  /** One review call. Throws the problem body on failure so callers can surface it. */
+  async function submitReview(
+    candidateId: string,
+    decision: ReviewDecision,
+    value?: string,
+  ): Promise<void> {
+    const result = await reviewTermCandidate({
+      path: {
+        treaty_id: treatyId,
+        version_id: versionId as string,
+        candidate_id: candidateId,
+      },
+      body: { decision, value: value ?? null },
+    });
+    if (result.error) throw result.error;
+  }
 
   const validate = useMutation({
     mutationFn: async () => {
@@ -105,6 +122,8 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
     [workspace.data, activePage],
   );
 
+  const outstanding = scalar.filter((c) => !c.resolution).length;
+
   if (treaty.data && treaty.data.treaty.current_version?.status === "validated") {
     return (
       <div className="space-y-4">
@@ -129,6 +148,11 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
         description={`${treaty.data?.treaty.name ?? ""} — confirm each term against the treaty text.`}
         actions={
           <>
+            {outstanding > 0 ? (
+              <span className="text-sm text-muted-foreground">
+                {outstanding} term{outstanding === 1 ? "" : "s"} not yet reviewed
+              </span>
+            ) : null}
             {validateError ? <span className="text-sm text-danger">{validateError}</span> : null}
             <Button onClick={() => validate.mutate()} disabled={validate.isPending}>
               {validate.isPending ? "Validating…" : "Validate treaty"}
@@ -203,9 +227,8 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
             <CandidateCard
               key={candidate.id}
               candidate={candidate}
-              onReview={(decision, value) =>
-                review.mutate({ candidateId: candidate.id, decision, value })
-              }
+              submitReview={submitReview}
+              onReviewed={invalidateCandidates}
               onJumpToPage={setActivePage}
             />
           ))}
@@ -216,45 +239,14 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
                 <CardTitle>Participations</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {participations.map((p) => {
-                  const data = (p.normalized_value ?? {}) as {
-                    reinsurer_name?: string;
-                    placed_share_percent?: number;
-                  };
-                  return (
-                    <div
-                      key={p.id}
-                      data-testid="participation-row"
-                      data-resolution={p.resolution ?? "open"}
-                      className="flex items-center justify-between rounded-md border border-border p-2.5 text-sm"
-                    >
-                      <span>
-                        <span className="font-medium">{data.reinsurer_name}</span>{" "}
-                        <span className="text-muted-foreground">{data.placed_share_percent}%</span>
-                        {p.resolution === "confirmed" ? (
-                          <Badge tone="success">confirmed</Badge>
-                        ) : null}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          data-testid="participation-confirm"
-                          onClick={() => review.mutate({ candidateId: p.id, decision: "confirm" })}
-                        >
-                          Confirm
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => review.mutate({ candidateId: p.id, decision: "reject" })}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {participations.map((p) => (
+                  <ParticipationRow
+                    key={p.id}
+                    candidate={p}
+                    submitReview={submitReview}
+                    onReviewed={invalidateCandidates}
+                  />
+                ))}
               </CardContent>
             </Card>
           ) : null}
@@ -264,48 +256,83 @@ export function ValidationWorkspace({ treatyId }: { treatyId: string }) {
   );
 }
 
+type ReviewFn = (id: string, decision: ReviewDecision, value?: string) => Promise<void>;
+
+function useReview(candidateId: string, submitReview: ReviewFn, onReviewed: () => void) {
+  const [error, setError] = useState<string | null>(null);
+  const mutation = useMutation({
+    mutationFn: (a: { decision: ReviewDecision; value?: string }) =>
+      submitReview(candidateId, a.decision, a.value),
+    onMutate: () => setError(null),
+    onSuccess: onReviewed,
+    onError: (e) => setError(asProblem(e)?.detail ?? "Could not save that review — try again."),
+  });
+  return { run: mutation.mutate, busy: mutation.isPending, error };
+}
+
 function CandidateCard({
   candidate,
-  onReview,
+  submitReview,
+  onReviewed,
   onJumpToPage,
 }: {
   candidate: TermCandidateOut;
-  onReview: (decision: ReviewDecision, value?: string) => void;
+  submitReview: ReviewFn;
+  onReviewed: () => void;
   onJumpToPage: (page: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(
     (candidate.normalized_value as { value?: string } | null)?.value ?? candidate.raw_value ?? "",
   );
-  const confirmed = candidate.resolution === "confirmed";
-  const rejected = candidate.resolution === "rejected";
+  const { run, busy, error } = useReview(candidate.id, submitReview, () => {
+    setEditing(false);
+    onReviewed();
+  });
+
+  const resolution = candidate.resolution ?? null;
+  const confirmed = resolution === "confirmed";
+  const rejected = resolution === "rejected";
+  const shownValue =
+    (candidate.normalized_value as { value?: string } | null)?.value ?? candidate.raw_value ?? null;
+  const hasValue = shownValue !== null && shownValue !== "";
 
   return (
     <Card
       data-testid={`term-${candidate.key}`}
-      data-resolution={candidate.resolution ?? "open"}
-      className={confirmed ? "border-human/40" : rejected ? "opacity-60" : undefined}
+      data-resolution={resolution ?? "open"}
+      className={cn(
+        confirmed && "border-human/50 bg-human/5",
+        rejected && "opacity-70",
+        busy && "animate-pulse",
+      )}
     >
       <CardContent className="space-y-2 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">{termLabel(candidate.key)}</span>
           <div className="flex items-center gap-2">
-            <Badge tone={candidateTone(candidate.status)}>{candidate.status}</Badge>
-            {candidate.confidence !== null ? (
-              <span className="text-xs text-muted-foreground">
-                {(candidate.confidence * 100).toFixed(0)}%
-              </span>
-            ) : null}
+            {resolution ? (
+              <Badge tone={resolutionTone(resolution)}>
+                {RESOLUTION_LABEL[resolution] ?? resolution}
+              </Badge>
+            ) : (
+              <>
+                <Badge tone={candidateTone(candidate.status)}>{candidate.status}</Badge>
+                {candidate.confidence !== null ? (
+                  <span className="text-xs text-muted-foreground">
+                    {(candidate.confidence * 100).toFixed(0)}%
+                  </span>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
 
         {editing ? (
-          <Input value={value} onChange={(e) => setValue(e.target.value)} />
+          <Input value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
         ) : (
           <p className="font-mono text-sm">
-            {(candidate.normalized_value as { value?: string } | null)?.value ??
-              candidate.raw_value ??
-              "— not found —"}
+            {shownValue ?? "— not found —"}
             {candidate.currency ? ` ${candidate.currency}` : ""}
           </p>
         )}
@@ -330,38 +357,130 @@ function CandidateCard({
           <p className="text-xs text-muted-foreground">{candidate.reasoning}</p>
         ) : null}
 
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
           {editing ? (
             <>
-              <Button size="sm" onClick={() => onReview("edit", value)}>
-                Save &amp; confirm
+              <Button size="sm" disabled={busy} onClick={() => run({ decision: "edit", value })}>
+                {busy ? "Saving…" : "Save & confirm"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setEditing(false)}>
                 Cancel
               </Button>
             </>
+          ) : resolution ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => run({ decision: "confirm" })}
+              title="Re-review this term"
+            >
+              Change decision
+            </Button>
           ) : (
             <>
               <Button
                 size="sm"
                 data-testid={`term-confirm-${candidate.key}`}
-                onClick={() => onReview("confirm")}
+                disabled={busy || !hasValue}
+                title={hasValue ? undefined : "Add a value with Edit before confirming"}
+                onClick={() => run({ decision: "confirm" })}
               >
-                Confirm
+                {busy ? "…" : "Confirm"}
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-                Edit
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setEditing(true)}
+              >
+                {hasValue ? "Edit" : "Add value"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => onReview("reject")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => run({ decision: "reject" })}
+              >
                 Reject
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => onReview("mark_ambiguous")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => run({ decision: "mark_ambiguous" })}
+              >
                 Ambiguous
               </Button>
             </>
           )}
         </div>
+
+        {error ? (
+          <p className="rounded-md border border-danger/30 bg-danger/5 px-2 py-1.5 text-xs text-danger">
+            {error}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function ParticipationRow({
+  candidate,
+  submitReview,
+  onReviewed,
+}: {
+  candidate: TermCandidateOut;
+  submitReview: ReviewFn;
+  onReviewed: () => void;
+}) {
+  const { run, busy, error } = useReview(candidate.id, submitReview, onReviewed);
+  const data = (candidate.normalized_value ?? {}) as {
+    reinsurer_name?: string;
+    placed_share_percent?: number;
+  };
+  const resolution = candidate.resolution ?? null;
+
+  return (
+    <div
+      data-testid="participation-row"
+      data-resolution={resolution ?? "open"}
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-md border border-border p-2.5 text-sm",
+        resolution === "confirmed" && "border-human/50 bg-human/5",
+        resolution === "rejected" && "opacity-70",
+      )}
+    >
+      <span>
+        <span className="font-medium">{data.reinsurer_name}</span>{" "}
+        <span className="text-muted-foreground">{data.placed_share_percent}%</span>{" "}
+        {resolution ? (
+          <Badge tone={resolutionTone(resolution)}>
+            {RESOLUTION_LABEL[resolution] ?? resolution}
+          </Badge>
+        ) : null}
+        {error ? <span className="ml-2 text-xs text-danger">{error}</span> : null}
+      </span>
+      <div className="flex gap-1">
+        <Button
+          size="sm"
+          variant={resolution === "confirmed" ? "ghost" : "secondary"}
+          data-testid="participation-confirm"
+          disabled={busy}
+          onClick={() => run({ decision: "confirm" })}
+        >
+          {busy ? "…" : resolution === "confirmed" ? "Re-confirm" : "Confirm"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => run({ decision: "reject" })}
+        >
+          Reject
+        </Button>
+      </div>
+    </div>
   );
 }
