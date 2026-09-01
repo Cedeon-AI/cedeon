@@ -239,6 +239,20 @@ function RecoverableRow({
           </div>
         </td>
       </tr>
+      {r.reconciliation.length > 0 ? (
+        <tr className="border-b border-border/60">
+          <td colSpan={8} className="px-4 pb-2.5">
+            <div className="rounded-md border-l-2 border-danger/50 bg-danger/5 px-3 py-2 text-xs">
+              <span className="font-semibold text-danger">Doesn't reconcile</span>
+              <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                {r.reconciliation.map((f) => (
+                  <li key={f.kind}>{f.text}</li>
+                ))}
+              </ul>
+            </div>
+          </td>
+        </tr>
+      ) : null}
       {open ? (
         <tr className="border-b border-border/60 bg-muted/30">
           <td colSpan={8} className="px-4 py-4">

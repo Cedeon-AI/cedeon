@@ -80,7 +80,7 @@ because it has direct, provable ROI; the layers below it feed the ones above.
 | **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack, endorsement re-versioning still Later) |
 | **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, candidates, investigator, packet, notice draft) |
 | **Obligation intelligence** | What has a claim triggered that I owe? | Foundation built (structured notice terms → computed deadlines on the queue); other obligation types Later |
-| **Exception / reconciliation intelligence** | What does not line up — expected vs billed vs collected? | Not built. Aged-recoverable chasing is the nearest live piece. |
+| **Exception / reconciliation intelligence** | What does not line up — expected vs agreed vs billed vs collected? | Started — internal reconciliation (`app/domain/recoveries/reconciliation.py`) flags a leg where Cedeon's calculated figure and the human-entered agreed / billed / collected disagree; surfaces on the recoverable and as an `EXCEPTION` attention item. Reinsurer-statement ingest is the larger module, Later. |
 | **Portfolio / renewal intelligence** | What patterns should I act on across the book? | Not built — needs trustworthy accumulated history first. |
 
 The **attention queue** (`app/domain/worklist.py` — a read-model, deliberately not a

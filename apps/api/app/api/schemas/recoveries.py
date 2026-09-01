@@ -329,6 +329,12 @@ class RecoveryNoticeList(ApiModel):
 # --- collection tracking (ADR-0024) -------------------------------------------
 
 
+class ReconcileFindingOut(ApiModel):
+    kind: str
+    text: str
+    gap: Decimal
+
+
 class RecoverableOut(ApiModel):
     id: UUID
     recovery_candidate_id: UUID
@@ -353,6 +359,7 @@ class RecoverableOut(ApiModel):
     next_action: str
     next_action_text: str
     next_action_urgent: bool
+    reconciliation: list[ReconcileFindingOut]
     created_at: dt.datetime
     updated_at: dt.datetime
 

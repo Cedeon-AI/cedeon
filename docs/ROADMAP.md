@@ -190,9 +190,24 @@ build ①–⑧ already delivered the "continuous intelligence" pivot; minimal c
   `contract_change` worklist item (category = contract). Treaty detail gets a version-history
   card + "New version" action. 5 new tests, 298 backend. *Deferred:* re-extraction against
   the endorsement doc + a term-level diff; a superseded-version banner on the recovery workspace.
-- **Later — ⑩ reinstatement premium math · ⑪ expected-vs-billed-vs-collected reconciliation ·
-  ⑫ CAT/event intelligence · per-layer participations + a grouped programme view (⑥ follow-ups)
-  · investigator eval cases (⑧ follow-up).**
+- **⑪ reconciliation intelligence — ✅ started (internal, no migration).** The first
+  *Exception* module. `app/domain/recoveries/reconciliation.py` (pure) checks the amounts
+  already on a recoverable — Cedeon's calculated `expected` vs the human-entered
+  `agreed` / `billed` / `collected` — and returns typed findings (agreed below/above
+  expected, billed ≠ agreed, billed without agreement, collected over billed, marked
+  collected but short), materiality-thresholded, worst gap first. On every `RecoverableOut`
+  (`reconciliation[]`); a `reconciliation_mismatch` worklist item (`AttentionCategory.EXCEPTION`
+  — now live); shown on the collection section + a ⚠ on the portfolio. 15 tests, 313 backend.
+  *Deferred:* reinsurer-statement / accounting-feed ingest (the larger reconciliation module).
+- **Later — ⑩ reinstatement premium math · ⑫ CAT/event intelligence · reinsurer-statement
+  reconciliation · per-layer participations + a grouped programme view (⑥ follow-ups) ·
+  investigator eval cases (⑧ follow-up) · ⑨ endorsement re-extraction + term diff.**
+- **Before any external demo — update the marketing / public site
+  (`apps/web/src/app/(marketing)/`, `components/marketing/`) so the landing page, feature
+  sections, comparison table, and copy reflect the intelligence-system positioning and
+  everything built since (attention queue, notice deadlines, drift, suggestions,
+  multi-layer, aged recoverables, endorsements, reconciliation). Currently stale — it
+  still describes the narrower contract-to-recovery product.**
 
 ---
 

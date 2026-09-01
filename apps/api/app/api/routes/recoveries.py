@@ -4,6 +4,7 @@ deterministically-calculated recovery. No AI in this module (ADR-0010)."""
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
@@ -35,6 +36,7 @@ from app.api.schemas.recoveries import (
     PacketReviewRequest,
     PacketSectionOut,
     PacketStatementOut,
+    ReconcileFindingOut,
     RecoverableList,
     RecoverableOut,
     RecoverableStatusTotalOut,
@@ -75,6 +77,7 @@ from app.domain.recoveries import (
     outstanding,
 )
 from app.domain.recoveries.chasing import entered_status_on, recommend_chase
+from app.domain.recoveries.reconciliation import RecoverableAmounts, reconcile
 from app.services.collection import CollectionService
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
@@ -650,6 +653,16 @@ def _recoverable_out(r: Recoverable, *, as_of: dt.date) -> RecoverableOut:
     )
     days_in_status = max((as_of - entered.date()).days, 0)
     hint = recommend_chase(status=r.status, days_in_status=days_in_status, days_overdue=overdue)
+    findings = reconcile(
+        RecoverableAmounts(
+            status=r.status,
+            currency=r.currency,
+            expected=Decimal(r.expected_amount),
+            agreed=Decimal(r.agreed_amount) if r.agreed_amount is not None else None,
+            billed=Decimal(r.billed_amount) if r.billed_amount is not None else None,
+            collected=Decimal(r.collected_amount),
+        )
+    )
     return RecoverableOut(
         id=r.id,
         recovery_candidate_id=r.recovery_candidate_id,
@@ -679,6 +692,9 @@ def _recoverable_out(r: Recoverable, *, as_of: dt.date) -> RecoverableOut:
         next_action=hint.action.value,
         next_action_text=hint.text,
         next_action_urgent=hint.urgent,
+        reconciliation=[
+            ReconcileFindingOut(kind=f.kind.value, text=f.text, gap=f.gap) for f in findings
+        ],
         created_at=r.created_at,
         updated_at=r.updated_at,
     )

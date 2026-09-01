@@ -26,6 +26,7 @@ from app.domain.recoveries import (
     outstanding,
 )
 from app.domain.recoveries.chasing import entered_status_on, recommend_chase
+from app.domain.recoveries.reconciliation import RecoverableAmounts, reconcile
 from app.domain.treaties import TreatyVersionStatus
 from app.domain.worklist import WorklistItem, WorklistKind, rank
 from app.repositories.losses import LossEventRepository
@@ -93,6 +94,7 @@ class WorklistService:
         items += await self._suggested_recovery_items(context)
         items += await self._packet_approval_items(org_id, candidates, event_names, today)
         items += self._recoverable_overdue_items(recoverables, today)
+        items += self._reconciliation_items(recoverables)
 
         ranked = rank(items)
         return Worklist(items=ranked, summary=self._summary(recoverables, candidates, ranked))
@@ -345,6 +347,36 @@ class WorklistService:
                     currency=r.currency,
                     due_in_days=-overdue,
                     age_days=overdue,
+                )
+            )
+        return out
+
+    def _reconciliation_items(self, recoverables: list[Recoverable]) -> list[WorklistItem]:
+        out: list[WorklistItem] = []
+        for r in recoverables:
+            findings = reconcile(
+                RecoverableAmounts(
+                    status=RecoverableStatus(r.status),
+                    currency=r.currency,
+                    expected=Decimal(r.expected_amount),
+                    agreed=Decimal(r.agreed_amount) if r.agreed_amount is not None else None,
+                    billed=Decimal(r.billed_amount) if r.billed_amount is not None else None,
+                    collected=Decimal(r.collected_amount),
+                )
+            )
+            if not findings:
+                continue
+            top = findings[0]
+            extra = f" (+{len(findings) - 1} more)" if len(findings) > 1 else ""
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.RECONCILIATION_MISMATCH,
+                    key=f"reconciliation_mismatch:{r.id}",
+                    title=f"{r.reinsurer.name} · {RecoverableStatus(r.status).value}",
+                    detail=top.text + extra,
+                    href=f"/recovery-candidates/{r.recovery_candidate_id}?section=collection",
+                    amount=top.gap,
+                    currency=r.currency,
                 )
             )
         return out

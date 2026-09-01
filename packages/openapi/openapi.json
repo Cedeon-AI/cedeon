@@ -2793,6 +2793,31 @@
         "title": "ProgramOut",
         "type": "object"
       },
+      "ReconcileFindingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "gap": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gap",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "gap"
+        ],
+        "title": "ReconcileFindingOut",
+        "type": "object"
+      },
       "RecoverableList": {
         "additionalProperties": false,
         "properties": {
@@ -2949,6 +2974,13 @@
             "title": "Outstanding",
             "type": "string"
           },
+          "reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/ReconcileFindingOut"
+            },
+            "title": "Reconciliation",
+            "type": "array"
+          },
           "recovery_candidate_id": {
             "format": "uuid",
             "title": "Recovery Candidate Id",
@@ -3008,6 +3040,7 @@
           "next_action",
           "next_action_text",
           "next_action_urgent",
+          "reconciliation",
           "created_at",
           "updated_at"
         ],
@@ -5461,6 +5494,7 @@
           "notice_due",
           "recovery_drift",
           "contract_change",
+          "reconciliation_mismatch",
           "recovery_review",
           "suggested_recovery",
           "packet_approval",

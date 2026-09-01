@@ -144,7 +144,17 @@ export function RecoverablesView() {
                   const st = recoverableStatus(r.status);
                   return (
                     <tr key={r.id} className="border-b border-border/60 last:border-0">
-                      <td className="px-4 py-2.5 font-medium">{r.reinsurer_name}</td>
+                      <td className="px-4 py-2.5 font-medium">
+                        {r.reinsurer_name}
+                        {r.reconciliation.length > 0 ? (
+                          <span
+                            className="ml-1.5 align-middle text-danger"
+                            title={r.reconciliation.map((f) => f.text).join("\n")}
+                          >
+                            ⚠
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-2 py-2.5">
                         <Badge tone={st.tone}>{st.label}</Badge>
                       </td>
