@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,10 +120,13 @@ export function RecoveryInvestigationPanel({
                     <p className="mt-1.5">{f.text}</p>
                     {f.citation ? (
                       <p className="mt-1 border-l-2 border-ai/40 bg-ai/5 px-2 py-1 text-xs text-muted-foreground">
-                        <span className="font-medium text-ai">
+                        <Link
+                          href={`/documents/${f.citation.document_id}?page=${f.citation.page_number}`}
+                          className="font-medium text-ai hover:underline"
+                        >
                           p.{f.citation.page_number}
-                          {f.citation.section ? ` · ${f.citation.section}` : ""}
-                        </span>
+                          {f.citation.section ? ` · ${f.citation.section}` : ""} →
+                        </Link>
                         <span className="mt-0.5 block italic">“{f.citation.quoted_text}”</span>
                       </p>
                     ) : null}

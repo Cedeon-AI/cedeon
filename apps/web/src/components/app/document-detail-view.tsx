@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,11 @@ import { getDocument, getDocumentChunks, getDocumentPages } from "@/lib/api";
 import { isProcessing, statusLabel, statusTone } from "@/lib/documents";
 
 export function DocumentDetailView({ documentId }: { documentId: string }) {
-  const [activePage, setActivePage] = useState(1);
+  const searchParams = useSearchParams();
+  const [activePage, setActivePage] = useState(() => {
+    const p = Number(searchParams.get("page"));
+    return Number.isFinite(p) && p >= 1 ? p : 1;
+  });
 
   const detail = useQuery({
     queryKey: ["documents", documentId],

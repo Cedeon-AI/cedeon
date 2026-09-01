@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileText } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -265,8 +266,20 @@ function StatementRow({
       )}
       {statement.citation?.quoted_text ? (
         <p className="mt-1 border-l-2 border-border pl-2 text-xs text-muted-foreground">
-          {statement.citation.page_number ? `p.${statement.citation.page_number}` : ""}
-          {statement.citation.section ? ` · ${statement.citation.section}` : ""}
+          {statement.citation.document_id && statement.citation.page_number ? (
+            <Link
+              href={`/documents/${statement.citation.document_id}?page=${statement.citation.page_number}`}
+              className="font-medium text-primary hover:underline"
+            >
+              p.{statement.citation.page_number}
+              {statement.citation.section ? ` · ${statement.citation.section}` : ""} →
+            </Link>
+          ) : (
+            <span>
+              {statement.citation.page_number ? `p.${statement.citation.page_number}` : ""}
+              {statement.citation.section ? ` · ${statement.citation.section}` : ""}
+            </span>
+          )}
           <span className="mt-0.5 block italic">“{statement.citation.quoted_text}”</span>
         </p>
       ) : null}
