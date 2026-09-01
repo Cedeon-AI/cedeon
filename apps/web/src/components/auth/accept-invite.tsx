@@ -76,13 +76,20 @@ export function AcceptInvite({ token }: { token: string }) {
       {p.account_exists ? (
         <div className="space-y-3">
           <p className="text-sm">
-            You already have a Cedeon account for this email. Sign in, then open this link again to
-            accept.
+            You already have a Cedeon account for this email. Accept below if you're signed in as{" "}
+            <span className="font-mono text-xs">{p.invited_email}</span> — otherwise sign in first.
           </p>
-          <Button asChild className="w-full">
-            <Link href={`/login?next=/invite/${token}`}>Sign in to accept</Link>
+          <Button className="w-full" disabled={pending} onClick={() => accept({})}>
+            {pending ? "Joining…" : `Join ${p.organization_name}`}
           </Button>
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          <Button asChild variant="outline" className="w-full">
+            <Link href={`/login?next=/invite/${token}`}>Sign in as this account</Link>
+          </Button>
+          {error ? (
+            <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
         </div>
       ) : (
         <form

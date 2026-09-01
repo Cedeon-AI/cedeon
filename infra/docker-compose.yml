@@ -61,6 +61,9 @@ services:
       CEDEON_DATABASE_URL: postgresql+asyncpg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_DATABASE_URL_SYNC: postgresql+psycopg://cedeon:cedeon@postgres:5432/cedeon
       CEDEON_SESSION_SECRET: ${CEDEON_SESSION_SECRET:-local-dev-session-secret-change-me-0000000000000000}
+      # Origin the invitation accept-links point at (the web app). Override alongside
+      # CEDEON_WEB_PORT.
+      CEDEON_PUBLIC_BASE_URL: ${CEDEON_PUBLIC_BASE_URL:-http://localhost:3000}
       CEDEON_OBJECT_STORE: s3
       CEDEON_S3_ENDPOINT_URL: http://minio:9000
       CEDEON_S3_BUCKET: cedeon-local
