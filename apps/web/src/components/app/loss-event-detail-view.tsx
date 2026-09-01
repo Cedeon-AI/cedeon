@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackLink, PageHeader } from "@/components/ui/page-header";
-import { getLossEvent, listRecoverySuggestions } from "@/lib/api";
+import { getLossEvent, getOccurrenceProposal, listRecoverySuggestions } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 
 export function LossEventDetailView({ eventId }: { eventId: string }) {
@@ -25,6 +25,12 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
           throwOnError: true,
         })
       ).data.suggestions,
+  });
+
+  const occurrences = useQuery({
+    queryKey: ["occurrence-proposal", eventId],
+    queryFn: async () =>
+      (await getOccurrenceProposal({ path: { event_id: eventId }, throwOnError: true })).data,
   });
 
   if (detail.isLoading || !detail.data) {
@@ -59,6 +65,52 @@ export function LossEventDetailView({ eventId }: { eventId: string }) {
           {event.peril ?? "peril not stated"}
           {event.hours_clause_hours ? ` · ${event.hours_clause_hours}-hour clause` : ""}
         </p>
+      ) : null}
+
+      {occurrences.data && occurrences.data.occurrences.length > 0 ? (
+        <Card className={occurrences.data.splits_the_event ? "border-warning/40 bg-warning/5" : ""}>
+          <CardHeader>
+            <CardTitle>
+              Hours-clause view
+              {occurrences.data.splits_the_event
+                ? ` — Cedeon sees ${occurrences.data.occurrences.length} occurrences`
+                : " — one occurrence"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Grouping the claims into rolling {occurrences.data.window_days}-day windows (
+              {occurrences.data.hours}-hour clause,{" "}
+              {occurrences.data.hours_source === "treaty"
+                ? "from the event"
+                : "peril default — set the clause on the event to override"}
+              ). A proposal — the cedent chooses when each window starts.
+            </p>
+            {occurrences.data.splits_the_event ? (
+              <ul className="divide-y divide-border/70">
+                {occurrences.data.occurrences.map((o) => (
+                  <li key={o.index} className="flex items-baseline justify-between gap-3 py-2">
+                    <span>
+                      <span className="font-medium">Occurrence {o.index}</span>{" "}
+                      <span className="text-muted-foreground">
+                        {o.start_date} → {o.end_date} · {o.claim_count} claim
+                        {o.claim_count === 1 ? "" : "s"}
+                      </span>
+                    </span>
+                    <span className="font-mono text-xs">
+                      {formatMoney(o.gross_incurred, event.currency ?? "USD")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">
+                All {occurrences.data.occurrences[0]?.claim_count ?? 0} claims fall inside one
+                window — the event is a single occurrence.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : null}
 
       {suggested.length > 0 ? (

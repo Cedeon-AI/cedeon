@@ -231,8 +231,20 @@ hours-clause grouping move from "do not build" to "supported (v1)"; the
 *LLMs-interpret / code-calculates / humans-approve* line is unchanged (reinstatement
 math is deterministic, occurrence grouping is human-confirmed).
 
-- **Still to build — ⑩ reinstatement premium math · ⑫ hours-clause / occurrence grouping ·
-  reinsurer-statement ingest.**
+- **⑩ reinstatement premium math — ✅ done (`48057be`, migration 0015).**
+  `app/domain/recoveries/reinstatements.py` (pure) prices each reinstatement pro-rata on
+  the amount this loss reinstates, at the layer's deposit premium × rate × time factor
+  (flat or pro-rata-as-to-time). Layer terms editor; a `reinstatement` block on the
+  recovery detail; a `reinstatement_due` obligation on the queue. 17 tests.
+- **⑫ hours-clause occurrence grouping — ✅ done (assistive, no migration).**
+  `app/domain/losses/occurrences.py` (pure) — a greedy anchored grouping of a loss
+  event's claims into rolling *N*-hour windows (`ceil(hours/24)` days), `N` from the
+  event's clause or a peril default. `GET /loss-events/{id}/occurrence-proposal`; a
+  "Hours-clause view" card on the loss-event page. It **proposes** — the cedent chooses
+  when each window starts; nothing is auto-decided or split. 7 tests.
+
+- **Still to build — reinsurer-statement / accounting-feed ingest (the larger reconciliation
+  module).**
 - **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
   `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
   reinsurance" (keeps the "contract to recovery" line); the product mockup is now the

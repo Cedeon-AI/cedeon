@@ -141,3 +141,20 @@ class UnderlyingLossOut(ApiModel):
 class LossEventDetail(ApiModel):
     event: LossEventOut
     losses: list[UnderlyingLossOut]
+
+
+class ProposedOccurrenceOut(ApiModel):
+    index: int
+    start_date: dt.date
+    end_date: dt.date
+    claim_count: int
+    claim_ids: list[str]
+    gross_incurred: Decimal
+
+
+class OccurrenceProposalOut(ApiModel):
+    hours: int
+    window_days: int
+    hours_source: str  # "treaty" | "peril_default"
+    splits_the_event: bool
+    occurrences: list[ProposedOccurrenceOut]

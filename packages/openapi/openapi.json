@@ -2304,6 +2304,43 @@
         "title": "NoticeTrigger",
         "type": "string"
       },
+      "OccurrenceProposalOut": {
+        "additionalProperties": false,
+        "properties": {
+          "hours": {
+            "title": "Hours",
+            "type": "integer"
+          },
+          "hours_source": {
+            "title": "Hours Source",
+            "type": "string"
+          },
+          "occurrences": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedOccurrenceOut"
+            },
+            "title": "Occurrences",
+            "type": "array"
+          },
+          "splits_the_event": {
+            "title": "Splits The Event",
+            "type": "boolean"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hours",
+          "window_days",
+          "hours_source",
+          "splits_the_event",
+          "occurrences"
+        ],
+        "title": "OccurrenceProposalOut",
+        "type": "object"
+      },
       "OrganizationSummary": {
         "additionalProperties": false,
         "properties": {
@@ -2879,6 +2916,51 @@
           "treaty_count"
         ],
         "title": "ProgramOut",
+        "type": "object"
+      },
+      "ProposedOccurrenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_count": {
+            "title": "Claim Count",
+            "type": "integer"
+          },
+          "claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Claim Ids",
+            "type": "array"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "gross_incurred": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Gross Incurred",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "start_date",
+          "end_date",
+          "claim_count",
+          "claim_ids",
+          "gross_incurred"
+        ],
+        "title": "ProposedOccurrenceOut",
         "type": "object"
       },
       "ReconcileFindingOut": {
@@ -6891,6 +6973,49 @@
           }
         },
         "summary": "Get Loss Event",
+        "tags": [
+          "loss-events"
+        ]
+      }
+    },
+    "/loss-events/{event_id}/occurrence-proposal": {
+      "get": {
+        "operationId": "getOccurrenceProposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "How the claims group into occurrences under an hours clause \u2014 a proposal for review",
         "tags": [
           "loss-events"
         ]

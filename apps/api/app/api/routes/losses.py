@@ -31,11 +31,18 @@ from app.api.schemas.losses import (
     LossImportDetail,
     LossImportList,
     LossImportOut,
+    OccurrenceProposalOut,
+    ProposedOccurrenceOut,
     RowIssueOut,
     UnderlyingLossOut,
 )
 from app.db.models.losses import LossEvent, LossImport, LossImportRow, UnderlyingLoss
 from app.domain.losses import FIELD_SPECS
+from app.domain.losses.occurrences import (
+    DEFAULT_HOURS_BY_PERIL,
+    ClaimForGrouping,
+    propose_occurrences,
+)
 
 imports_router = APIRouter(prefix="/loss-imports", tags=["loss-imports"])
 events_router = APIRouter(prefix="/loss-events", tags=["loss-events"])
@@ -318,4 +325,55 @@ async def get_loss_event(
     return LossEventDetail(
         event=_event_out(event, totals),
         losses=[_loss_out(loss) for loss in losses],
+    )
+
+
+@events_router.get(
+    "/{event_id}/occurrence-proposal",
+    response_model=OccurrenceProposalOut,
+    summary="How the claims group into occurrences under an hours clause — a proposal for review",
+    operation_id="getOccurrenceProposal",
+)
+async def get_occurrence_proposal(
+    event_id: UUID, context: AuthedContext, service: LossEventServiceDep
+) -> OccurrenceProposalOut:
+    event, losses = await service.get_event(context, event_id)
+
+    hours = event.hours_clause_hours
+    hours_source = "treaty"
+    if hours is None:
+        peril = (event.peril or "").strip().lower()
+        hours = next(
+            (h for key, h in DEFAULT_HOURS_BY_PERIL.items() if key in peril),
+            168,
+        )
+        hours_source = "peril_default"
+
+    proposal = propose_occurrences(
+        [
+            ClaimForGrouping(
+                claim_id=loss.claim_id,
+                date_of_loss=loss.date_of_loss,
+                gross_incurred=Decimal(loss.gross_incurred),
+            )
+            for loss in losses
+        ],
+        hours=hours,
+    )
+    return OccurrenceProposalOut(
+        hours=proposal.hours,
+        window_days=proposal.window_days,
+        hours_source=hours_source,
+        splits_the_event=proposal.splits_the_event,
+        occurrences=[
+            ProposedOccurrenceOut(
+                index=o.index,
+                start_date=o.start_date,
+                end_date=o.end_date,
+                claim_count=o.claim_count,
+                claim_ids=o.claim_ids,
+                gross_incurred=o.gross_incurred,
+            )
+            for o in proposal.occurrences
+        ],
     )
