@@ -199,9 +199,19 @@ build ①–⑧ already delivered the "continuous intelligence" pivot; minimal c
   (`reconciliation[]`); a `reconciliation_mismatch` worklist item (`AttentionCategory.EXCEPTION`
   — now live); shown on the collection section + a ⚠ on the portfolio. 15 tests, 313 backend.
   *Deferred:* reinsurer-statement / accounting-feed ingest (the larger reconciliation module).
+- **Investigator regression eval — ✅ done (⑧ follow-up, `66f56e4`).** `app/ai/evals/investigator.py`
+  — a bound task (runs `InvestigationService` against a prepared candidate) + pure graders:
+  the deterministic figure is echoed not recomputed, every persisted citation quotes real
+  page text, the agent used `get_recovery_calculation`, the golden loss reads *supported*,
+  and a `999,999,999` injection line never reaches a finding/citation and is flagged.
+  `tests/ai/test_evals.py::test_investigator_dataset` (golden + injection cases; `-m eval`).
+- **Read-only desk e2e — ✅ done (`46d36cb`).** `apps/web/e2e/desk.spec.ts` signs in as the
+  demo user and walks the attention queue + categories, the recoverables portfolio + aging
+  chart, treaty version history + executable layer, and the recovery workspace rail —
+  selectors independent of demo-data vintage, each test self-skips when unseeded.
 - **Later — ⑩ reinstatement premium math · ⑫ CAT/event intelligence · reinsurer-statement
   reconciliation · per-layer participations + a grouped programme view (⑥ follow-ups) ·
-  investigator eval cases (⑧ follow-up) · ⑨ endorsement re-extraction + term diff.**
+  ⑨ endorsement re-extraction + term diff.**
 - **Before any external demo — update the marketing / public site
   (`apps/web/src/app/(marketing)/`, `components/marketing/`) so the landing page, feature
   sections, comparison table, and copy reflect the intelligence-system positioning and
