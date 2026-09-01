@@ -19,6 +19,7 @@ from app.api.schemas.reinsurance import (
     NewTreatyVersionRequest,
     ParticipationOut,
     SetLayerParticipationsRequest,
+    SetReinstatementTermsRequest,
     TermOut,
     TreatyCreate,
     TreatyDetail,
@@ -101,6 +102,9 @@ def _version_out(version: TreatyVersion) -> TreatyVersionOut:
                 currency=layer.currency,
                 reinstatements=layer.reinstatements,
                 description=layer.description,
+                deposit_premium=layer.deposit_premium,
+                reinstatement_rates=layer.reinstatement_rates,
+                reinstatement_basis=layer.reinstatement_basis,
                 participations=[
                     _participation_out(p)
                     for p in version.participations
@@ -359,6 +363,41 @@ async def set_layer_participations(
         version_id,
         layer_no,
         [(row.reinsurer_name, row.placed_share_percent) for row in payload.panel],
+    )
+    treaty = await treaty_service.get_treaty(context, treaty_id)
+    current = await treaty_service.get_current_version(context, treaty)
+    return TreatyDetail(
+        treaty=_treaty_out(treaty),
+        current_version=_version_out(current) if current else None,
+        versions=[
+            _version_summary(v)
+            for v in sorted(treaty.versions, key=lambda x: x.version_no, reverse=True)
+        ],
+    )
+
+
+@router.put(
+    "/{treaty_id}/versions/{version_id}/layers/{layer_no}/reinstatement-terms",
+    response_model=TreatyDetail,
+    summary="Set a layer's reinstatement premium terms (deposit premium, rates, basis)",
+    operation_id="setLayerReinstatementTerms",
+)
+async def set_layer_reinstatement_terms(
+    treaty_id: UUID,
+    version_id: UUID,
+    layer_no: int,
+    payload: SetReinstatementTermsRequest,
+    context: AuthedContext,
+    session: DbSession,
+    treaty_service: TreatyServiceDep,
+) -> TreatyDetail:
+    await ValidationService(session).set_layer_reinstatement_terms(
+        context,
+        version_id,
+        layer_no,
+        deposit_premium=payload.deposit_premium,
+        rates=list(payload.rates),
+        basis=payload.basis,
     )
     treaty = await treaty_service.get_treaty(context, treaty_id)
     current = await treaty_service.get_current_version(context, treaty)

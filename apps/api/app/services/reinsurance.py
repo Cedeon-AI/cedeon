@@ -354,6 +354,13 @@ class TreatyService:
                 currency=layer.currency,
                 reinstatements=layer.reinstatements,
                 description=layer.description,
+                deposit_premium=layer.deposit_premium,
+                reinstatement_rates=(
+                    list(layer.reinstatement_rates)
+                    if layer.reinstatement_rates is not None
+                    else None
+                ),
+                reinstatement_basis=layer.reinstatement_basis,
             )
             new_version.layers.append(new_layer)
             new_layer_by_no[layer.layer_no] = new_layer

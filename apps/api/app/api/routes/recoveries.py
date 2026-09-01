@@ -54,6 +54,8 @@ from app.api.schemas.recoveries import (
     RecoveryPacketVersionSummary,
     RecoveryProgramme,
     RecoveryReviewOut,
+    ReinstatementChargeOut,
+    ReinstatementOut,
     ReviewRecoveryCandidateRequest,
     SetKnowledgeDateRequest,
     SuggestedRecoveryList,
@@ -85,7 +87,11 @@ from app.services.investigation import InvestigationService
 from app.services.notice import NoticeReview, NoticeService
 from app.services.obligations import NoticeObligation, ObligationService
 from app.services.packet import PacketReview, RecoveryPacketService
-from app.services.recoveries import CandidateContext, RecoveryCandidateService
+from app.services.recoveries import (
+    CandidateContext,
+    RecoveryCandidateService,
+    ReinstatementView,
+)
 from app.services.suggestions import SuggestionService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
@@ -96,6 +102,31 @@ recoverables_router = APIRouter(prefix="/recoverables", tags=["recoverables"])
 
 def _sibling_sort_key(ctx: CandidateContext | None) -> int:
     return ctx.layer_no if ctx is not None and ctx.layer_no is not None else 0
+
+
+def _reinstatement_out(view: ReinstatementView) -> ReinstatementOut:
+    r = view.result
+    return ReinstatementOut(
+        basis=view.basis,
+        deposit_premium=view.deposit_premium,
+        reinstatements_available=r.reinstatements_available,
+        prior_erosion=r.prior_erosion,
+        this_loss_to_layer=r.this_loss_to_layer,
+        total_erosion=r.total_erosion,
+        cover_exhausted=r.cover_exhausted,
+        premium_due=r.premium_due,
+        charges=[
+            ReinstatementChargeOut(
+                order=c.order,
+                amount_reinstated=c.amount_reinstated,
+                rate=c.rate,
+                time_factor=c.time_factor,
+                premium=c.premium,
+            )
+            for c in r.charges
+        ],
+        trace=list(r.trace),
+    )
 
 
 def _candidate_out(
@@ -331,6 +362,7 @@ async def get_recovery_candidate(
         and c.loss_event_id == candidate.loss_event_id
     ]
     ctx = await service.context_for(context, siblings)
+    reinstatement = await service.reinstatement_for(context, candidate)
     return RecoveryCandidateDetail(
         candidate=_candidate_out(candidate, ctx.get(candidate.id)),
         current_calculation=_calculation_out(current) if current else None,
@@ -346,6 +378,7 @@ async def get_recovery_candidate(
             for c in sorted(siblings, key=lambda c: _sibling_sort_key(ctx.get(c.id)))
             if c.id != candidate.id
         ],
+        reinstatement=_reinstatement_out(reinstatement) if reinstatement is not None else None,
     )
 
 

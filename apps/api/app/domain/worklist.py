@@ -43,6 +43,7 @@ class WorklistKind(StrEnum):
     RECOVERY_DRIFT = "recovery_drift"
     CONTRACT_CHANGE = "contract_change"
     RECONCILIATION_MISMATCH = "reconciliation_mismatch"
+    REINSTATEMENT_DUE = "reinstatement_due"
     RECOVERY_REVIEW = "recovery_review"
     SUGGESTED_RECOVERY = "suggested_recovery"
     PACKET_APPROVAL = "packet_approval"
@@ -55,6 +56,7 @@ _KIND_CATEGORY: dict[WorklistKind, AttentionCategory] = {
     WorklistKind.RECOVERY_DRIFT: AttentionCategory.RECOVERY,
     WorklistKind.CONTRACT_CHANGE: AttentionCategory.CONTRACT,
     WorklistKind.RECONCILIATION_MISMATCH: AttentionCategory.EXCEPTION,
+    WorklistKind.REINSTATEMENT_DUE: AttentionCategory.OBLIGATION,
     WorklistKind.RECOVERY_REVIEW: AttentionCategory.RECOVERY,
     WorklistKind.SUGGESTED_RECOVERY: AttentionCategory.RECOVERY,
     WorklistKind.PACKET_APPROVAL: AttentionCategory.RECOVERY,
@@ -76,6 +78,7 @@ _KIND_WEIGHT: dict[WorklistKind, int] = {
     WorklistKind.RECOVERY_DRIFT: 500,
     WorklistKind.CONTRACT_CHANGE: 450,
     WorklistKind.RECONCILIATION_MISMATCH: 400,
+    WorklistKind.REINSTATEMENT_DUE: 350,
     WorklistKind.RECOVERY_REVIEW: 300,
     WorklistKind.SUGGESTED_RECOVERY: 250,
     WorklistKind.PACKET_APPROVAL: 200,

@@ -175,6 +175,11 @@ class TreatyLayer(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     reinstatements: Mapped[int | None] = mapped_column(Integer, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Reinstatement premium terms (validated by a human, never AI). ``reinstatement_rates``
+    # is the rate per reinstatement, e.g. ["1", "1"] for two reinstatements at 100%.
+    deposit_premium: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
+    reinstatement_rates: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    reinstatement_basis: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     treaty_version: Mapped[TreatyVersion] = relationship(back_populates="layers")
     # A read-only view of this layer's own panel. The version owns every participation

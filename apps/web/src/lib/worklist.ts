@@ -23,6 +23,7 @@ const KIND: Record<WorklistKind, { label: string; tone: Tone }> = {
   recovery_drift: { label: "Number moved", tone: "warning" },
   contract_change: { label: "Treaty updated", tone: "warning" },
   reconciliation_mismatch: { label: "Doesn't reconcile", tone: "danger" },
+  reinstatement_due: { label: "Reinstatement due", tone: "warning" },
   recovery_review: { label: "Review", tone: "info" },
   suggested_recovery: { label: "Suggested", tone: "info" },
   packet_approval: { label: "Packet", tone: "info" },

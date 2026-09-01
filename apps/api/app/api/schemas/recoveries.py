@@ -202,6 +202,27 @@ class RecoveryInvestigationOut(ApiModel):
     findings: list[InvestigationFindingOut]
 
 
+class ReinstatementChargeOut(ApiModel):
+    order: int
+    amount_reinstated: Decimal
+    rate: Decimal
+    time_factor: Decimal
+    premium: Decimal
+
+
+class ReinstatementOut(ApiModel):
+    basis: str
+    deposit_premium: Decimal
+    reinstatements_available: int
+    prior_erosion: Decimal
+    this_loss_to_layer: Decimal
+    total_erosion: Decimal
+    cover_exhausted: bool
+    premium_due: Decimal
+    charges: list[ReinstatementChargeOut]
+    trace: list[str]
+
+
 class RecoveryCandidateDetail(ApiModel):
     candidate: RecoveryCandidateOut
     current_calculation: RecoveryCalculationOut | None
@@ -211,6 +232,8 @@ class RecoveryCandidateDetail(ApiModel):
     notice_obligation: NoticeObligationOut | None
     # The other layers of the same tower responding to the same event.
     siblings: list[RecoveryCandidateOut] = Field(default_factory=list)
+    # The reinstatement premium this recovery triggers, if the layer has terms.
+    reinstatement: ReinstatementOut | None = None
 
 
 class ToolCallOut(ApiModel):

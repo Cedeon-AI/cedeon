@@ -34,6 +34,7 @@ from app.repositories.recoveries import RecoverableRepository, RecoveryCandidate
 from app.repositories.reinsurance import TreatyRepository
 from app.services.auth import AuthenticatedContext
 from app.services.obligations import ObligationService
+from app.services.recoveries import RecoveryCandidateService
 from app.services.suggestions import SuggestionService
 
 # A notice deadline this far out (or already past) is worth surfacing.
@@ -95,6 +96,7 @@ class WorklistService:
         items += await self._packet_approval_items(org_id, candidates, event_names, today)
         items += self._recoverable_overdue_items(recoverables, today)
         items += self._reconciliation_items(recoverables)
+        items += await self._reinstatement_items(context, candidates, event_names, treaty_names)
 
         ranked = rank(items)
         return Worklist(items=ranked, summary=self._summary(recoverables, candidates, ranked))
@@ -377,6 +379,47 @@ class WorklistService:
                     href=f"/recovery-candidates/{r.recovery_candidate_id}?section=collection",
                     amount=top.gap,
                     currency=r.currency,
+                )
+            )
+        return out
+
+    async def _reinstatement_items(
+        self,
+        context: AuthenticatedContext,
+        candidates: list[RecoveryCandidate],
+        event_names: dict[UUID, str],
+        treaty_names: dict[UUID, str],
+    ) -> list[WorklistItem]:
+        """A confirmed recovery whose layer carries reinstatement terms owes a
+        reinstatement premium — the cedent's obligation, deterministic."""
+        service = RecoveryCandidateService(self._session)
+        out: list[WorklistItem] = []
+        for c in candidates:
+            if c.status not in (
+                RecoveryCandidateStatus.CONFIRMED,
+                RecoveryCandidateStatus.NOTICE_DRAFTED,
+            ):
+                continue
+            view = await service.reinstatement_for(context, c)
+            if view is None or view.result.premium_due <= _ZERO:
+                continue
+            treaty = treaty_names.get(c.treaty_id, "treaty")
+            event = event_names.get(c.loss_event_id, "loss event")
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.REINSTATEMENT_DUE,
+                    key=f"reinstatement_due:{c.id}",
+                    title=f"Reinstatement premium — {treaty}",
+                    detail=(
+                        f"{event}: "
+                        + ", ".join(
+                            f"reinstatement {ch.order} {ch.premium} {c.currency}"
+                            for ch in view.result.charges
+                        )
+                    ),
+                    href=f"/recovery-candidates/{c.id}?section=calculation",
+                    amount=view.result.premium_due,
+                    currency=c.currency,
                 )
             )
         return out

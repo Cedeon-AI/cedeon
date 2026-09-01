@@ -6,6 +6,7 @@ import { NoticeProvisionEditor } from "@/components/app/notice-provision-editor"
 import { RecoveryPreview } from "@/components/app/recovery-preview";
 import { TreatyLayerPanelsEditor } from "@/components/app/treaty-layer-panels-editor";
 import { TreatyLayersEditor } from "@/components/app/treaty-layers-editor";
+import { TreatyReinstatementEditor } from "@/components/app/treaty-reinstatement-editor";
 import { TreatyVersionsCard } from "@/components/app/treaty-versions-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,6 +174,11 @@ export function TreatyDetailView({ treatyId }: { treatyId: string }) {
             existing={version.layers}
           />
           <TreatyLayerPanelsEditor
+            treatyId={treatyId}
+            versionId={version.id}
+            layers={version.layers}
+          />
+          <TreatyReinstatementEditor
             treatyId={treatyId}
             versionId={version.id}
             layers={version.layers}

@@ -1356,6 +1356,18 @@
             "title": "Currency",
             "type": "string"
           },
+          "deposit_premium": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Premium"
+          },
           "description": {
             "anyOf": [
               {
@@ -1382,6 +1394,31 @@
             },
             "title": "Participations",
             "type": "array"
+          },
+          "reinstatement_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reinstatement Basis"
+          },
+          "reinstatement_rates": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reinstatement Rates"
           },
           "reinstatements": {
             "anyOf": [
@@ -3414,6 +3451,16 @@
               }
             ]
           },
+          "reinstatement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReinstatementOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reviews": {
             "items": {
               "$ref": "#/components/schemas/RecoveryReviewOut"
@@ -4334,6 +4381,114 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "ReinstatementChargeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_reinstated": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Reinstated",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "premium": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Premium",
+            "type": "string"
+          },
+          "rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "time_factor": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Time Factor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order",
+          "amount_reinstated",
+          "rate",
+          "time_factor",
+          "premium"
+        ],
+        "title": "ReinstatementChargeOut",
+        "type": "object"
+      },
+      "ReinstatementOut": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/ReinstatementChargeOut"
+            },
+            "title": "Charges",
+            "type": "array"
+          },
+          "cover_exhausted": {
+            "title": "Cover Exhausted",
+            "type": "boolean"
+          },
+          "deposit_premium": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Deposit Premium",
+            "type": "string"
+          },
+          "premium_due": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Premium Due",
+            "type": "string"
+          },
+          "prior_erosion": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Prior Erosion",
+            "type": "string"
+          },
+          "reinstatements_available": {
+            "title": "Reinstatements Available",
+            "type": "integer"
+          },
+          "this_loss_to_layer": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "This Loss To Layer",
+            "type": "string"
+          },
+          "total_erosion": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Erosion",
+            "type": "string"
+          },
+          "trace": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trace",
+            "type": "array"
+          }
+        },
+        "required": [
+          "basis",
+          "deposit_premium",
+          "reinstatements_available",
+          "prior_erosion",
+          "this_loss_to_layer",
+          "total_erosion",
+          "cover_exhausted",
+          "premium_due",
+          "charges",
+          "trace"
+        ],
+        "title": "ReinstatementOut",
+        "type": "object"
+      },
       "ReinsurerCreate": {
         "additionalProperties": false,
         "properties": {
@@ -4643,6 +4798,50 @@
           "provision_text"
         ],
         "title": "SetNoticeTermRequest",
+        "type": "object"
+      },
+      "SetReinstatementTermsRequest": {
+        "additionalProperties": false,
+        "description": "Reinstatement premium terms for one layer. Empty ``rates`` clears the terms.",
+        "properties": {
+          "basis": {
+            "default": "flat",
+            "title": "Basis",
+            "type": "string"
+          },
+          "deposit_premium": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Premium"
+          },
+          "rates": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Rates",
+            "type": "array"
+          }
+        },
+        "title": "SetReinstatementTermsRequest",
         "type": "object"
       },
       "SpendByDayOut": {
@@ -5788,6 +5987,7 @@
           "recovery_drift",
           "contract_change",
           "reconciliation_mismatch",
+          "reinstatement_due",
           "recovery_review",
           "suggested_recovery",
           "packet_approval",
@@ -8593,6 +8793,78 @@
           }
         },
         "summary": "Give one layer its own reinsurer panel (before the version is validated)",
+        "tags": [
+          "treaties"
+        ]
+      }
+    },
+    "/treaties/{treaty_id}/versions/{version_id}/layers/{layer_no}/reinstatement-terms": {
+      "put": {
+        "operationId": "setLayerReinstatementTerms",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "treaty_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Treaty Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "layer_no",
+            "required": true,
+            "schema": {
+              "title": "Layer No",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReinstatementTermsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreatyDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set a layer's reinstatement premium terms (deposit premium, rates, basis)",
         "tags": [
           "treaties"
         ]

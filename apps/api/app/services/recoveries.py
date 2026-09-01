@@ -35,6 +35,11 @@ from app.domain.recoveries import (
 from app.domain.recoveries import (
     RecoveryCalculation as RecoveryCalculationResult,
 )
+from app.domain.recoveries.reinstatements import (
+    ReinstatementBasis,
+    ReinstatementResult,
+    compute_reinstatement_premium,
+)
 from app.domain.reviews import ReviewDecision, ReviewSubjectType
 from app.domain.treaties import TreatyVersionStatus
 from app.repositories.audit import AuditRepository
@@ -60,6 +65,13 @@ class CandidateContext:
     layer_attachment: Decimal | None
     layer_limit: Decimal | None
     layer_recovery: Decimal | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReinstatementView:
+    result: ReinstatementResult
+    basis: str
+    deposit_premium: Decimal
 
 
 class RecoveryPreviewService:
@@ -156,6 +168,68 @@ class RecoveryCandidateService:
         if candidate is None:
             raise NotFoundError("recovery candidate not found")
         return candidate
+
+    async def reinstatement_for(
+        self, context: AuthenticatedContext, candidate: RecoveryCandidate
+    ) -> ReinstatementView | None:
+        """The reinstatement premium this recovery triggers, if its layer carries
+        reinstatement terms. Prior erosion is the sum of the current layer recovery of
+        every other non-rejected recovery on the same layer for an earlier event."""
+        calc = self.current_calculation(candidate)
+        if calc is None:
+            return None
+        org_id = context.organization.id
+        version = await self._versions.get(org_id, candidate.treaty_version_id)
+        if version is None:
+            return None
+        layer = next((x for x in version.layers if x.id == candidate.treaty_layer_id), None)
+        if layer is None or not layer.reinstatement_rates or layer.deposit_premium is None:
+            return None
+
+        this_event = await self._events.get(org_id, candidate.loss_event_id)
+        this_date = this_event.date_of_loss_from if this_event is not None else None
+
+        prior_erosion = Decimal("0")
+        for other in await self._candidates.list(org_id):
+            if (
+                other.id == candidate.id
+                or other.treaty_layer_id != candidate.treaty_layer_id
+                or other.status is RecoveryCandidateStatus.REJECTED
+            ):
+                continue
+            other_calc = self.current_calculation(other)
+            if other_calc is None:
+                continue
+            other_event = await self._events.get(org_id, other.loss_event_id)
+            other_date = other_event.date_of_loss_from if other_event is not None else None
+            if this_date is not None and other_date is not None and other_date >= this_date:
+                continue
+            prior_erosion += Decimal(other_calc.layer_recovery)
+
+        basis = ReinstatementBasis(layer.reinstatement_basis or "flat")
+        unexpired = Decimal("1")
+        if (
+            basis is ReinstatementBasis.PRO_RATA_TIME
+            and version.effective_date is not None
+            and version.expiration_date is not None
+            and this_date is not None
+        ):
+            period = (version.expiration_date - version.effective_date).days
+            remaining = (version.expiration_date - this_date).days
+            unexpired = Decimal(max(0, remaining)) / Decimal(period) if period > 0 else Decimal("1")
+
+        result = compute_reinstatement_premium(
+            layer_limit=Decimal(layer.limit),
+            deposit_premium=Decimal(layer.deposit_premium),
+            rates=[Decimal(r) for r in layer.reinstatement_rates],
+            basis=basis,
+            prior_erosion=prior_erosion,
+            this_loss_to_layer=Decimal(calc.layer_recovery),
+            unexpired_fraction=unexpired,
+        )
+        return ReinstatementView(
+            result=result, basis=basis.value, deposit_premium=Decimal(layer.deposit_premium)
+        )
 
     async def candidate_reviews(
         self, context: AuthenticatedContext, candidate_id: UUID

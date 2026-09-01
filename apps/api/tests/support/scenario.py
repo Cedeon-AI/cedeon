@@ -33,6 +33,7 @@ async def validated_golden_treaty(
     org: str = "Carrier Ops",
     layers: list[tuple[str, str]] | None = None,
     layer_panels: dict[int, list[tuple[str, str]]] | None = None,
+    reinstatement_terms: dict[int, dict[str, object]] | None = None,
     treaty_pdf: bytes | None = None,
 ) -> GoldenTreaty:
     from tests.support.auth import register
@@ -88,6 +89,11 @@ async def validated_golden_treaty(
                     {"reinsurer_name": name, "placed_share_percent": pct} for name, pct in panel
                 ]
             },
+        )
+    for layer_no, terms in (reinstatement_terms or {}).items():
+        await client.put(
+            f"/treaties/{treaty['id']}/versions/{version_id}/layers/{layer_no}/reinstatement-terms",
+            json=terms,
         )
     await client.post(f"/treaties/{treaty['id']}/versions/{version_id}/validate")
 

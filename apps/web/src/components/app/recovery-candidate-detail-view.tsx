@@ -15,7 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { BackLink, EmptyState, PageHeader } from "@/components/ui/page-header";
-import type { NoticeObligationOut, RecoveryCalculationOut, ReviewDecision } from "@/lib/api";
+import type {
+  NoticeObligationOut,
+  RecoveryCalculationOut,
+  ReinstatementOut,
+  ReviewDecision,
+} from "@/lib/api";
 import {
   getLossEvent,
   getRecoveryCandidate,
@@ -294,6 +299,10 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
                 />
               )}
 
+              {detail.data.reinstatement ? (
+                <ReinstatementCard r={detail.data.reinstatement} currency={candidate.currency} />
+              ) : null}
+
               <Card>
                 <CardHeader>
                   <CardTitle>Review</CardTitle>
@@ -556,6 +565,67 @@ function OccurrenceBasisRow({ eventId }: { eventId: string }) {
       k="Occurrence basis"
       v={`${e.peril ?? "—"}${e.hours_clause_hours ? ` · ${e.hours_clause_hours}h clause` : ""}`}
     />
+  );
+}
+
+function ReinstatementCard({ r, currency }: { r: ReinstatementOut; currency: string }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Reinstatement premium</CardTitle>
+        <Badge tone={r.cover_exhausted ? "danger" : "warning"}>
+          {r.cover_exhausted ? "cover exhausted" : "reinstatement triggered"}
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="rounded-md border border-calculation/30 bg-calculation/5 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-calculation">
+            Premium due (this loss)
+          </p>
+          <p className="mt-1 font-mono text-2xl font-semibold tracking-tight">
+            {formatMoney(r.premium_due, currency)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {r.basis === "pro_rata_time" ? "pro-rata as to time" : "flat"} · deposit{" "}
+            {formatMoney(r.deposit_premium, currency)} · {r.reinstatements_available} reinstatement
+            {r.reinstatements_available === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Prior erosion {formatMoney(r.prior_erosion, currency)} + this loss{" "}
+          {formatMoney(r.this_loss_to_layer, currency)} = {formatMoney(r.total_erosion, currency)}{" "}
+          cumulative.
+        </div>
+        {r.charges.length > 0 ? (
+          <table className="w-full text-sm">
+            <tbody>
+              {r.charges.map((c) => (
+                <tr key={c.order} className="border-t border-border/60">
+                  <td className="py-1.5">Reinstatement {c.order}</td>
+                  <td className="py-1.5 text-muted-foreground">
+                    {formatMoney(c.amount_reinstated, currency)} @ {Number(c.rate) * 100}%
+                    {c.time_factor !== "1" ? ` × ${c.time_factor}` : ""}
+                  </td>
+                  <td className="py-1.5 text-right font-medium">
+                    {formatMoney(c.premium, currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">Calculation trace</summary>
+          <ol className="mt-1 space-y-0.5">
+            {r.trace.map((line) => (
+              <li key={line} className="font-mono">
+                {line}
+              </li>
+            ))}
+          </ol>
+        </details>
+      </CardContent>
+    </Card>
   );
 }
 

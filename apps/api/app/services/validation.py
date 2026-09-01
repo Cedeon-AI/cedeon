@@ -374,6 +374,74 @@ class ValidationService:
         assert result is not None
         return result
 
+    async def set_layer_reinstatement_terms(
+        self,
+        context: AuthenticatedContext,
+        treaty_version_id: UUID,
+        layer_no: int,
+        *,
+        deposit_premium: Decimal | None,
+        rates: list[Decimal],
+        basis: str,
+    ) -> TreatyVersion:
+        """Set the reinstatement premium terms on one layer — deposit premium, the
+        rate per reinstatement, and whether it is flat or pro-rata as to time. Human
+        facts, never AI. Editable until the version is frozen. Passing no rates clears
+        the terms."""
+        version = await self._require_version(context, treaty_version_id)
+        if version.status.is_frozen:
+            raise ConflictError("this treaty version is already validated — its terms are frozen")
+        layer = next((x for x in version.layers if x.layer_no == layer_no), None)
+        if layer is None:
+            raise NotFoundError(f"treaty version has no layer {layer_no}")
+        if basis not in ("flat", "pro_rata_time"):
+            raise ValidationError("reinstatement basis must be 'flat' or 'pro_rata_time'")
+        for rate in rates:
+            if rate < 0:
+                raise ValidationError("a reinstatement rate must not be negative")
+        if deposit_premium is not None and deposit_premium < 0:
+            raise ValidationError("the deposit premium must not be negative")
+        if rates and deposit_premium is None:
+            raise ValidationError("a deposit premium is required to price reinstatements")
+
+        layer.reinstatement_rates = [str(r) for r in rates] if rates else None
+        layer.reinstatement_basis = basis if rates else None
+        layer.deposit_premium = deposit_premium if rates else None
+        layer.reinstatements = len(rates) if rates else layer.reinstatements
+
+        self._audit.record(
+            AuditRecord(
+                organization_id=context.organization.id,
+                actor_type=ActorType.USER,
+                actor_id=context.user.id,
+                action="treaty_version.reinstatement_terms_set",
+                entity_type="treaty_version",
+                entity_id=version.id,
+                summary=(
+                    f"{context.user.email} "
+                    + (
+                        f"set {len(rates)} reinstatement(s) on layer {layer_no} "
+                        f"({basis}, deposit {deposit_premium})"
+                        if rates
+                        else f"cleared the reinstatement terms on layer {layer_no}"
+                    )
+                ),
+                payload={
+                    "layer_no": layer_no,
+                    "rates": [str(r) for r in rates],
+                    "basis": basis,
+                    "deposit_premium": (
+                        str(deposit_premium) if deposit_premium is not None else None
+                    ),
+                },
+                correlation_id=get_correlation_id(),
+            )
+        )
+        await self._session.commit()
+        result = await self._versions.get(context.organization.id, version.id)
+        assert result is not None
+        return result
+
     def _version_currency(self, version: TreatyVersion) -> str | None:
         if version.currency:
             return version.currency.upper()[:3]

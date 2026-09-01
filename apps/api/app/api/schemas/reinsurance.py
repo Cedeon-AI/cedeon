@@ -75,6 +75,10 @@ class LayerOut(ApiModel):
     description: str | None
     # This layer's own reinsurer panel; empty means it uses the programme panel.
     participations: list[ParticipationOut]
+    # Reinstatement premium terms (human-validated).
+    deposit_premium: Decimal | None = None
+    reinstatement_rates: list[str] | None = None
+    reinstatement_basis: str | None = None
 
 
 class LayerParticipationInput(ApiModel):
@@ -86,6 +90,14 @@ class SetLayerParticipationsRequest(ApiModel):
     """The reinsurer panel for one layer. An empty list clears the override."""
 
     panel: list[LayerParticipationInput] = Field(default_factory=list)
+
+
+class SetReinstatementTermsRequest(ApiModel):
+    """Reinstatement premium terms for one layer. Empty ``rates`` clears the terms."""
+
+    deposit_premium: Decimal | None = Field(default=None, ge=0)
+    rates: list[Decimal] = Field(default_factory=list)
+    basis: str = "flat"  # flat | pro_rata_time
 
 
 class TermOut(ApiModel):

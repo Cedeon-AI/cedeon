@@ -78,7 +78,7 @@ because it has direct, provable ROI; the layers below it feed the ones above.
 | Layer | Question it answers | Status |
 | --- | --- | --- |
 | **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack; per-layer panels; endorsement re-versioning with re-extraction + a term-level diff) |
-| **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, candidates, investigator, packet, notice draft) |
+| **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, multi-layer, reinstatement premium, candidates, investigator, packet, notice draft) |
 | **Obligation intelligence** | What has a claim triggered that I owe? | Foundation built (structured notice terms → computed deadlines on the queue); other obligation types Later |
 | **Exception / reconciliation intelligence** | What does not line up — expected vs agreed vs billed vs collected? | Started — internal reconciliation (`app/domain/recoveries/reconciliation.py`) flags a leg where Cedeon's calculated figure and the human-entered agreed / billed / collected disagree; surfaces on the recoverable and as an `EXCEPTION` attention item. Reinsurer-statement ingest is the larger module, Later. |
 | **Portfolio / renewal intelligence** | What patterns should I act on across the book? | Not built — needs trustworthy accumulated history first. |
@@ -174,9 +174,10 @@ DRAFT → NEEDS_REVIEW → IN_REVIEW → CONFIRMED → NOTICE_DRAFTED
 (inputs change → recalculation → new immutable RecoveryCalculation; candidate may revert to NEEDS_REVIEW)
 ```
 
-## 7. MVP scope — the one treaty structure
+## 7. Scope — the treaty structures Cedeon models
 
-**Simple per-occurrence Excess of Loss (XOL): `$X limit excess of $Y attachment`.**
+**Per-occurrence Excess of Loss (XOL): `$X limit excess of $Y attachment`**, and a
+**stack** of such layers in one programme, each with its own reinsurer panel.
 
 Example: `$20M xs $50M` → `attachment = 50,000,000`, `limit = 20,000,000`.
 
@@ -186,12 +187,21 @@ layer_recovery          = min(amount_above_attachment, limit)
 participant_recovery[i]  = round(layer_recovery × validated_share[i])   (penny-allocated to sum exactly)
 ```
 
-**Explicitly deferred** (design so they can be added without a rewrite; do **not**
-build them): quota share / surplus / prop treaties, aggregate XOL, aggregate
+**Also modelled (2026-09-01 scope expansion — deterministic, human-validated terms):**
+- **Reinstatement premium.** A layer carries a deposit premium, a rate per
+  reinstatement, and a basis (flat / pro-rata-as-to-time). When a loss erodes the
+  layer, `app/domain/recoveries/reinstatements.py` computes the reinstatement
+  premium due — pure arithmetic, no LLM. Prior erosion in the period comes from the
+  current layer recovery of earlier confirmed recoveries on the same layer.
+- **Hours-clause occurrence grouping — assistive.** Cedeon *proposes* how claims
+  cluster into occurrences within the peril's hours window; a human confirms the
+  boundaries. It never auto-decides an occurrence.
+
+**Still explicitly deferred** (design so they can be added without a rewrite; do
+**not** build them): quota share / surplus / prop treaties, aggregate XOL, aggregate
 deductibles, inuring reinsurance and inuring order, top-and-drop, ECO/XPL, index
-clauses, reinstatement waterfalls, hours-clause event clustering, catastrophe event
-grouping, commutation / sunset, multi-treaty optimisation, retrocession chains,
-multi-currency / FX conversion.
+clauses, commutation / sunset, multi-treaty optimisation, retrocession chains,
+multi-currency / FX conversion, automated catastrophe-event modelling.
 
 MVP currency rule: **treaty currency must equal loss currency** or the candidate is
 flagged `CURRENCY_MISMATCH` and no calculation runs.
