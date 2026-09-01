@@ -23,31 +23,32 @@ PLACEMENT → CONTRACT → CLAIMS → RECOVERY → SETTLEMENT → RENEWAL → (P
 We are **not** building the whole lifecycle now. The vision exists to keep the MVP's
 data model and boundaries honest, not to expand scope.
 
-### 1a. Other financially material exceptions (future possibilities — do NOT build)
+### 1a. Other financially material exceptions
 
 The same architecture — validated executable contract + financial data +
-deterministic checks + citation-backed AI interpretation + human review — could one
-day surface other reinsurance exceptions:
+deterministic checks + citation-backed AI interpretation + human review — surfaces
+other reinsurance exceptions. **Built so far** (each a concrete check, never a
+generic model): potential missed recoveries (system-suggested recoveries), notice /
+reporting deadlines (obligation intelligence), contract changes (endorsement
+re-versioning), overdue / aging recoverables (aged-recoverable intelligence),
+expected-vs-agreed-vs-billed-vs-collected (internal reconciliation), and
+what-the-reinsurer-says-vs-what-we-hold (statement reconciliation).
 
-- potential missed or understated recoveries
-- notice / reporting exceptions
-- treaty configuration discrepancies
-- reinsurer participation mismatches
-- reinstatement discrepancies
-- expected-vs-booked recoverable differences
-- booked-vs-billed-vs-collected reconciliation differences
-- overdue / aging recoverables
+**Still directional, not in scope:** treaty configuration discrepancies, reinsurer
+participation mismatches, cross-treaty inuring-order checks.
 
 **These are directional possibilities only. None is in scope.** Specifically, for
 now:
 
 - Do **not** introduce a generalised `FinancialException` / `FinancialFinding` model.
+  Each check stays concrete — `ReconcileFinding`, `StatementFinding`,
+  `RecoveryCandidate` — and the attention queue (`app/domain/worklist.py`) is a
+  *derived read-model* over those concrete objects, not a stored generic finding.
 - Do **not** turn `RecoveryCandidate` into a generic abstraction — it stays a
   concrete recovery finding.
-- A shared domain abstraction is reconsidered only once **two or three** additional
-  exception types have been validated through customer discovery and their real
-  shapes are known. Premature generalisation here would be exactly the speculative
-  abstraction the engineering rules forbid.
+- Even now that several exception types are built, resist a shared domain
+  abstraction until their real customer-validated shapes clearly converge. The
+  category-aware worklist is the *only* generalisation, and it is a view, not a table.
 
 ## 2. Initial product — Cedeon Recovery Intelligence
 
@@ -80,7 +81,7 @@ because it has direct, provable ROI; the layers below it feed the ones above.
 | **Contract intelligence** | What does this treaty mean, as executable terms? | Built (extraction → validation → executable layer/stack; per-layer panels; endorsement re-versioning with re-extraction + a term-level diff) |
 | **Recovery intelligence** | What does the contract mean for these losses? | Built (deterministic engine, multi-layer, reinstatement premium, candidates, investigator, packet, notice draft) |
 | **Obligation intelligence** | What has a claim triggered that I owe? | Foundation built (structured notice terms → computed deadlines on the queue); other obligation types Later |
-| **Exception / reconciliation intelligence** | What does not line up — expected vs agreed vs billed vs collected? | Started — internal reconciliation (`app/domain/recoveries/reconciliation.py`) flags a leg where Cedeon's calculated figure and the human-entered agreed / billed / collected disagree; surfaces on the recoverable and as an `EXCEPTION` attention item. Reinsurer-statement ingest is the larger module, Later. |
+| **Exception / reconciliation intelligence** | What does not line up — expected vs agreed vs billed vs collected, and vs what the reinsurer says? | Built (two concrete checks, no generic model): internal reconciliation (`app/domain/recoveries/reconciliation.py`) flags a leg where Cedeon's calculated figure and the human-entered agreed / billed / collected disagree; reinsurer-statement reconciliation (`app/domain/recoveries/statement_reconciliation.py`) matches a batch of reinsurer-stated figures to recoverables and flags where the two views diverge. Both surface as `EXCEPTION` attention items. |
 | **Portfolio / renewal intelligence** | What patterns should I act on across the book? | Not built — needs trustworthy accumulated history first. |
 
 The **attention queue** (`app/domain/worklist.py` — a read-model, deliberately not a

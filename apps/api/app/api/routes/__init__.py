@@ -12,6 +12,7 @@ from app.api.routes import (
     organizations,
     recoveries,
     reinsurance,
+    statements,
     treaties,
     worklist,
 )
@@ -30,6 +31,7 @@ api_router.include_router(recoveries.router)
 api_router.include_router(recoveries.packets_router)
 api_router.include_router(recoveries.notices_router)
 api_router.include_router(recoveries.recoverables_router)
+api_router.include_router(statements.router)
 api_router.include_router(activity.router)
 api_router.include_router(worklist.router)
 

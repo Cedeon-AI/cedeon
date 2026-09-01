@@ -32,6 +32,7 @@ from app.domain.worklist import WorklistItem, WorklistKind, rank
 from app.repositories.losses import LossEventRepository
 from app.repositories.recoveries import RecoverableRepository, RecoveryCandidateRepository
 from app.repositories.reinsurance import TreatyRepository
+from app.repositories.statements import ReinsurerStatementRepository
 from app.services.auth import AuthenticatedContext
 from app.services.obligations import ObligationService
 from app.services.recoveries import RecoveryCandidateService
@@ -77,6 +78,7 @@ class WorklistService:
         self._events = LossEventRepository(session)
         self._obligations = ObligationService(session)
         self._suggestions = SuggestionService(session)
+        self._statements = ReinsurerStatementRepository(session)
 
     async def build(self, context: AuthenticatedContext) -> Worklist:
         org_id = context.organization.id
@@ -97,6 +99,7 @@ class WorklistService:
         items += self._recoverable_overdue_items(recoverables, today)
         items += self._reconciliation_items(recoverables)
         items += await self._reinstatement_items(context, candidates, event_names, treaty_names)
+        items += await self._statement_discrepancy_items(org_id)
 
         ranked = rank(items)
         return Worklist(items=ranked, summary=self._summary(recoverables, candidates, ranked))
@@ -420,6 +423,32 @@ class WorklistService:
                     href=f"/recovery-candidates/{c.id}?section=calculation",
                     amount=view.result.premium_due,
                     currency=c.currency,
+                )
+            )
+        return out
+
+    async def _statement_discrepancy_items(self, org_id: UUID) -> list[WorklistItem]:
+        """An unresolved reinsurer-statement line that didn't reconcile."""
+        out: list[WorklistItem] = []
+        for line in await self._statements.unresolved_discrepancy_lines(org_id):
+            discrepancies = [
+                f for f in line.findings if f.get("kind") not in ("clean", None)
+            ]
+            if not discrepancies:
+                continue
+            top = discrepancies[0]
+            gap = None
+            if top.get("ours") is not None and top.get("theirs") is not None:
+                gap = abs(Decimal(str(top["ours"])) - Decimal(str(top["theirs"])))
+            out.append(
+                WorklistItem(
+                    kind=WorklistKind.STATEMENT_DISCREPANCY,
+                    key=f"statement_discrepancy:{line.id}",
+                    title=f"{line.reinsurer_name} · statement doesn't reconcile",
+                    detail=str(top.get("text", "")),
+                    href=f"/statements/{line.statement_id}",
+                    amount=gap,
+                    currency=line.currency,
                 )
             )
         return out

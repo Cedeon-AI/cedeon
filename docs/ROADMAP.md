@@ -243,8 +243,21 @@ math is deterministic, occurrence grouping is human-confirmed).
   "Hours-clause view" card on the loss-event page. It **proposes** — the cedent chooses
   when each window starts; nothing is auto-decided or split. 7 tests.
 
-- **Still to build — reinsurer-statement / accounting-feed ingest (the larger reconciliation
-  module).**
+- **Reinsurer-statement reconciliation — ✅ done (migration 0016).** The larger Exception
+  module. `app/domain/recoveries/statement_reconciliation.py` (pure) compares a batch of
+  reinsurer-stated figures (agreed / paid) against what Cedeon holds for the matched
+  recoverable — their agreed below/above ours, below the calculated expected, paid short
+  or over — materiality-thresholded, worst gap first. `reinsurer_statements` +
+  `reinsurer_statement_lines` (findings as JSONB, `resolved` flag). `POST|GET
+  /reinsurer-statements`, a per-line `resolve`. A `statement_discrepancy` worklist item
+  (`EXCEPTION`). Web: a "Statements" screen under Recoveries (enter the reinsurer's
+  numbers → line-by-line reconciliation). Lines are entered directly — a file importer
+  for real bordereau formats is the natural next addition. 22 tests. PRODUCT §1a/§2a updated.
+
+**All six deferred items + the AI-path verification are done.** The one remaining
+*planned* item is the marketing-site refresh's follow-up pass for the scope-expansion
+features (reinstatements, hours-clause view, statements) — the site currently describes
+per-occurrence XOL only.
 - **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
   `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
   reinsurance" (keeps the "contract to recovery" line); the product mockup is now the

@@ -940,6 +940,50 @@
         "title": "CreateRecoveryCandidateRequest",
         "type": "object"
       },
+      "CreateStatementRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineIn"
+            },
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          },
+          "statement_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Date"
+          }
+        },
+        "required": [
+          "label",
+          "currency",
+          "lines"
+        ],
+        "title": "CreateStatementRequest",
+        "type": "object"
+      },
       "DeadlineBasis": {
         "enum": [
           "calendar",
@@ -5048,6 +5092,331 @@
         "title": "SpendTotalsOut",
         "type": "object"
       },
+      "StatementFindingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "ours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ours"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "theirs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theirs"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "ours",
+          "theirs"
+        ],
+        "title": "StatementFindingOut",
+        "type": "object"
+      },
+      "StatementLineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "reinsurer_name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reinsurer Name",
+            "type": "string"
+          },
+          "their_agreed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Their Agreed"
+          },
+          "their_paid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Their Paid"
+          }
+        },
+        "required": [
+          "reinsurer_name"
+        ],
+        "title": "StatementLineIn",
+        "type": "object"
+      },
+      "StatementLineOut": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/StatementFindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "matched_recoverable_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Recoverable Id"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "reinsurer_name": {
+            "title": "Reinsurer Name",
+            "type": "string"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "their_agreed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Their Agreed"
+          },
+          "their_paid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Their Paid"
+          }
+        },
+        "required": [
+          "row_number",
+          "reinsurer_name",
+          "reference",
+          "currency",
+          "their_agreed",
+          "their_paid",
+          "matched_recoverable_id",
+          "findings",
+          "resolved"
+        ],
+        "title": "StatementLineOut",
+        "type": "object"
+      },
+      "StatementList": {
+        "additionalProperties": false,
+        "properties": {
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/StatementSummary"
+            },
+            "title": "Statements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "statements"
+        ],
+        "title": "StatementList",
+        "type": "object"
+      },
+      "StatementOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "open_discrepancies": {
+            "title": "Open Discrepancies",
+            "type": "integer"
+          },
+          "statement_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Date"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "currency",
+          "statement_date",
+          "created_at",
+          "line_count",
+          "open_discrepancies",
+          "lines"
+        ],
+        "title": "StatementOut",
+        "type": "object"
+      },
+      "StatementSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "open_discrepancies": {
+            "title": "Open Discrepancies",
+            "type": "integer"
+          },
+          "statement_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Date"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "currency",
+          "statement_date",
+          "created_at",
+          "line_count",
+          "open_discrepancies"
+        ],
+        "title": "StatementSummary",
+        "type": "object"
+      },
       "SuggestedRecoveryList": {
         "additionalProperties": false,
         "properties": {
@@ -6069,6 +6438,7 @@
           "recovery_drift",
           "contract_change",
           "reconciliation_mismatch",
+          "statement_discrepancy",
           "reinstatement_due",
           "recovery_review",
           "suggested_recovery",
@@ -8473,6 +8843,161 @@
         "summary": "Human decision on a packet version: confirm | reject | request_info | edit",
         "tags": [
           "recovery-packets"
+        ]
+      }
+    },
+    "/reinsurer-statements": {
+      "get": {
+        "operationId": "listReinsurerStatements",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Statements",
+        "tags": [
+          "reinsurer-statements"
+        ]
+      },
+      "post": {
+        "operationId": "createReinsurerStatement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStatementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit a reinsurer's stated figures; Cedeon reconciles each line",
+        "tags": [
+          "reinsurer-statements"
+        ]
+      }
+    },
+    "/reinsurer-statements/{statement_id}": {
+      "get": {
+        "operationId": "getReinsurerStatement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Statement",
+        "tags": [
+          "reinsurer-statements"
+        ]
+      }
+    },
+    "/reinsurer-statements/{statement_id}/lines/{row_number}/resolve": {
+      "post": {
+        "operationId": "resolveStatementLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "row_number",
+            "required": true,
+            "schema": {
+              "title": "Row Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark one reconciled line as handled",
+        "tags": [
+          "reinsurer-statements"
         ]
       }
     },

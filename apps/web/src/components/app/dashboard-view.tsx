@@ -33,6 +33,7 @@ const ICON: Record<WorklistKind, LucideIcon> = {
   recovery_drift: TrendingUp,
   contract_change: FileWarning,
   reconciliation_mismatch: Scale,
+  statement_discrepancy: Scale,
   reinstatement_due: RefreshCw,
   recovery_review: Sigma,
   suggested_recovery: Sparkles,

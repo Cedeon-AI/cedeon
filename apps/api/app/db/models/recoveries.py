@@ -472,3 +472,54 @@ class Recoverable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     reinsurer: Mapped[Any] = relationship("Reinsurer")
+
+
+class ReinsurerStatement(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A batch of figures a reinsurer stated (agreed / paid), reconciled line by
+    line against what Cedeon holds. The lines are supplied directly — a file
+    importer for real bordereau formats is a later addition."""
+
+    __tablename__ = "reinsurer_statements"
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    statement_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    lines: Mapped[list[ReinsurerStatementLine]] = relationship(
+        back_populates="statement",
+        cascade="all, delete-orphan",
+        order_by="ReinsurerStatementLine.row_number",
+    )
+
+
+class ReinsurerStatementLine(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    __tablename__ = "reinsurer_statement_lines"
+    __table_args__ = (
+        UniqueConstraint("statement_id", "row_number", name="uq_reinsurer_statement_lines_row"),
+    )
+
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    statement_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("reinsurer_statements.id", ondelete="CASCADE"), nullable=False
+    )
+    row_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    reinsurer_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    their_agreed: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
+    their_paid: Mapped[Any | None] = mapped_column(MONEY, nullable=True)
+    matched_recoverable_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recoverables.id", ondelete="SET NULL"), nullable=True
+    )
+    findings: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    statement: Mapped[ReinsurerStatement] = relationship(back_populates="lines")
