@@ -96,6 +96,7 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
     reviews,
     investigations,
     notice_obligation: obligation,
+    siblings = [],
   } = detail.data;
   const status = candidateStatus(candidate.status);
   const open = candidate.status === "needs_review" || candidate.status === "in_review";
@@ -204,6 +205,38 @@ export function RecoveryCandidateDetailView({ candidateId }: { candidateId: stri
 
         {/* content */}
         <div className="min-w-0 flex-1 space-y-4">
+          {siblings.length > 0 && candidate.layer_no ? (
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+              <p className="font-medium">
+                Layer {candidate.layer_no} of {siblings.length + 1} on this loss
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2 text-xs">
+                {[...siblings, candidate]
+                  .sort((a, b) => (a.layer_no ?? 0) - (b.layer_no ?? 0))
+                  .map((s) =>
+                    s.id === candidate.id ? (
+                      <span
+                        key={s.id}
+                        className="rounded border border-primary/40 bg-primary/10 px-2 py-1 font-medium text-primary"
+                      >
+                        L{s.layer_no} ·{" "}
+                        {s.layer_recovery ? formatMoney(s.layer_recovery, s.currency) : "—"}
+                      </span>
+                    ) : (
+                      <Link
+                        key={s.id}
+                        href={`/recovery-candidates/${s.id}`}
+                        className="rounded border border-border px-2 py-1 text-muted-foreground transition hover:border-border-strong hover:text-foreground"
+                      >
+                        L{s.layer_no} ·{" "}
+                        {s.layer_recovery ? formatMoney(s.layer_recovery, s.currency) : "—"}
+                      </Link>
+                    ),
+                  )}
+              </div>
+            </div>
+          ) : null}
+
           {section === "loss-basis" ? (
             <Card>
               <CardHeader>

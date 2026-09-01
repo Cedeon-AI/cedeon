@@ -102,10 +102,30 @@ class RecoveryCandidateOut(ApiModel):
     pre_drift_recovery: Decimal | None
     created_at: dt.datetime
     reviewed_at: dt.datetime | None
+    # Programme context — populated on the list and detail responses.
+    treaty_name: str | None = None
+    loss_event_name: str | None = None
+    layer_no: int | None = None
+    layer_attachment: Decimal | None = None
+    layer_limit: Decimal | None = None
+    layer_recovery: Decimal | None = None
+
+
+class RecoveryProgramme(ApiModel):
+    """The sibling recoveries a multi-layer loss opens — one tower, one event."""
+
+    treaty_id: UUID
+    treaty_version_id: UUID
+    treaty_name: str | None
+    loss_event_id: UUID
+    loss_event_name: str | None
+    currency: str
+    candidates: list[RecoveryCandidateOut]
 
 
 class RecoveryCandidateList(ApiModel):
     candidates: list[RecoveryCandidateOut]
+    programmes: list[RecoveryProgramme] = Field(default_factory=list)
 
 
 class SetKnowledgeDateRequest(ApiModel):
@@ -189,6 +209,8 @@ class RecoveryCandidateDetail(ApiModel):
     reviews: list[RecoveryReviewOut]
     investigations: list[RecoveryInvestigationOut]
     notice_obligation: NoticeObligationOut | None
+    # The other layers of the same tower responding to the same event.
+    siblings: list[RecoveryCandidateOut] = Field(default_factory=list)
 
 
 class ToolCallOut(ApiModel):

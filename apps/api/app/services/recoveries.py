@@ -13,6 +13,7 @@ never computes the number.
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
@@ -46,6 +47,19 @@ from app.services.errors import ConflictError, NotFoundError, ValidationError
 
 _VALID_VERSION_STATES = (TreatyVersionStatus.VALIDATED, TreatyVersionStatus.ACTIVE)
 _REVIEW_DECISIONS = (ReviewDecision.CONFIRM, ReviewDecision.REJECT, ReviewDecision.REQUEST_INFO)
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateContext:
+    """Names + the frozen layer figure for one candidate — the programme context the
+    recoveries list and the sibling-layers strip need."""
+
+    treaty_name: str | None
+    loss_event_name: str | None
+    layer_no: int | None
+    layer_attachment: Decimal | None
+    layer_limit: Decimal | None
+    layer_recovery: Decimal | None
 
 
 class RecoveryPreviewService:
@@ -100,6 +114,40 @@ class RecoveryCandidateService:
         self, context: AuthenticatedContext, *, status: RecoveryCandidateStatus | None = None
     ) -> list[RecoveryCandidate]:
         return await self._candidates.list(context.organization.id, status=status)
+
+    async def context_for(
+        self, context: AuthenticatedContext, candidates: list[RecoveryCandidate]
+    ) -> dict[UUID, CandidateContext]:
+        """Names + the layer figure for a set of candidates, batched. Used to draw the
+        recoveries list and the "sibling layers" strip without N+1 queries."""
+        org_id = context.organization.id
+        treaty_ids = {c.treaty_id for c in candidates}
+        version_ids = {c.treaty_version_id for c in candidates}
+        event_ids = {c.loss_event_id for c in candidates}
+        treaties = {tid: await self._treaties.get(org_id, tid) for tid in treaty_ids}
+        versions = {vid: await self._versions.get(org_id, vid) for vid in version_ids}
+        events = {eid: await self._events.get(org_id, eid) for eid in event_ids}
+
+        out: dict[UUID, CandidateContext] = {}
+        for c in candidates:
+            version = versions.get(c.treaty_version_id)
+            layer = (
+                next((x for x in version.layers if x.id == c.treaty_layer_id), None)
+                if version is not None
+                else None
+            )
+            calc = self.current_calculation(c)
+            treaty = treaties.get(c.treaty_id)
+            event = events.get(c.loss_event_id)
+            out[c.id] = CandidateContext(
+                treaty_name=treaty.name if treaty is not None else None,
+                loss_event_name=event.name if event is not None else None,
+                layer_no=layer.layer_no if layer is not None else None,
+                layer_attachment=Decimal(layer.attachment) if layer is not None else None,
+                layer_limit=Decimal(layer.limit) if layer is not None else None,
+                layer_recovery=Decimal(calc.layer_recovery) if calc is not None else None,
+            )
+        return out
 
     async def get_candidate(
         self, context: AuthenticatedContext, candidate_id: UUID

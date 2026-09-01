@@ -52,6 +52,7 @@ from app.api.schemas.recoveries import (
     RecoveryPacketDetail,
     RecoveryPacketVersionOut,
     RecoveryPacketVersionSummary,
+    RecoveryProgramme,
     RecoveryReviewOut,
     ReviewRecoveryCandidateRequest,
     SetKnowledgeDateRequest,
@@ -84,7 +85,7 @@ from app.services.investigation import InvestigationService
 from app.services.notice import NoticeReview, NoticeService
 from app.services.obligations import NoticeObligation, ObligationService
 from app.services.packet import PacketReview, RecoveryPacketService
-from app.services.recoveries import RecoveryCandidateService
+from app.services.recoveries import CandidateContext, RecoveryCandidateService
 from app.services.suggestions import SuggestionService
 
 router = APIRouter(prefix="/recovery-candidates", tags=["recovery-candidates"])
@@ -93,7 +94,13 @@ notices_router = APIRouter(prefix="/recovery-notices", tags=["recovery-notices"]
 recoverables_router = APIRouter(prefix="/recoverables", tags=["recoverables"])
 
 
-def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
+def _sibling_sort_key(ctx: CandidateContext | None) -> int:
+    return ctx.layer_no if ctx is not None and ctx.layer_no is not None else 0
+
+
+def _candidate_out(
+    candidate: RecoveryCandidate, ctx: CandidateContext | None = None
+) -> RecoveryCandidateOut:
     return RecoveryCandidateOut(
         id=candidate.id,
         status=candidate.status,
@@ -110,6 +117,12 @@ def _candidate_out(candidate: RecoveryCandidate) -> RecoveryCandidateOut:
         pre_drift_recovery=candidate.pre_drift_recovery,
         created_at=candidate.created_at,
         reviewed_at=candidate.reviewed_at,
+        treaty_name=ctx.treaty_name if ctx else None,
+        loss_event_name=ctx.loss_event_name if ctx else None,
+        layer_no=ctx.layer_no if ctx else None,
+        layer_attachment=ctx.layer_attachment if ctx else None,
+        layer_limit=ctx.layer_limit if ctx else None,
+        layer_recovery=ctx.layer_recovery if ctx else None,
     )
 
 
@@ -238,10 +251,29 @@ async def list_recovery_candidates(
     session: DbSession,
     status_filter: Annotated[RecoveryCandidateStatus | None, Query(alias="status")] = None,
 ) -> RecoveryCandidateList:
-    candidates = await RecoveryCandidateService(session).list_candidates(
-        context, status=status_filter
-    )
-    return RecoveryCandidateList(candidates=[_candidate_out(c) for c in candidates])
+    service = RecoveryCandidateService(session)
+    candidates = await service.list_candidates(context, status=status_filter)
+    ctx = await service.context_for(context, candidates)
+    rows = [_candidate_out(c, ctx.get(c.id)) for c in candidates]
+
+    # Group the sibling recoveries a multi-layer loss opens: one tower, one event.
+    groups: dict[tuple[UUID, UUID], list[RecoveryCandidateOut]] = {}
+    for c, row in zip(candidates, rows, strict=True):
+        groups.setdefault((c.treaty_version_id, c.loss_event_id), []).append(row)
+    programmes = [
+        RecoveryProgramme(
+            treaty_id=members[0].treaty_id,
+            treaty_version_id=vid,
+            treaty_name=members[0].treaty_name,
+            loss_event_id=eid,
+            loss_event_name=members[0].loss_event_name,
+            currency=members[0].currency,
+            candidates=sorted(members, key=lambda r: r.layer_no or 0),
+        )
+        for (vid, eid), members in groups.items()
+        if len(members) > 1
+    ]
+    return RecoveryCandidateList(candidates=rows, programmes=programmes)
 
 
 @router.get(
@@ -290,8 +322,17 @@ async def get_recovery_candidate(
         context, candidate_id
     )
     obligation = await ObligationService(session).for_candidate(context, candidate)
+
+    all_candidates = await service.list_candidates(context)
+    siblings = [
+        c
+        for c in all_candidates
+        if c.treaty_version_id == candidate.treaty_version_id
+        and c.loss_event_id == candidate.loss_event_id
+    ]
+    ctx = await service.context_for(context, siblings)
     return RecoveryCandidateDetail(
-        candidate=_candidate_out(candidate),
+        candidate=_candidate_out(candidate, ctx.get(candidate.id)),
         current_calculation=_calculation_out(current) if current else None,
         calculations=[
             _calculation_out(c)
@@ -300,6 +341,11 @@ async def get_recovery_candidate(
         reviews=[_review_out(r) for r in reviews],
         investigations=[_investigation_out(i) for i in investigations],
         notice_obligation=_obligation_out(obligation),
+        siblings=[
+            _candidate_out(c, ctx.get(c.id))
+            for c in sorted(siblings, key=lambda c: _sibling_sort_key(ctx.get(c.id)))
+            if c.id != candidate.id
+        ],
     )
 
 

@@ -118,3 +118,47 @@ class TestMultiLayerRecovery:
             "5000000.00",
             "8700000.00",
         ]
+
+
+class TestProgrammeGrouping:
+    async def test_the_tower_groups_as_one_programme_and_the_detail_links_siblings(
+        self, client: AsyncClient, object_store, session
+    ) -> None:
+        golden = await validated_golden_treaty(client, object_store, session, layers=_STACK)
+        event_id = await committed_hurricane_event(client)
+        await client.post(
+            "/recovery-candidates",
+            json={"treaty_id": golden.treaty_id, "loss_event_id": event_id},
+        )
+
+        listing = (await client.get("/recovery-candidates")).json()
+        assert len(listing["candidates"]) == 3
+        assert len(listing["programmes"]) == 1
+        prog = listing["programmes"][0]
+        assert prog["loss_event_name"] == "Hurricane Demo 2027"
+        assert [c["layer_no"] for c in prog["candidates"]] == [1, 2, 3]
+        assert [c["layer_recovery"] for c in prog["candidates"]] == [
+            "5000000.00",
+            "20000000.00",
+            "8700000.00",
+        ]
+        # every row carries its programme context
+        assert all(c["treaty_name"] for c in listing["candidates"])
+
+        bottom = next(c for c in prog["candidates"] if c["layer_no"] == 1)
+        detail = (await client.get(f"/recovery-candidates/{bottom['id']}")).json()
+        assert [s["layer_no"] for s in detail["siblings"]] == [2, 3]
+        assert detail["candidate"]["layer_recovery"] == "5000000.00"
+
+    async def test_a_single_layer_recovery_is_not_a_programme(
+        self, client: AsyncClient, object_store, session
+    ) -> None:
+        golden = await validated_golden_treaty(client, object_store, session)
+        event_id = await committed_hurricane_event(client)
+        await client.post(
+            "/recovery-candidates",
+            json={"treaty_id": golden.treaty_id, "loss_event_id": event_id},
+        )
+        listing = (await client.get("/recovery-candidates")).json()
+        assert listing["programmes"] == []
+        assert listing["candidates"][0]["layer_recovery"] == "8700000.00"

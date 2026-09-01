@@ -3420,6 +3420,13 @@
             },
             "title": "Reviews",
             "type": "array"
+          },
+          "siblings": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryCandidateOut"
+            },
+            "title": "Siblings",
+            "type": "array"
           }
         },
         "required": [
@@ -3441,6 +3448,13 @@
               "$ref": "#/components/schemas/RecoveryCandidateOut"
             },
             "title": "Candidates",
+            "type": "array"
+          },
+          "programmes": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryProgramme"
+            },
+            "title": "Programmes",
             "type": "array"
           }
         },
@@ -3512,10 +3526,68 @@
             ],
             "title": "Knowledge Date"
           },
+          "layer_attachment": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer Attachment"
+          },
+          "layer_limit": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer Limit"
+          },
+          "layer_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer No"
+          },
+          "layer_recovery": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer Recovery"
+          },
           "loss_event_id": {
             "format": "uuid",
             "title": "Loss Event Id",
             "type": "string"
+          },
+          "loss_event_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss Event Name"
           },
           "pre_drift_recovery": {
             "anyOf": [
@@ -3553,6 +3625,17 @@
             "format": "uuid",
             "title": "Treaty Layer Id",
             "type": "string"
+          },
+          "treaty_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treaty Name"
           },
           "treaty_version_id": {
             "format": "uuid",
@@ -4117,6 +4200,71 @@
           "trace"
         ],
         "title": "RecoveryPreviewResponse",
+        "type": "object"
+      },
+      "RecoveryProgramme": {
+        "additionalProperties": false,
+        "description": "The sibling recoveries a multi-layer loss opens \u2014 one tower, one event.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryCandidateOut"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "loss_event_id": {
+            "format": "uuid",
+            "title": "Loss Event Id",
+            "type": "string"
+          },
+          "loss_event_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss Event Name"
+          },
+          "treaty_id": {
+            "format": "uuid",
+            "title": "Treaty Id",
+            "type": "string"
+          },
+          "treaty_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treaty Name"
+          },
+          "treaty_version_id": {
+            "format": "uuid",
+            "title": "Treaty Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "treaty_id",
+          "treaty_version_id",
+          "treaty_name",
+          "loss_event_id",
+          "loss_event_name",
+          "currency",
+          "candidates"
+        ],
+        "title": "RecoveryProgramme",
         "type": "object"
       },
       "RecoveryReviewOut": {
