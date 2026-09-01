@@ -32,6 +32,7 @@ async def validated_golden_treaty(
     email: str = "ops@carrier.example",
     org: str = "Carrier Ops",
     layers: list[tuple[str, str]] | None = None,
+    treaty_pdf: bytes | None = None,
 ) -> GoldenTreaty:
     from tests.support.auth import register
 
@@ -47,7 +48,7 @@ async def validated_golden_treaty(
     ).json()
     upload = await client.post(
         "/documents",
-        files={"file": ("t.pdf", build_treaty_pdf(), "application/pdf")},
+        files={"file": ("t.pdf", treaty_pdf or build_treaty_pdf(), "application/pdf")},
         data={"kind": "treaty"},
     )
     doc_id = UUID(upload.json()["id"])
