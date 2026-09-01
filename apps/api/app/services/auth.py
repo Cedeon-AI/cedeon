@@ -24,16 +24,18 @@ from app.core.security import (
 from app.core.security.passwords import TIMING_GUARD_HASH, WeakPasswordError
 from app.core.security.sessions import tokens_equal
 from app.core.text import normalize_email, slugify
-from app.db.models.identity import Membership, Organization, User, UserSession
+from app.db.models.identity import Membership, Organization, SignupCode, User, UserSession
 from app.domain.audit import ActorType, AuditRecord
-from app.domain.organizations import Role
+from app.domain.organizations import Role, is_redeemable
 from app.domain.organizations.invitations import InvitationStatus, is_live
+from app.notifications import EmailMessage, EmailSender
 from app.repositories.audit import AuditRepository
 from app.repositories.identity import (
     InvitationRepository,
     MembershipRepository,
     OrganizationRepository,
     SessionRepository,
+    SignupCodeRepository,
     UserRepository,
 )
 from app.services.errors import (
@@ -69,13 +71,21 @@ class SessionIssue:
 
 
 class AuthService:
-    def __init__(self, session: AsyncSession, settings: Settings) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        settings: Settings,
+        *,
+        email: EmailSender | None = None,
+    ) -> None:
         self._session = session
         self._settings = settings
+        self._email = email
         self.organizations = OrganizationRepository(session)
         self.users = UserRepository(session)
         self.memberships = MembershipRepository(session)
         self.invitations = InvitationRepository(session)
+        self.signup_codes = SignupCodeRepository(session)
         self.sessions = SessionRepository(session)
         self.audit = AuditRepository(session)
 
@@ -88,6 +98,7 @@ class AuthService:
         email: str,
         name: str,
         password: str,
+        signup_code: str | None = None,
         user_agent: str | None = None,
         ip_address: str | None = None,
     ) -> SessionIssue:
@@ -96,6 +107,9 @@ class AuthService:
             raise ValidationError("organization name is required")
         if not name.strip():
             raise ValidationError("your name is required")
+
+        # Gate on signup_mode before anything is created (ADR-0028).
+        code = await self._resolve_signup_code(signup_code)
 
         if await self.users.get_by_email(email) is not None:
             raise ConflictError("an account with this email already exists")
@@ -108,6 +122,7 @@ class AuthService:
         organization = Organization(
             name=organization_name.strip(),
             slug=await self._unique_slug(slugify(organization_name)),
+            ai_budget_usd=code.grant_ai_budget_usd if code is not None else None,
         )
         self.organizations.add(organization)
 
@@ -129,9 +144,34 @@ class AuthService:
                 entity_type="organization",
                 entity_id=organization.id,
                 summary=f"{user.email} registered organization {organization.name!r}",
+                payload=(
+                    {"signup_code": code.label, "ai_budget_usd": str(organization.ai_budget_usd)}
+                    if code is not None
+                    else {}
+                ),
                 correlation_id=get_correlation_id(),
             )
         )
+        if code is not None:
+            assert signup_code is not None  # guaranteed in "code" mode
+            redeemed = await self.signup_codes.try_redeem(
+                hash_session_token(signup_code.strip(), self._settings.session_secret),
+                now=dt.datetime.now(dt.UTC),
+            )
+            if not redeemed:  # lost a race, or revoked between check and here
+                raise ConflictError("that access code was just used up — please request a new one")
+            self.audit.record(
+                AuditRecord(
+                    organization_id=organization.id,
+                    actor_type=ActorType.USER,
+                    actor_id=user.id,
+                    action="signup_code.redeemed",
+                    entity_type="signup_code",
+                    entity_id=code.id,
+                    summary=f"access code {code.label!r} redeemed by {user.email}",
+                    correlation_id=get_correlation_id(),
+                )
+            )
 
         issue = await self._issue_session(
             user=user,
@@ -145,7 +185,62 @@ class AuthService:
         except IntegrityError as exc:  # pragma: no cover - race on unique email/slug
             await self._session.rollback()
             raise ConflictError("could not create organization, please retry") from exc
+
+        await self._notify_ops_of_signup(organization, user, code)
         return issue
+
+    async def _resolve_signup_code(self, raw_code: str | None) -> SignupCode | None:
+        """Enforce ``signup_mode``. Returns the redeemable code row in ``code`` mode,
+        ``None`` in ``open`` mode, and raises in ``closed`` mode or on a bad code."""
+        mode = self._settings.signup_mode
+        if mode == "closed":
+            raise PermissionDeniedError(
+                "Cedeon is invite-only right now — contact us to request access"
+            )
+        if mode == "open":
+            return None
+
+        if not raw_code or not raw_code.strip():
+            raise ValidationError("an access code is required to create a workspace")
+        code_hash = hash_session_token(raw_code.strip(), self._settings.session_secret)
+        code = await self.signup_codes.get_by_code_hash(code_hash)
+        if code is None or not tokens_equal(code.code_hash, code_hash):
+            raise ValidationError("that access code is not valid")
+        if not is_redeemable(
+            revoked_at=code.revoked_at,
+            expires_at=code.expires_at,
+            max_uses=code.max_uses,
+            redeemed_count=code.redeemed_count,
+            now=dt.datetime.now(dt.UTC),
+        ):
+            raise ValidationError("that access code has expired or has already been used")
+        return code
+
+    async def _notify_ops_of_signup(
+        self, organization: Organization, user: User, code: SignupCode | None
+    ) -> None:
+        if not (self._settings.ops_email and self._email):
+            return
+        budget = (
+            f"${organization.ai_budget_usd}/mo AI budget"
+            if organization.ai_budget_usd is not None
+            else "unlimited AI budget"
+        )
+        via = f" via code {code.label!r}" if code is not None else ""
+        try:
+            await self._email.send(
+                EmailMessage(
+                    to=self._settings.ops_email,
+                    subject=f"[Cedeon] new workspace: {organization.name}",
+                    text_body=(
+                        f"{user.email} created the workspace {organization.name!r} "
+                        f"({organization.slug}){via}.\n{budget}."
+                    ),
+                    from_addr=self._settings.email_from,
+                )
+            )
+        except Exception:  # a failed ops notice must not fail registration
+            log.warning("auth.ops_notify_failed", organization_id=str(organization.id))
 
     async def accept_invitation(
         self,

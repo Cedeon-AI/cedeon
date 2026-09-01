@@ -14,22 +14,38 @@ from typing import Any
 from uuid import UUID
 
 from procrastinate import RetryStrategy
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.jobs.app import procrastinate_app
 from app.jobs.context import job_session
 from app.parsing import build_parser
 from app.services.document_pipeline import DocumentPipeline
-from app.services.errors import ConflictError
+from app.services.errors import ConflictError, UsageLimitError
 from app.storage import build_object_store
 
 log = get_logger(__name__)
 
 # Transient failures (provider 5xx / rate limits, object-store blips) retry with
-# backoff. A ConflictError means "already running / already done" — do not retry.
+# backoff. A ConflictError means "already running / already done" and a
+# UsageLimitError means "over the monthly budget" — neither should retry.
 _AI_RETRY = RetryStrategy(max_attempts=4, exponential_wait=4)
 _PARSE_RETRY = RetryStrategy(max_attempts=3, linear_wait=5)
+_AI_SKIP = (ConflictError, UsageLimitError)
+
+
+async def _post_run_budget_notice(
+    session: AsyncSession, settings: Settings, organization_id: UUID
+) -> None:
+    """After an AI run records its cost, alert ops if the org crossed its budget."""
+    from app.notifications import build_email_sender
+    from app.services.ai_budget import AiBudgetService
+
+    await AiBudgetService(session, settings).notify_if_crossed(
+        organization_id, email=build_email_sender(settings)
+    )
+    await session.commit()
 
 
 @procrastinate_app.task(name="ping")
@@ -68,9 +84,10 @@ async def extract_treaty(*, organization_id: str, treaty_version_id: str) -> dic
         service = TreatyExtractionService(session, settings)
         try:
             run = await service.run(UUID(organization_id), UUID(treaty_version_id))
-        except ConflictError as exc:
+        except _AI_SKIP as exc:
             log.info("job.extract_treaty.skipped", reason=str(exc))
             return {"skipped": str(exc)}
+        await _post_run_budget_notice(session, settings, UUID(organization_id))
     return {"agent_run_id": str(run.id), "status": run.status.value}
 
 
@@ -97,9 +114,10 @@ async def investigate_recovery_candidate(
                 UUID(candidate_id),
                 actor_id=UUID(actor_id) if actor_id else None,
             )
-        except ConflictError as exc:
+        except _AI_SKIP as exc:
             log.info("job.investigate.skipped", reason=str(exc))
             return {"skipped": str(exc)}
+        await _post_run_budget_notice(session, settings, UUID(organization_id))
     return {"investigation_id": str(investigation.id), "status": investigation.status.value}
 
 
@@ -137,9 +155,10 @@ async def draft_recovery_notice(
                 recipient={k: str(v) for k, v in recipient.items()},
                 actor_id=UUID(actor_id) if actor_id else None,
             )
-        except ConflictError as exc:
+        except _AI_SKIP as exc:
             log.info("job.draft_recovery_notice.skipped", reason=str(exc))
             return {"skipped": str(exc)}
+        await _post_run_budget_notice(session, settings, UUID(organization_id))
     return {"recovery_notice_id": str(notice.id), "status": notice.status.value}
 
 

@@ -9,12 +9,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from app.api.dependencies.context import AuthedContext, DbSession
+from app.api.dependencies.context import AppSettings, AuthedContext, DbSession
 from app.api.schemas.activity import (
     ActivityToolCallOut,
     AgentRunDetail,
     AgentRunList,
     AgentRunSummary,
+    AiBudgetOut,
     AiSpendResponse,
     AuditEventOut,
     AuditFeed,
@@ -26,6 +27,7 @@ from app.db.models.audit import AuditEvent
 from app.db.models.extraction import AgentRun, ToolCall
 from app.domain.ai import AgentRunStatus, AgentType
 from app.services.activity import ActivityService
+from app.services.ai_budget import AiBudgetService
 
 router = APIRouter(prefix="/activity", tags=["activity"])
 
@@ -129,11 +131,18 @@ async def list_audit_events(
 async def get_ai_spend(
     context: AuthedContext,
     session: DbSession,
+    settings: AppSettings,
     days: Annotated[int, Query(ge=1, le=365)] = 30,
 ) -> AiSpendResponse:
     spend = await ActivityService(session).ai_spend(context, days=days)
+    budget = await AiBudgetService(session, settings).status(context.organization.id)
     return AiSpendResponse(
         since=spend.since,
+        budget=AiBudgetOut(
+            budget_usd=budget.budget_usd,
+            spent_usd=budget.spent_usd,
+            period_start=budget.period_start,
+        ),
         totals=SpendTotalsOut(
             runs=spend.totals.runs,
             succeeded=spend.totals.succeeded,

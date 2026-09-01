@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.logging import get_correlation_id
 from app.db.models.documents import Document
 from app.db.models.reinsurance import (
@@ -32,6 +33,7 @@ from app.repositories.reinsurance import (
     TreatyRepository,
     TreatyVersionRepository,
 )
+from app.services.ai_budget import AiBudgetService
 from app.services.auth import AuthenticatedContext
 from app.services.errors import ConflictError, NotFoundError, ValidationError
 
@@ -191,9 +193,11 @@ class TreatyService:
         self,
         session: AsyncSession,
         *,
+        settings: Settings,
         enqueue_extract: ExtractEnqueuer = _no_enqueue,
     ) -> None:
         self._session = session
+        self._settings = settings
         self._enqueue_extract = enqueue_extract
         self._treaties = TreatyRepository(session)
         self._versions = TreatyVersionRepository(session)
@@ -237,6 +241,9 @@ class TreatyService:
             source_document = await self._documents.get(context.organization.id, source_document_id)
             if source_document is None:
                 raise NotFoundError("source document not found")
+            # A treaty from a document means extraction is coming — stop here if the
+            # workspace is over its AI budget (ADR-0028).
+            await AiBudgetService(self._session, self._settings).enforce(context.organization.id)
 
         treaty = Treaty(
             organization_id=context.organization.id,
@@ -290,6 +297,7 @@ class TreatyService:
             raise ValidationError("this treaty has no source document to extract from")
         if version.status is TreatyVersionStatus.VALIDATED:
             raise ConflictError("this treaty version is already validated")
+        await AiBudgetService(self._session, self._settings).enforce(context.organization.id)
         version.status = TreatyVersionStatus.EXTRACTING
         await self._session.commit()
         await self._enqueue_extract(context.organization.id, version.id)
@@ -332,6 +340,8 @@ class TreatyService:
         rerun_extraction = (
             source_document is not None and source_document.status == DocumentStatus.PARSED
         )
+        if rerun_extraction:
+            await AiBudgetService(self._session, self._settings).enforce(org_id)
 
         new_version = TreatyVersion(
             organization_id=org_id,

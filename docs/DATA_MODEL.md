@@ -89,8 +89,11 @@ treaty_term_candidates(
 
 ## 4. Entity catalogue (MVP)
 
-**Identity & tenancy** *(migration 0001; `invitations` added in 0017)*
-`organizations` (`name`, `slug` unique — the stable identity, never renamed) ·
+**Identity & tenancy** *(migration 0001; `invitations` added in 0017; `signup_codes`
++ org AI-budget columns in 0018)*
+`organizations` (`name`, `slug` unique — the stable identity, never renamed;
+`ai_budget_usd` **nullable** = monthly AI-spend cap, NULL = unlimited;
+`ai_budget_notified_at` — dedupes the ops alert to one per month — ADR-0028) ·
 `users` (`email` unique lower-cased, `password_hash` **nullable** — SSO seam, `name`,
 `is_active`, `last_login_at`; **no `organization_id`** — org membership is
 first-class) · `memberships` (`organization_id`, `user_id`, `role`
@@ -100,6 +103,9 @@ first-class) · `memberships` (`organization_id`, `user_id`, `role`
 `status` pending/accepted/revoked, `invited_by_user_id` `SET NULL`, `expires_at`,
 `accepted_at`; **partial unique index** `(organization_id, email) WHERE status
 = 'PENDING'` — one live invite per email per org; single-use, bound to the email) ·
+`signup_codes` (operator-minted access codes — `code_hash` HMAC unique, `label`,
+`max_uses` / `redeemed_count`, `grant_ai_budget_usd`, `expires_at`, `revoked_at`;
+gate org creation when `CEDEON_SIGNUP_MODE=code` — ADR-0028) ·
 `sessions` (server-side, `token_hash`, `organization_id` + `user_id`, `expires_at`,
 `revoked_at`, `last_seen_at` idle timeout).
 

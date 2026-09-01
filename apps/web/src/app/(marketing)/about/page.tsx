@@ -97,7 +97,7 @@ export default function AboutPage() {
             Work with us on the first cohort
           </h2>
           <Button asChild size="lg">
-            <Link href="/login">
+            <Link href="/register">
               Request access <ArrowRight className="size-4" />
             </Link>
           </Button>

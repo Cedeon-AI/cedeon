@@ -52,6 +52,16 @@ db-reset:
 seed-demo:
     cd {{api_dir}} && uv run python -m app.scripts.seed_demo
 
+# --- Access (ADR-0028) ---
+
+# Mint a signup access code: just mint-code "Acme Re demo" --budget 50
+mint-code *args:
+    cd {{api_dir}} && uv run python -m app.scripts.mint_signup_code "$@"
+
+# Set an org's monthly AI budget: just set-org-budget acme-re 100  (or 'unlimited')
+set-org-budget slug budget:
+    cd {{api_dir}} && uv run python -m app.scripts.set_org_budget {{slug}} {{budget}}
+
 # --- Dev servers (without docker) ---
 
 api-dev:

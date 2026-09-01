@@ -91,8 +91,17 @@ class SpendTotalsOut(ApiModel):
     cost_usd: Decimal
 
 
+class AiBudgetOut(ApiModel):
+    """This organization's calendar-month AI-spend cap (ADR-0028)."""
+
+    budget_usd: Decimal | None  # null = unlimited
+    spent_usd: Decimal
+    period_start: dt.datetime
+
+
 class AiSpendResponse(ApiModel):
     since: dt.datetime
     totals: SpendTotalsOut
     by_type: list[SpendByTypeOut]
     by_day: list[SpendByDayOut]
+    budget: AiBudgetOut

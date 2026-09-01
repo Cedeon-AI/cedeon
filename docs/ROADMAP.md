@@ -38,12 +38,14 @@ queue is a derived view, not a table (ARCHITECTURE.md §9, PRODUCT §1a).
 | — | Recovery-control build ①–⑧ + intelligence-system reframe (⑨, ⑪) | ✅ **Complete** (2026-08-31) — migrations 0012–0013 |
 | — | Marketing-site reframe + all 6 deferred items (⑥ ⑨ ⑩ ⑫ + statement reconciliation) | ✅ **Complete** (2026-09-01) — ADR-0025; migrations 0014–0016 |
 | — | Multi-user organization — first-class membership capability, `admin`/`member` roles, email invitations, write-role enforcement on every mutating route, Settings area | ✅ **Complete** (2026-09-01) — ADR-0026; migration 0017 |
+| — | Pre-demo controls — signup gating (`open`/`code`/`closed` + access codes), per-org monthly AI-spend budget, ops alerts | ✅ **Complete** (2026-09-01) — ADR-0028; migration 0018 |
 
 **The 10-phase MVP is complete**, plus the recovery-control build, the six
-deferred items, and the multi-user organization system. Full pipeline through notice
-draft + the intelligence layers on top, all built, tested (**369 backend** +
-`pytest -m eval` extraction & investigator datasets + a live golden-path e2e),
-migrations 0001–0017, running through the containerized stack.
+deferred items, the multi-user organization system, and the pre-demo access /
+spend controls. Full pipeline through notice draft + the intelligence layers on
+top, all built, tested (**390 backend** + `pytest -m eval` extraction &
+investigator datasets + a live golden-path e2e), migrations 0001–0018, running
+through the containerized stack.
 
 **First meaningful success criterion:** a reinsurance professional uploads a
 real-shaped XOL treaty + loss dataset, validates Cedeon's extracted terms, and Cedeon
@@ -308,6 +310,22 @@ enforcement. Added:
 - One genuine bug found and fixed en route: `CollectionService.list_for_candidate`
   didn't re-check the parent candidate's org, so a cross-org id returned `200 []`
   instead of 404.
+
+**Pre-demo access & spend controls — ✅ done (2026-09-01, user-directed — ADR-0028,
+migration 0018).** Before a hosted demo, close the two exposures on `/register`:
+who may create an org, and how much any org may spend.
+
+- **`CEDEON_SIGNUP_MODE`** — `open` / `code` / `closed`. The config validator refuses
+  `open` in staging/production. `code` mode needs a redeemable **signup code**
+  (`just mint-code "Acme Re" --budget 50`) — HMAC-stored, usage-capped, expiring; the
+  code stamps the new org's AI budget. `GET /auth/config` exposes the mode to the web
+  client.
+- **Per-org monthly AI budget** — `organizations.ai_budget_usd` (NULL = unlimited).
+  `AiBudgetService.enforce` → 402 before any extraction / investigation / notice job
+  is queued or run, once the calendar-month `agent_runs.cost_usd` sum hits the cap.
+  Jobs skip on `UsageLimitError` (no retry). `just set-org-budget <slug> <usd>`.
+- **Alerts** — ops emailed once/month at 80% of budget and on every org creation
+  (`CEDEON_OPS_EMAIL`, best-effort, also audited).
 
 ---
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +13,7 @@ from app.db.models.identity import (
     Invitation,
     Membership,
     Organization,
+    SignupCode,
     User,
     UserSession,
 )
@@ -152,6 +153,37 @@ class InvitationRepository:
             .order_by(Invitation.created_at.desc())
         )
         return list(result.scalars().all())
+
+
+class SignupCodeRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def add(self, code: SignupCode) -> None:
+        self._session.add(code)
+
+    async def get_by_code_hash(self, code_hash: str) -> SignupCode | None:
+        result = await self._session.execute(
+            select(SignupCode).where(SignupCode.code_hash == code_hash)
+        )
+        return result.scalar_one_or_none()
+
+    async def try_redeem(self, code_hash: str, *, now: dt.datetime) -> bool:
+        """Atomically consume one use. Returns False if the code is gone / exhausted /
+        expired — so two concurrent registrations cannot both spend a single-use code."""
+        result = await self._session.execute(
+            update(SignupCode)
+            .where(
+                SignupCode.code_hash == code_hash,
+                SignupCode.revoked_at.is_(None),
+                SignupCode.redeemed_count < SignupCode.max_uses,
+                or_(SignupCode.expires_at.is_(None), SignupCode.expires_at > now),
+            )
+            .values(redeemed_count=SignupCode.redeemed_count + 1)
+            .returning(SignupCode.id)
+            .execution_options(synchronize_session=False)
+        )
+        return result.scalar_one_or_none() is not None
 
 
 class SessionRepository:

@@ -64,7 +64,7 @@ export function SiteHeader() {
             <Link href="/login">Sign in</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href="/login">Request access</Link>
+            <Link href="/register">Request access</Link>
           </Button>
         </div>
 
@@ -110,7 +110,7 @@ export function SiteHeader() {
                     <Link href="/login">Sign in</Link>
                   </Button>
                   <Button asChild size="sm" onClick={() => setOpen(false)}>
-                    <Link href="/login">Request access</Link>
+                    <Link href="/register">Request access</Link>
                   </Button>
                 </div>
               </Dialog.Content>

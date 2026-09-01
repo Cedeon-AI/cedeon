@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { asProblem, register } from "@/lib/api";
 
-export function RegisterForm() {
+export function RegisterForm({ needsCode = false }: { needsCode?: boolean }) {
   const router = useRouter();
   const [form, setForm] = useState({
     organization_name: "",
     name: "",
     email: "",
     password: "",
+    signup_code: "",
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,9 @@ export function RegisterForm() {
     event.preventDefault();
     setError(null);
     setPending(true);
-    const result = await register({ body: form });
+    const result = await register({
+      body: { ...form, signup_code: form.signup_code.trim() || null },
+    });
     setPending(false);
 
     if (!result.data) {
@@ -74,6 +77,27 @@ export function RegisterForm() {
         />
       </Field>
       <p className="text-xs text-muted-foreground">At least 12 characters.</p>
+      {needsCode ? (
+        <div>
+          <Field label="Access code" htmlFor="signup_code">
+            <Input
+              id="signup_code"
+              required
+              autoComplete="off"
+              placeholder="the code we sent you"
+              value={form.signup_code}
+              onChange={set("signup_code")}
+            />
+          </Field>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Don't have one? Email{" "}
+            <a href="mailto:access@cedeon.ai" className="font-medium text-primary hover:underline">
+              access@cedeon.ai
+            </a>
+            .
+          </p>
+        </div>
+      ) : null}
       {error ? (
         <p className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
           {error}

@@ -40,6 +40,17 @@ otherwise in product, marketing, or docs.
   7-day expiry, single-use, bound to the invited email (you can only accept as that
   address), one pending per `(org, email)`. Admin-only to create / resend / revoke.
 - **Last-admin protection**: an organization always keeps ≥ 1 admin.
+- **Signup gating** (ADR-0028): `CEDEON_SIGNUP_MODE` = `open` / `code` / `closed`.
+  The config validator **forbids `open` in staging/production**, so a deploy cannot
+  ship self-serve registration by omission. `code` mode requires a redeemable
+  **signup code** (operator-minted, HMAC stored, usage-capped, expiring) to create an
+  organization; the code also stamps the org's AI budget. Codes gate *creation only* —
+  they are not an identity mechanism.
+- **Per-organization AI budget** (ADR-0028): `organizations.ai_budget_usd`
+  (NULL = unlimited). `AiBudgetService.enforce` raises **402** before any model work
+  is enqueued or run once the calendar-month `agent_runs.cost_usd` sum reaches the
+  cap; jobs skip (no retry). Only the operator changes a budget
+  (`just set-org-budget`). Ops is emailed once/month at 80% and on org creation.
 - `password_hash` is nullable so SSO / SAML (e.g. WorkOS) attaches later without
   changing the meaning of existing rows. **Not built** — but the seam exists, and the
   membership-not-user-owns-org model + admin/member roles keep the path clean.

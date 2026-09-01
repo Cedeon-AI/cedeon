@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     email_sender: Literal["console"] = "console"
     email_from: str = "Cedeon <no-reply@cedeon.app>"
 
+    # Signup gating (ADR-0028). "open" self-serve · "code" needs an access code you
+    # minted (`just mint-code`) · "closed" no self-serve at all. Forced to code/closed
+    # outside local/test by the validator below.
+    signup_mode: Literal["open", "code", "closed"] = "open"
+    signup_code_ttl_days: int = 30
+    # Where org-creation and AI-budget notices are sent. None → only the audit log +
+    # structured logs record them.
+    ops_email: str | None = None
+
     # Object storage
     object_store: Literal["filesystem", "s3"] = "filesystem"
     filesystem_store_root: str = ".data/objectstore"
@@ -120,6 +129,11 @@ class Settings(BaseSettings):
             if "localhost" in self.database_url:
                 raise ValueError(
                     "CEDEON_DATABASE_URL still points at localhost in a deployed environment"
+                )
+            if self.signup_mode == "open":
+                raise ValueError(
+                    "CEDEON_SIGNUP_MODE must be 'code' or 'closed' outside local/test "
+                    "(open self-serve registration is not allowed in a deployed environment)"
                 )
         return self
 

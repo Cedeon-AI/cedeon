@@ -37,6 +37,7 @@ from app.repositories.recoveries import (
     RecoveryInvestigationRepository,
 )
 from app.repositories.reinsurance import TreatyVersionRepository
+from app.services.ai_budget import AiBudgetService
 from app.services.auth import AuthenticatedContext
 from app.services.errors import ConflictError, NotFoundError
 
@@ -90,8 +91,7 @@ class InvestigationService:
     async def investigate(
         self, organization_id: UUID, candidate_id: UUID, *, actor_id: UUID | None = None
     ) -> RecoveryInvestigation:
-        if not self._settings.ai_enabled:
-            raise ConflictError("AI is disabled in this environment")
+        await AiBudgetService(self._session, self._settings).enforce(organization_id)
 
         candidate = await self._candidates.get(organization_id, candidate_id)
         if candidate is None:

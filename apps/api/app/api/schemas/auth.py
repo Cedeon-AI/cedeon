@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal
 from uuid import UUID
 
 from pydantic import EmailStr, Field
@@ -14,6 +15,14 @@ class RegisterRequest(ApiModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=200)
     password: str = Field(min_length=12, max_length=1024)
+    # Required only when signup_mode is "code" (surfaced by GET /auth/config).
+    signup_code: str | None = Field(default=None, max_length=200)
+
+
+class AuthConfigResponse(ApiModel):
+    """Public. Tells the web client how registration is gated (ADR-0028)."""
+
+    signup_mode: Literal["open", "code", "closed"]
 
 
 class LoginRequest(ApiModel):

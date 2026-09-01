@@ -113,7 +113,7 @@ export default function SecurityPage() {
             Questions about deployment, data residency or contractual terms?
           </p>
           <Button asChild>
-            <Link href="/login">Request access</Link>
+            <Link href="/register">Request access</Link>
           </Button>
         </Container>
       </Section>

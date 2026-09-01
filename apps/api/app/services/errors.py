@@ -40,3 +40,10 @@ class AuthenticationError(ServiceError):
 class PermissionDeniedError(ServiceError):
     code = "permission_denied"
     status = 403
+
+
+class UsageLimitError(ServiceError):
+    """The organization has hit a usage/spend limit (ADR-0028). 402 Payment Required."""
+
+    code = "usage_limit_reached"
+    status = 402

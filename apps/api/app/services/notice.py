@@ -43,6 +43,7 @@ from app.repositories.recoveries import (
     RecoveryPacketRepository,
 )
 from app.repositories.reinsurance import TreatyRepository, TreatyVersionRepository
+from app.services.ai_budget import AiBudgetService
 from app.services.auth import AuthenticatedContext
 from app.services.errors import ConflictError, NotFoundError, ValidationError
 
@@ -115,8 +116,7 @@ class NoticeService:
         recipient: dict[str, str],
         actor_id: UUID | None = None,
     ) -> RecoveryNotice:
-        if not self._settings.ai_enabled:
-            raise ConflictError("AI is disabled in this environment")
+        await AiBudgetService(self._session, self._settings).enforce(organization_id)
 
         candidate = await self._candidates.get(organization_id, candidate_id)
         if candidate is None:

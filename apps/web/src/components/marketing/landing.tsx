@@ -399,7 +399,7 @@ export function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button asChild size="lg">
-                <Link href="/login">
+                <Link href="/register">
                   Request access <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -916,7 +916,7 @@ export function Landing() {
             </p>
           </div>
           <Button asChild size="lg">
-            <Link href="/login">
+            <Link href="/register">
               Request access <ArrowRight className="size-4" />
             </Link>
           </Button>

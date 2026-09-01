@@ -339,9 +339,47 @@
         "title": "AgentType",
         "type": "string"
       },
+      "AiBudgetOut": {
+        "additionalProperties": false,
+        "description": "This organization's calendar-month AI-spend cap (ADR-0028).",
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "period_start": {
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "spent_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Spent Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "budget_usd",
+          "spent_usd",
+          "period_start"
+        ],
+        "title": "AiBudgetOut",
+        "type": "object"
+      },
       "AiSpendResponse": {
         "additionalProperties": false,
         "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/AiBudgetOut"
+          },
           "by_day": {
             "items": {
               "$ref": "#/components/schemas/SpendByDayOut"
@@ -369,7 +407,8 @@
           "since",
           "totals",
           "by_type",
-          "by_day"
+          "by_day",
+          "budget"
         ],
         "title": "AiSpendResponse",
         "type": "object"
@@ -527,6 +566,26 @@
           "events"
         ],
         "title": "AuditFeed",
+        "type": "object"
+      },
+      "AuthConfigResponse": {
+        "additionalProperties": false,
+        "description": "Public. Tells the web client how registration is gated (ADR-0028).",
+        "properties": {
+          "signup_mode": {
+            "enum": [
+              "open",
+              "code",
+              "closed"
+            ],
+            "title": "Signup Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signup_mode"
+        ],
+        "title": "AuthConfigResponse",
         "type": "object"
       },
       "Body_uploadDocument": {
@@ -4654,6 +4713,18 @@
             "minLength": 12,
             "title": "Password",
             "type": "string"
+          },
+          "signup_code": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signup Code"
           }
         },
         "required": [
@@ -6988,6 +7059,27 @@
         "summary": "List Audit Events",
         "tags": [
           "activity"
+        ]
+      }
+    },
+    "/auth/config": {
+      "get": {
+        "operationId": "getAuthConfig",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auth Config",
+        "tags": [
+          "auth"
         ]
       }
     },

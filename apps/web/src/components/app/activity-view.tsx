@@ -11,6 +11,7 @@ import { EmptyState, PageHeader } from "@/components/ui/page-header";
 import { actorTone, agentLabel, runStatusTone, usd } from "@/lib/activity";
 import type { AgentRunSummary } from "@/lib/api";
 import { getAgentRun, getAiSpend, listAgentRuns, listAuditEvents } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type Tab = "runs" | "audit" | "spend";
 
@@ -263,8 +264,34 @@ function AiSpend() {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
   const s = spend.data;
+  const b = s.budget;
+  const budgetUsd = b.budget_usd === null ? null : Number(b.budget_usd);
+  const spentUsd = Number(b.spent_usd);
+  const pct =
+    budgetUsd && budgetUsd > 0 ? Math.min(100, Math.round((spentUsd / budgetUsd) * 100)) : 0;
+  const near = pct >= 80;
   return (
     <div className="space-y-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
+            <p className="text-sm font-medium">This month's AI budget</p>
+            <p className="text-xs text-muted-foreground">
+              {budgetUsd === null
+                ? `${usd(b.spent_usd)} spent · no cap set`
+                : `${usd(b.spent_usd)} of ${usd(budgetUsd)} used${near ? " — nearing the limit" : ""}`}
+            </p>
+          </div>
+          {budgetUsd !== null ? (
+            <div className="h-2 w-40 overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full", near ? "bg-danger" : "bg-primary")}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Runs (30d)" value={String(s.totals.runs)} />
         <Stat label="Succeeded" value={String(s.totals.succeeded)} tone="text-human" />

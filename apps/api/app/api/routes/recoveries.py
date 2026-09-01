@@ -82,6 +82,7 @@ from app.domain.recoveries import (
 )
 from app.domain.recoveries.chasing import entered_status_on, recommend_chase
 from app.domain.recoveries.reconciliation import RecoverableAmounts, reconcile
+from app.services.ai_budget import AiBudgetService
 from app.services.collection import CollectionService
 from app.services.errors import ConflictError
 from app.services.investigation import InvestigationService
@@ -451,8 +452,7 @@ async def investigate_recovery_candidate(
     settings: AppSettings,
     enqueue: Annotated[InvestigateEnqueuer, Depends(get_investigate_enqueuer)],
 ) -> RecoveryCandidateOut:
-    if not settings.ai_enabled:
-        raise ConflictError("AI is disabled in this environment")
+    await AiBudgetService(session, settings).enforce(context.organization.id)
     # Surfaces 404 / 409 before the job is queued.
     candidate = await RecoveryCandidateService(session).get_candidate(context, candidate_id)
     if candidate.current_calculation_id is None:
@@ -658,8 +658,7 @@ async def draft_recovery_notice(
     settings: AppSettings,
     enqueue: Annotated[NoticeEnqueuer, Depends(get_notice_enqueuer)],
 ) -> RecoveryCandidateOut:
-    if not settings.ai_enabled:
-        raise ConflictError("AI is disabled in this environment")
+    await AiBudgetService(session, settings).enforce(context.organization.id)
     candidate = await RecoveryCandidateService(session).get_candidate(context, candidate_id)
     if candidate.status.value not in ("confirmed", "notice_drafted"):
         raise ConflictError("confirm the recovery candidate before drafting a notice")

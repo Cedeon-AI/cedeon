@@ -29,6 +29,7 @@ from app.repositories.extraction import (
     TermCandidateRepository,
 )
 from app.repositories.reinsurance import TreatyVersionRepository
+from app.services.ai_budget import AiBudgetService
 from app.services.errors import ConflictError
 
 log = get_logger(__name__)
@@ -62,6 +63,8 @@ class TreatyExtractionService:
         self._audit = AuditRepository(session)
 
     async def run(self, organization_id: UUID, treaty_version_id: UUID) -> AgentRun:
+        await AiBudgetService(self._session, self._settings).enforce(organization_id)
+
         version = await self._versions.get(organization_id, treaty_version_id)
         if version is None:
             raise ExtractionInputError(f"treaty version {treaty_version_id} not found")

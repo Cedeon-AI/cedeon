@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request, Response, status
 
 from app.api.dependencies.context import AppSettings, AuthedContext, AuthServiceDep
 from app.api.schemas.auth import (
+    AuthConfigResponse,
     LoginRequest,
     MeResponse,
     OrganizationSummary,
@@ -17,6 +18,11 @@ from app.core.config import Settings
 from app.services.auth import AuthenticatedContext
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/config", response_model=AuthConfigResponse, operation_id="getAuthConfig")
+async def auth_config(settings: AppSettings) -> AuthConfigResponse:
+    return AuthConfigResponse(signup_mode=settings.signup_mode)
 
 
 def _client_ip(request: Request) -> str | None:
@@ -79,6 +85,7 @@ async def register(
         email=payload.email,
         name=payload.name,
         password=payload.password,
+        signup_code=payload.signup_code,
         user_agent=request.headers.get("user-agent"),
         ip_address=_client_ip(request),
     )

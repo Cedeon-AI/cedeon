@@ -64,6 +64,11 @@ services:
       # Origin the invitation accept-links point at (the web app). Override alongside
       # CEDEON_WEB_PORT.
       CEDEON_PUBLIC_BASE_URL: ${CEDEON_PUBLIC_BASE_URL:-http://localhost:3000}
+      # Signup gating + spend controls (ADR-0028). "open" locally; set "code"/"closed"
+      # for anything customer-facing.
+      CEDEON_SIGNUP_MODE: ${CEDEON_SIGNUP_MODE:-open}
+      CEDEON_OPS_EMAIL: ${CEDEON_OPS_EMAIL:-}
+      CEDEON_AI_ENABLED: ${CEDEON_AI_ENABLED:-true}
       CEDEON_OBJECT_STORE: s3
       CEDEON_S3_ENDPOINT_URL: http://minio:9000
       CEDEON_S3_BUCKET: cedeon-local
@@ -97,6 +102,8 @@ services:
       CEDEON_S3_SECRET_ACCESS_KEY: cedeon-secret
       CEDEON_DOCUMENT_PARSER: pymupdf
       CEDEON_LOG_JSON: "true"
+      CEDEON_OPS_EMAIL: ${CEDEON_OPS_EMAIL:-}
+      CEDEON_AI_ENABLED: ${CEDEON_AI_ENABLED:-true}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_WORKSPACE_ID: ${ANTHROPIC_WORKSPACE_ID:-}
       CEDEON_TREATY_EXTRACTION_MODEL: ${CEDEON_TREATY_EXTRACTION_MODEL:-anthropic:claude-opus-5}

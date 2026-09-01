@@ -31,6 +31,7 @@ older ones; mark superseded ADRs rather than deleting them.
 | 0024 | Collection tracking: a recoverable per reinsurer, human facts on an audit trail | Accepted |
 | 0025 | Scope expansion: reinstatements + hours-clause grouping; each exception check stays concrete | Accepted |
 | 0026 | Team model: first-class membership, email invitations, admin / member (no owner) | Accepted |
+| 0028 | Signup gating (`open` / `code` / `closed`) + per-organization monthly AI budget | Accepted |
 
 ---
 
@@ -709,3 +710,72 @@ design). No change to `users`, `sessions`, or the session mechanism. `Role` is n
 service accounts, custom roles, a permission-policy engine, and org-switching UI are
 **intentionally deferred** — the model does not block any of them (docs/SECURITY.md
 §2, §7).
+
+---
+
+## ADR-0028 — Signup gating (`open` / `code` / `closed`) + per-organization monthly AI budget
+
+**Context.** Before an initial hosted demo, anyone reaching `/register` could create
+an organization and immediately trigger Opus-class treaty extraction and
+investigation jobs — real, unbounded spend against one Anthropic key, with the
+operator finding out from the bill. Two separate exposures: **who may create an org**,
+and **how much any org (invited or not) may spend**. A signup gate alone does not
+close the second — an invited customer can still re-run extraction many times during
+a demo.
+
+**Decision.**
+
+1. **`CEDEON_SIGNUP_MODE` — `open` / `code` / `closed`.** The config validator
+   **forbids `open` in `staging` / `production`** (same mechanism that rejects a dev
+   session secret), so a deploy cannot accidentally ship self-serve registration.
+   - `closed` — `POST /auth/register` returns 403 "invite-only"; the operator creates
+     orgs with a CLI.
+   - `code` *(the deployed default)* — registration requires a redeemable **signup
+     code**.
+   - `open` — unrestricted (local/test, or a deliberate PLG choice later).
+   `GET /auth/config` (public) exposes the mode so the web client shows the code
+   field or the invite-only message.
+
+2. **Signup codes** (`signup_codes`, migration 0018). Operator-minted
+   (`just mint-code "Acme Re" --budget 50`). Only the **HMAC** of the raw code is
+   stored (same scheme as invitation / session tokens). A code carries a `label`
+   (which prospect), `max_uses` (default 1), optional `expires_at` (default 30 days),
+   and an optional **`grant_ai_budget_usd`** that is stamped onto every organization
+   it creates. Redemption is a **single atomic `UPDATE … WHERE redeemed_count <
+   max_uses AND NOT revoked AND NOT expired`** — two concurrent registrations cannot
+   both spend a single-use code — and writes a `signup_code.redeemed` audit row.
+   Codes are **not** a user-identity mechanism — they gate creation only; the
+   invitation flow (ADR-0026) still adds colleagues.
+
+3. **Per-organization monthly AI budget.** `organizations.ai_budget_usd`
+   (`NUMERIC(12,2)`, **NULL = unlimited**). "Spend" is `SUM(agent_runs.cost_usd)` for
+   the current calendar month — the exact figure `/activity/ai-spend` already shows.
+   `AiBudgetService.enforce(org_id)` raises **402 `usage_limit_reached`** and is
+   called:
+   - at the route / enqueue layer (treaty create + re-extract, investigate, draft
+     notice) so the user gets an immediate, clear refusal and no job is queued;
+   - inside the job services (`TreatyExtractionService.run`,
+     `InvestigationService.investigate`, `NoticeService.draft`) as the authoritative
+     backstop — a job that gets past here has spent money. Jobs treat
+     `UsageLimitError` like `ConflictError`: skip, do **not** retry.
+   `enforce` also subsumes the old global `CEDEON_AI_ENABLED` check.
+
+4. **Alerting.** After a run records its cost, `notify_if_crossed` emails
+   `CEDEON_OPS_EMAIL` once per calendar month when an org reaches 80% of (or passes)
+   its budget — deduped by `organizations.ai_budget_notified_at`, and best-effort (a
+   failed send never fails the job). Org creation also emails ops. Both also write
+   `audit_events`. Delivery rides the ADR-0026 `EmailSender` seam (console until a
+   provider is wired).
+
+5. **Only the operator changes a budget.** Org admins cannot raise their own cap.
+   `just set-org-budget <slug> <usd|unlimited>`; the redeemed code sets the initial
+   value. No API endpoint.
+
+**Consequences.** Migration 0018 (one table, two nullable columns — additive,
+reversible). Existing orgs (the demo seed) default to unlimited until
+`set-org-budget` is run. `signup_mode` defaults to `open` so local dev and the whole
+test suite are unaffected; CI/prod set `code`. New service `AiBudgetService`; new
+error `UsageLimitError` (402). Not built: usage-based billing, hard token limits per
+call, per-user (vs per-org) budgets, a self-serve "buy more credit" flow, a
+superadmin UI (the CLIs need DB access, which only the operator has) — the schema
+does not block any of them.

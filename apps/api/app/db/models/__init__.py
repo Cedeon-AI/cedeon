@@ -15,6 +15,7 @@ from app.db.models.identity import (
     Invitation,
     Membership,
     Organization,
+    SignupCode,
     User,
     UserSession,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "ReinsuranceProgram",
     "Reinsurer",
     "Review",
+    "SignupCode",
     "ToolCall",
     "Treaty",
     "TreatyLayer",

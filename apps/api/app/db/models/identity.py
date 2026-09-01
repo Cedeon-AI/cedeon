@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
+    Numeric,
     String,
     UniqueConstraint,
     func,
@@ -42,6 +45,14 @@ class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+
+    # Calendar-month AI spend cap in USD (ADR-0028). NULL = unlimited. Set by the
+    # redeemed signup code or `just set-org-budget`; org admins cannot change it.
+    ai_budget_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # Last time ops was notified about this org's budget (dedupes to one alert / month).
+    ai_budget_notified_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     memberships: Mapped[list[Membership]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"
@@ -120,6 +131,25 @@ class Invitation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     organization: Mapped[Organization] = relationship()
     invited_by: Mapped[User | None] = relationship(foreign_keys=[invited_by_user_id])
+
+
+class SignupCode(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """An operator-minted access code that permits creating one (or ``max_uses``)
+    organization while ``signup_mode`` is ``"code"`` (ADR-0028). Only the code's
+    HMAC is stored."""
+
+    __tablename__ = "signup_codes"
+
+    # HMAC of the raw code (same scheme as invitation / session tokens).
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    redeemed_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # Stamped onto every organization created with this code. NULL = unlimited.
+    grant_ai_budget_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class UserSession(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):

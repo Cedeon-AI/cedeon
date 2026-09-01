@@ -41,7 +41,7 @@ AppSettings = Annotated[Settings, Depends(get_settings_dep)]
 
 
 def get_auth_service(session: DbSession, settings: AppSettings) -> AuthService:
-    return AuthService(session, settings)
+    return AuthService(session, settings, email=build_email_sender(settings))
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
@@ -125,9 +125,10 @@ async def get_notice_enqueuer() -> NoticeEnqueuer:
 
 def get_treaty_service(
     session: DbSession,
+    settings: AppSettings,
     enqueue_extract: Annotated[ExtractEnqueuer, Depends(get_extract_enqueuer)],
 ) -> TreatyService:
-    return TreatyService(session, enqueue_extract=enqueue_extract)
+    return TreatyService(session, settings=settings, enqueue_extract=enqueue_extract)
 
 
 TreatyServiceDep = Annotated[TreatyService, Depends(get_treaty_service)]
