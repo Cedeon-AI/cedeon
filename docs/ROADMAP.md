@@ -260,10 +260,11 @@ math is deterministic, occurrence grouping is human-confirmed).
   numbers → line-by-line reconciliation). Lines are entered directly — a file importer
   for real bordereau formats is the natural next addition. 22 tests. PRODUCT §1a/§2a updated.
 
-**All six deferred items + the AI-path verification are done.** The one remaining
-*planned* item is the marketing-site refresh's follow-up pass for the scope-expansion
-features (reinstatements, hours-clause view, statements) — the site currently describes
-per-occurrence XOL only.
+**All six deferred items + the AI-path verification are done.** The marketing site and
+every doc (README, PRODUCT, ARCHITECTURE, DATA_MODEL, AI_ARCHITECTURE, DECISIONS
+ADR-0025, UX_STUDY, fixtures README) were brought to the current state in `c978181`.
+Nothing planned is outstanding — the "Still directional, not in scope" items in
+PRODUCT §1a/§7 are the next candidates only after customer discovery.
 - **Marketing / public site refreshed — ✅ done (`apps/web/src/app/(marketing)/` +
   `components/marketing/`).** Hero + eyebrow reframed to "the intelligence system for ceded
   reinsurance" (keeps the "contract to recovery" line); the product mockup is now the
